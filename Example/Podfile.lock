@@ -1,0 +1,16 @@
+PODS:
+  - AKPlayer (0.1.0)
+
+DEPENDENCIES:
+  - AKPlayer (from `../`)
+
+EXTERNAL SOURCES:
+  AKPlayer:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  AKPlayer: 50d9dbdb468c9bd32665bd85da2fcfb17181680e
+
+PODFILE CHECKSUM: e36a6d9459ba82b10febe0d4e1513dadb9e592d1
+
+COCOAPODS: 1.10.0.beta.1

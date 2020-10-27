@@ -1,0 +1,6 @@
+framework module AKPlayer {
+  umbrella header "AKPlayer-umbrella.h"
+
+  export *
+  module * { export * }
+}

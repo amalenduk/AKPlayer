@@ -1,0 +1,989 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1468E0C787FD681825069A9DA56835A7 /* Pods-AKPlayer_Example-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 38215A7DA9E3E1123EB301034744D9DF /* Pods-AKPlayer_Example-dummy.m */; };
+		3EAC60E5B162FF2175A34490A4A4D08A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3212113385A8FBBDB272BD23C409FF61 /* Foundation.framework */; };
+		5D4003A5053C52955B977F921AE6B3A7 /* AKPlayer-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 4AE5CE5FC8D70F529B29EB5A0DE5FF19 /* AKPlayer-dummy.m */; };
+		607329F5AF5F9964B5BEB8607FC849B8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3212113385A8FBBDB272BD23C409FF61 /* Foundation.framework */; };
+		6B84F20489724E8FE775B05634E03C77 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3212113385A8FBBDB272BD23C409FF61 /* Foundation.framework */; };
+		795B91DDCED9ABDC351BE5D3AAC9E5BF /* AKPlayer-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 3EB82FD7F6F8431D8B4C160485105914 /* AKPlayer-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D78A2065F1B45407454D45616C304ABC /* Pods-AKPlayer_Tests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A49C520FDFD19A8337F2A94F6E483C3 /* Pods-AKPlayer_Tests-dummy.m */; };
+		E29422DA76BAB77BB47D93FCB08A3DBB /* Pods-AKPlayer_Example-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 8F9AA91BCFFC41A94C0F86336C3B522C /* Pods-AKPlayer_Example-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		EDAD3995C4B447493FD2D859BD441C6F /* Pods-AKPlayer_Tests-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 00747DA8B9E381E0EBDB2A9EF6F01321 /* Pods-AKPlayer_Tests-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		F4926012254891F2009844FA /* AKPlayerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FE3254891F1009844FA /* AKPlayerDelegate.swift */; };
+		F4926013254891F2009844FA /* AKLoadedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FE6254891F1009844FA /* AKLoadedState.swift */; };
+		F4926014254891F2009844FA /* AKPausedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FE7254891F1009844FA /* AKPausedState.swift */; };
+		F4926015254891F2009844FA /* AKLoadingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FE8254891F1009844FA /* AKLoadingState.swift */; };
+		F4926016254891F2009844FA /* AKStoppedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FE9254891F1009844FA /* AKStoppedState.swift */; };
+		F4926017254891F2009844FA /* AKInitState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FEA254891F1009844FA /* AKInitState.swift */; };
+		F4926018254891F2009844FA /* AKWaitingForNetworkState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FEB254891F1009844FA /* AKWaitingForNetworkState.swift */; };
+		F4926019254891F2009844FA /* AKPlayingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FEC254891F1009844FA /* AKPlayingState.swift */; };
+		F492601A254891F2009844FA /* AKBufferingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FED254891F1009844FA /* AKBufferingState.swift */; };
+		F492601B254891F2009844FA /* AKFailedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FEE254891F1009844FA /* AKFailedState.swift */; };
+		F492601C254891F2009844FA /* AKPlayerTimeObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF0254891F1009844FA /* AKPlayerTimeObservingService.swift */; };
+		F492601D254891F2009844FA /* AKPlayerTimeControlStatusObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF1254891F1009844FA /* AKPlayerTimeControlStatusObservingService.swift */; };
+		F492601E254891F2009844FA /* AKPlayerItemStatusObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF2254891F1009844FA /* AKPlayerItemStatusObservingService.swift */; };
+		F492601F254891F2009844FA /* AKPlayerNowPlayingMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF3254891F1009844FA /* AKPlayerNowPlayingMetadataService.swift */; };
+		F4926020254891F2009844FA /* AKPlayerItemBufferObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF4254891F1009844FA /* AKPlayerItemBufferObservingService.swift */; };
+		F4926021254891F2009844FA /* AKPlayerItemInitializationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF5254891F1009844FA /* AKPlayerItemInitializationService.swift */; };
+		F4926022254891F2009844FA /* AKPlayerRouteChangeObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF6254891F1009844FA /* AKPlayerRouteChangeObservingService.swift */; };
+		F4926023254891F2009844FA /* AKNowPlayableCommandService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF7254891F1009844FA /* AKNowPlayableCommandService.swift */; };
+		F4926024254891F2009844FA /* AKPlayerSeekService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF8254891F1009844FA /* AKPlayerSeekService.swift */; };
+		F4926025254891F2009844FA /* AKPlayerPlaybackObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FF9254891F1009844FA /* AKPlayerPlaybackObservingService.swift */; };
+		F4926026254891F2009844FA /* AKAudioSessionServiceable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FFA254891F1009844FA /* AKAudioSessionServiceable.swift */; };
+		F4926027254891F2009844FA /* AKAudioSessionInterruptionObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FFB254891F1009844FA /* AKAudioSessionInterruptionObservingService.swift */; };
+		F4926028254891F2009844FA /* AKPlayableMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FFD254891F2009844FA /* AKPlayableMetadata.swift */; };
+		F4926029254891F2009844FA /* AKPlayerCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FFE254891F2009844FA /* AKPlayerCommand.swift */; };
+		F492602A254891F2009844FA /* AKPlayerStateControllable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4925FFF254891F2009844FA /* AKPlayerStateControllable.swift */; };
+		F492602B254891F2009844FA /* AKPlayerDefaultConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926000254891F2009844FA /* AKPlayerDefaultConfiguration.swift */; };
+		F492602C254891F2009844FA /* AKPlayerConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926001254891F2009844FA /* AKPlayerConfiguration.swift */; };
+		F492602D254891F2009844FA /* AKPlayerUnavailableActionReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926002254891F2009844FA /* AKPlayerUnavailableActionReason.swift */; };
+		F492602E254891F2009844FA /* AKPlayerLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926003254891F2009844FA /* AKPlayerLogger.swift */; };
+		F492602F254891F2009844FA /* AKMediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926004254891F2009844FA /* AKMediaItem.swift */; };
+		F4926030254891F2009844FA /* AKMediaType.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926005254891F2009844FA /* AKMediaType.swift */; };
+		F4926031254891F2009844FA /* AKMediaItemPlayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926006254891F2009844FA /* AKMediaItemPlayable.swift */; };
+		F4926032254891F2009844FA /* AKPlayerLoggerDomain.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926007254891F2009844FA /* AKPlayerLoggerDomain.swift */; };
+		F4926033254891F2009844FA /* AKMediaMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926008254891F2009844FA /* AKMediaMetadata.swift */; };
+		F4926034254891F2009844FA /* AKPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926009254891F2009844FA /* AKPlayerManager.swift */; };
+		F4926035254891F2009844FA /* AKPlayerError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600A254891F2009844FA /* AKPlayerError.swift */; };
+		F4926036254891F2009844FA /* AKPlayerManageable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600B254891F2009844FA /* AKPlayerManageable.swift */; };
+		F4926037254891F2009844FA /* AKNowPlayableCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600C254891F2009844FA /* AKNowPlayableCommand.swift */; };
+		F4926038254891F2009844FA /* AKMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600D254891F2009844FA /* AKMedia.swift */; };
+		F4926039254891F2009844FA /* AKPlayerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600E254891F2009844FA /* AKPlayerPlugin.swift */; };
+		F492603A254891F2009844FA /* AKPlayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600F254891F2009844FA /* AKPlayable.swift */; };
+		F492603B254891F2009844FA /* AKPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926010254891F2009844FA /* AKPlayerView.swift */; };
+		F492603C254891F2009844FA /* AKPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926011254891F2009844FA /* AKPlayer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7E49014F406DA129DD7CF642FA94B1E7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC0A666710EFE219C9B03A77465799D2;
+			remoteInfo = "Pods-AKPlayer_Example";
+		};
+		DD97B3CE0C616E4F638B82077D0A9D50 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B29A593F2453CEE064207F3DE35FC1E9;
+			remoteInfo = AKPlayer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		00747DA8B9E381E0EBDB2A9EF6F01321 /* Pods-AKPlayer_Tests-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-AKPlayer_Tests-umbrella.h"; sourceTree = "<group>"; };
+		06B3C10689165C65A525E119BA79CD89 /* AKPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AKPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		112AEC7F771ED2EC09E1D4A4DD89448B /* Pods-AKPlayer_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-AKPlayer_Example.debug.xcconfig"; sourceTree = "<group>"; };
+		19AAB9DA76261E802E3BBA8B3A79D540 /* Pods-AKPlayer_Example-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-AKPlayer_Example-acknowledgements.plist"; sourceTree = "<group>"; };
+		1A49C520FDFD19A8337F2A94F6E483C3 /* Pods-AKPlayer_Tests-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-AKPlayer_Tests-dummy.m"; sourceTree = "<group>"; };
+		221BE4EFCC5D3C00B3273B449B2406E9 /* AKPlayer.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = AKPlayer.debug.xcconfig; sourceTree = "<group>"; };
+		3212113385A8FBBDB272BD23C409FF61 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS12.2.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		38215A7DA9E3E1123EB301034744D9DF /* Pods-AKPlayer_Example-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-AKPlayer_Example-dummy.m"; sourceTree = "<group>"; };
+		3EB82FD7F6F8431D8B4C160485105914 /* AKPlayer-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "AKPlayer-umbrella.h"; sourceTree = "<group>"; };
+		41B641202981A1F97E530AE2548A2ADD /* AKPlayer.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; path = AKPlayer.podspec; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		4AE5CE5FC8D70F529B29EB5A0DE5FF19 /* AKPlayer-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "AKPlayer-dummy.m"; sourceTree = "<group>"; };
+		4E1415CB325BF45F871A48402B78B616 /* AKPlayer-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "AKPlayer-prefix.pch"; sourceTree = "<group>"; };
+		55CCB772C30F86649C277BC9B52F82BB /* Pods-AKPlayer_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-AKPlayer_Example.release.xcconfig"; sourceTree = "<group>"; };
+		67646E1CBE676EAF145AF3FCEED82BF6 /* Pods-AKPlayer_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-AKPlayer_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
+		6ED8505D444D34F115252A9E07663A87 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		80536907CB12891C2E7A6A3B64E5D492 /* AKPlayer.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = AKPlayer.modulemap; sourceTree = "<group>"; };
+		818E100397D95C15BAA670F85BD55355 /* Pods-AKPlayer_Example-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-AKPlayer_Example-acknowledgements.markdown"; sourceTree = "<group>"; };
+		86B2FF35FC29559F774FC8E368C5CEDB /* Pods-AKPlayer_Tests-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-AKPlayer_Tests-Info.plist"; sourceTree = "<group>"; };
+		8F9AA91BCFFC41A94C0F86336C3B522C /* Pods-AKPlayer_Example-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-AKPlayer_Example-umbrella.h"; sourceTree = "<group>"; };
+		9D366030D03661817EFBA6D6105F4DDE /* Pods-AKPlayer_Example.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-AKPlayer_Example.modulemap"; sourceTree = "<group>"; };
+		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		AA929E31713F9652C66C025F50BB2E69 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		AC6688AE314FAAED0D6A1C950D3DE68F /* AKPlayer.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = AKPlayer.release.xcconfig; sourceTree = "<group>"; };
+		AC6B959AD42B73EEBADE29986DE26149 /* Pods-AKPlayer_Tests.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-AKPlayer_Tests.modulemap"; sourceTree = "<group>"; };
+		AD3A9D0B1410319172639738B8BE1913 /* AKPlayer-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "AKPlayer-Info.plist"; sourceTree = "<group>"; };
+		BFA0DA6A4A07D0DEF79EA6530A3737D8 /* Pods-AKPlayer_Tests-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-AKPlayer_Tests-acknowledgements.plist"; sourceTree = "<group>"; };
+		C36C01053F31DEC068F8640A900BE4BF /* Pods-AKPlayer_Example-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-AKPlayer_Example-Info.plist"; sourceTree = "<group>"; };
+		C370E3321814362F1E1D0E79DFACA5F0 /* Pods-AKPlayer_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-AKPlayer_Tests.debug.xcconfig"; sourceTree = "<group>"; };
+		C8368EB2950E10350A15475D436221BA /* Pods-AKPlayer_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-AKPlayer_Tests.release.xcconfig"; sourceTree = "<group>"; };
+		D0807855CA531C5D2C477247767FA6AB /* Pods_AKPlayer_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_AKPlayer_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D106427840D49479C129A627228B5CF1 /* Pods-AKPlayer_Example-frameworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Pods-AKPlayer_Example-frameworks.sh"; sourceTree = "<group>"; };
+		DE862BBF8A1ADB89460F7BFF10B6F908 /* Pods_AKPlayer_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_AKPlayer_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4925FE3254891F1009844FA /* AKPlayerDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerDelegate.swift; sourceTree = "<group>"; };
+		F4925FE6254891F1009844FA /* AKLoadedState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKLoadedState.swift; sourceTree = "<group>"; };
+		F4925FE7254891F1009844FA /* AKPausedState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPausedState.swift; sourceTree = "<group>"; };
+		F4925FE8254891F1009844FA /* AKLoadingState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKLoadingState.swift; sourceTree = "<group>"; };
+		F4925FE9254891F1009844FA /* AKStoppedState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKStoppedState.swift; sourceTree = "<group>"; };
+		F4925FEA254891F1009844FA /* AKInitState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKInitState.swift; sourceTree = "<group>"; };
+		F4925FEB254891F1009844FA /* AKWaitingForNetworkState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKWaitingForNetworkState.swift; sourceTree = "<group>"; };
+		F4925FEC254891F1009844FA /* AKPlayingState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayingState.swift; sourceTree = "<group>"; };
+		F4925FED254891F1009844FA /* AKBufferingState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKBufferingState.swift; sourceTree = "<group>"; };
+		F4925FEE254891F1009844FA /* AKFailedState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKFailedState.swift; sourceTree = "<group>"; };
+		F4925FF0254891F1009844FA /* AKPlayerTimeObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerTimeObservingService.swift; sourceTree = "<group>"; };
+		F4925FF1254891F1009844FA /* AKPlayerTimeControlStatusObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerTimeControlStatusObservingService.swift; sourceTree = "<group>"; };
+		F4925FF2254891F1009844FA /* AKPlayerItemStatusObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerItemStatusObservingService.swift; sourceTree = "<group>"; };
+		F4925FF3254891F1009844FA /* AKPlayerNowPlayingMetadataService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerNowPlayingMetadataService.swift; sourceTree = "<group>"; };
+		F4925FF4254891F1009844FA /* AKPlayerItemBufferObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerItemBufferObservingService.swift; sourceTree = "<group>"; };
+		F4925FF5254891F1009844FA /* AKPlayerItemInitializationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerItemInitializationService.swift; sourceTree = "<group>"; };
+		F4925FF6254891F1009844FA /* AKPlayerRouteChangeObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerRouteChangeObservingService.swift; sourceTree = "<group>"; };
+		F4925FF7254891F1009844FA /* AKNowPlayableCommandService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKNowPlayableCommandService.swift; sourceTree = "<group>"; };
+		F4925FF8254891F1009844FA /* AKPlayerSeekService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerSeekService.swift; sourceTree = "<group>"; };
+		F4925FF9254891F1009844FA /* AKPlayerPlaybackObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerPlaybackObservingService.swift; sourceTree = "<group>"; };
+		F4925FFA254891F1009844FA /* AKAudioSessionServiceable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKAudioSessionServiceable.swift; sourceTree = "<group>"; };
+		F4925FFB254891F1009844FA /* AKAudioSessionInterruptionObservingService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKAudioSessionInterruptionObservingService.swift; sourceTree = "<group>"; };
+		F4925FFD254891F2009844FA /* AKPlayableMetadata.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayableMetadata.swift; sourceTree = "<group>"; };
+		F4925FFE254891F2009844FA /* AKPlayerCommand.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerCommand.swift; sourceTree = "<group>"; };
+		F4925FFF254891F2009844FA /* AKPlayerStateControllable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerStateControllable.swift; sourceTree = "<group>"; };
+		F4926000254891F2009844FA /* AKPlayerDefaultConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerDefaultConfiguration.swift; sourceTree = "<group>"; };
+		F4926001254891F2009844FA /* AKPlayerConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerConfiguration.swift; sourceTree = "<group>"; };
+		F4926002254891F2009844FA /* AKPlayerUnavailableActionReason.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerUnavailableActionReason.swift; sourceTree = "<group>"; };
+		F4926003254891F2009844FA /* AKPlayerLogger.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerLogger.swift; sourceTree = "<group>"; };
+		F4926004254891F2009844FA /* AKMediaItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKMediaItem.swift; sourceTree = "<group>"; };
+		F4926005254891F2009844FA /* AKMediaType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKMediaType.swift; sourceTree = "<group>"; };
+		F4926006254891F2009844FA /* AKMediaItemPlayable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKMediaItemPlayable.swift; sourceTree = "<group>"; };
+		F4926007254891F2009844FA /* AKPlayerLoggerDomain.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerLoggerDomain.swift; sourceTree = "<group>"; };
+		F4926008254891F2009844FA /* AKMediaMetadata.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKMediaMetadata.swift; sourceTree = "<group>"; };
+		F4926009254891F2009844FA /* AKPlayerManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerManager.swift; sourceTree = "<group>"; };
+		F492600A254891F2009844FA /* AKPlayerError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerError.swift; sourceTree = "<group>"; };
+		F492600B254891F2009844FA /* AKPlayerManageable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerManageable.swift; sourceTree = "<group>"; };
+		F492600C254891F2009844FA /* AKNowPlayableCommand.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKNowPlayableCommand.swift; sourceTree = "<group>"; };
+		F492600D254891F2009844FA /* AKMedia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKMedia.swift; sourceTree = "<group>"; };
+		F492600E254891F2009844FA /* AKPlayerPlugin.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerPlugin.swift; sourceTree = "<group>"; };
+		F492600F254891F2009844FA /* AKPlayable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayable.swift; sourceTree = "<group>"; };
+		F4926010254891F2009844FA /* AKPlayerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerView.swift; sourceTree = "<group>"; };
+		F4926011254891F2009844FA /* AKPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayer.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		21A3C55B2C0E39738E882840C636F549 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3EAC60E5B162FF2175A34490A4A4D08A /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		31920758069D9F1DF6F0733BFAC77871 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				607329F5AF5F9964B5BEB8607FC849B8 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B669002546E2A3CEBA75852EB16CAAC7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B84F20489724E8FE775B05634E03C77 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		00735CB6942DBA3E36CEB6A9440F2A53 /* Targets Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				6CC5AA7FC54FFFDC22F3FDC705F60BFF /* Pods-AKPlayer_Example */,
+				3811562A08E5714D6D5B75E6DCABBFEB /* Pods-AKPlayer_Tests */,
+			);
+			name = "Targets Support Files";
+			sourceTree = "<group>";
+		};
+		08DF01ACD0E693E6B78A138F8C9AF78E /* AKPlayer */ = {
+			isa = PBXGroup;
+			children = (
+				F4925FE2254891BD009844FA /* Source */,
+				E31603653E5A0B0345FA29A70F997035 /* Pod */,
+				714A55181B22F38A8A04090ECF78D668 /* Support Files */,
+			);
+			name = AKPlayer;
+			path = ../..;
+			sourceTree = "<group>";
+		};
+		25CC96492EAC687A0D2C6E5D846B58A5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				06B3C10689165C65A525E119BA79CD89 /* AKPlayer.framework */,
+				DE862BBF8A1ADB89460F7BFF10B6F908 /* Pods_AKPlayer_Example.framework */,
+				D0807855CA531C5D2C477247767FA6AB /* Pods_AKPlayer_Tests.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3811562A08E5714D6D5B75E6DCABBFEB /* Pods-AKPlayer_Tests */ = {
+			isa = PBXGroup;
+			children = (
+				AC6B959AD42B73EEBADE29986DE26149 /* Pods-AKPlayer_Tests.modulemap */,
+				67646E1CBE676EAF145AF3FCEED82BF6 /* Pods-AKPlayer_Tests-acknowledgements.markdown */,
+				BFA0DA6A4A07D0DEF79EA6530A3737D8 /* Pods-AKPlayer_Tests-acknowledgements.plist */,
+				1A49C520FDFD19A8337F2A94F6E483C3 /* Pods-AKPlayer_Tests-dummy.m */,
+				86B2FF35FC29559F774FC8E368C5CEDB /* Pods-AKPlayer_Tests-Info.plist */,
+				00747DA8B9E381E0EBDB2A9EF6F01321 /* Pods-AKPlayer_Tests-umbrella.h */,
+				C370E3321814362F1E1D0E79DFACA5F0 /* Pods-AKPlayer_Tests.debug.xcconfig */,
+				C8368EB2950E10350A15475D436221BA /* Pods-AKPlayer_Tests.release.xcconfig */,
+			);
+			name = "Pods-AKPlayer_Tests";
+			path = "Target Support Files/Pods-AKPlayer_Tests";
+			sourceTree = "<group>";
+		};
+		57F64775762B29BB59670ECAD8B53FB5 /* Development Pods */ = {
+			isa = PBXGroup;
+			children = (
+				08DF01ACD0E693E6B78A138F8C9AF78E /* AKPlayer */,
+			);
+			name = "Development Pods";
+			sourceTree = "<group>";
+		};
+		6CC5AA7FC54FFFDC22F3FDC705F60BFF /* Pods-AKPlayer_Example */ = {
+			isa = PBXGroup;
+			children = (
+				9D366030D03661817EFBA6D6105F4DDE /* Pods-AKPlayer_Example.modulemap */,
+				818E100397D95C15BAA670F85BD55355 /* Pods-AKPlayer_Example-acknowledgements.markdown */,
+				19AAB9DA76261E802E3BBA8B3A79D540 /* Pods-AKPlayer_Example-acknowledgements.plist */,
+				38215A7DA9E3E1123EB301034744D9DF /* Pods-AKPlayer_Example-dummy.m */,
+				D106427840D49479C129A627228B5CF1 /* Pods-AKPlayer_Example-frameworks.sh */,
+				C36C01053F31DEC068F8640A900BE4BF /* Pods-AKPlayer_Example-Info.plist */,
+				8F9AA91BCFFC41A94C0F86336C3B522C /* Pods-AKPlayer_Example-umbrella.h */,
+				112AEC7F771ED2EC09E1D4A4DD89448B /* Pods-AKPlayer_Example.debug.xcconfig */,
+				55CCB772C30F86649C277BC9B52F82BB /* Pods-AKPlayer_Example.release.xcconfig */,
+			);
+			name = "Pods-AKPlayer_Example";
+			path = "Target Support Files/Pods-AKPlayer_Example";
+			sourceTree = "<group>";
+		};
+		714A55181B22F38A8A04090ECF78D668 /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				80536907CB12891C2E7A6A3B64E5D492 /* AKPlayer.modulemap */,
+				4AE5CE5FC8D70F529B29EB5A0DE5FF19 /* AKPlayer-dummy.m */,
+				AD3A9D0B1410319172639738B8BE1913 /* AKPlayer-Info.plist */,
+				4E1415CB325BF45F871A48402B78B616 /* AKPlayer-prefix.pch */,
+				3EB82FD7F6F8431D8B4C160485105914 /* AKPlayer-umbrella.h */,
+				221BE4EFCC5D3C00B3273B449B2406E9 /* AKPlayer.debug.xcconfig */,
+				AC6688AE314FAAED0D6A1C950D3DE68F /* AKPlayer.release.xcconfig */,
+			);
+			name = "Support Files";
+			path = "Example/Pods/Target Support Files/AKPlayer";
+			sourceTree = "<group>";
+		};
+		C0834CEBB1379A84116EF29F93051C60 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				3212113385A8FBBDB272BD23C409FF61 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		CF1408CF629C7361332E53B88F7BD30C = {
+			isa = PBXGroup;
+			children = (
+				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
+				57F64775762B29BB59670ECAD8B53FB5 /* Development Pods */,
+				D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */,
+				25CC96492EAC687A0D2C6E5D846B58A5 /* Products */,
+				00735CB6942DBA3E36CEB6A9440F2A53 /* Targets Support Files */,
+			);
+			sourceTree = "<group>";
+		};
+		D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C0834CEBB1379A84116EF29F93051C60 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E31603653E5A0B0345FA29A70F997035 /* Pod */ = {
+			isa = PBXGroup;
+			children = (
+				41B641202981A1F97E530AE2548A2ADD /* AKPlayer.podspec */,
+				AA929E31713F9652C66C025F50BB2E69 /* LICENSE */,
+				6ED8505D444D34F115252A9E07663A87 /* README.md */,
+			);
+			name = Pod;
+			sourceTree = "<group>";
+		};
+		F4925FE2254891BD009844FA /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				F4926011254891F2009844FA /* AKPlayer.swift */,
+				F4925FE3254891F1009844FA /* AKPlayerDelegate.swift */,
+				F4925FFC254891F2009844FA /* Components */,
+				F4925FE4254891F1009844FA /* Helpers */,
+				F4925FEF254891F1009844FA /* Services */,
+				F4925FE5254891F1009844FA /* States */,
+			);
+			path = Source;
+			sourceTree = "<group>";
+		};
+		F4925FE4254891F1009844FA /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		F4925FE5254891F1009844FA /* States */ = {
+			isa = PBXGroup;
+			children = (
+				F4925FE6254891F1009844FA /* AKLoadedState.swift */,
+				F4925FE7254891F1009844FA /* AKPausedState.swift */,
+				F4925FE8254891F1009844FA /* AKLoadingState.swift */,
+				F4925FE9254891F1009844FA /* AKStoppedState.swift */,
+				F4925FEA254891F1009844FA /* AKInitState.swift */,
+				F4925FEB254891F1009844FA /* AKWaitingForNetworkState.swift */,
+				F4925FEC254891F1009844FA /* AKPlayingState.swift */,
+				F4925FED254891F1009844FA /* AKBufferingState.swift */,
+				F4925FEE254891F1009844FA /* AKFailedState.swift */,
+			);
+			path = States;
+			sourceTree = "<group>";
+		};
+		F4925FEF254891F1009844FA /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F4925FF0254891F1009844FA /* AKPlayerTimeObservingService.swift */,
+				F4925FF1254891F1009844FA /* AKPlayerTimeControlStatusObservingService.swift */,
+				F4925FF2254891F1009844FA /* AKPlayerItemStatusObservingService.swift */,
+				F4925FF3254891F1009844FA /* AKPlayerNowPlayingMetadataService.swift */,
+				F4925FF4254891F1009844FA /* AKPlayerItemBufferObservingService.swift */,
+				F4925FF5254891F1009844FA /* AKPlayerItemInitializationService.swift */,
+				F4925FF6254891F1009844FA /* AKPlayerRouteChangeObservingService.swift */,
+				F4925FF7254891F1009844FA /* AKNowPlayableCommandService.swift */,
+				F4925FF8254891F1009844FA /* AKPlayerSeekService.swift */,
+				F4925FF9254891F1009844FA /* AKPlayerPlaybackObservingService.swift */,
+				F4925FFA254891F1009844FA /* AKAudioSessionServiceable.swift */,
+				F4925FFB254891F1009844FA /* AKAudioSessionInterruptionObservingService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F4925FFC254891F2009844FA /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F4925FFD254891F2009844FA /* AKPlayableMetadata.swift */,
+				F4925FFE254891F2009844FA /* AKPlayerCommand.swift */,
+				F4925FFF254891F2009844FA /* AKPlayerStateControllable.swift */,
+				F4926000254891F2009844FA /* AKPlayerDefaultConfiguration.swift */,
+				F4926001254891F2009844FA /* AKPlayerConfiguration.swift */,
+				F4926002254891F2009844FA /* AKPlayerUnavailableActionReason.swift */,
+				F4926003254891F2009844FA /* AKPlayerLogger.swift */,
+				F4926004254891F2009844FA /* AKMediaItem.swift */,
+				F4926005254891F2009844FA /* AKMediaType.swift */,
+				F4926006254891F2009844FA /* AKMediaItemPlayable.swift */,
+				F4926007254891F2009844FA /* AKPlayerLoggerDomain.swift */,
+				F4926008254891F2009844FA /* AKMediaMetadata.swift */,
+				F4926009254891F2009844FA /* AKPlayerManager.swift */,
+				F492600A254891F2009844FA /* AKPlayerError.swift */,
+				F492600B254891F2009844FA /* AKPlayerManageable.swift */,
+				F492600C254891F2009844FA /* AKNowPlayableCommand.swift */,
+				F492600D254891F2009844FA /* AKMedia.swift */,
+				F492600E254891F2009844FA /* AKPlayerPlugin.swift */,
+				F492600F254891F2009844FA /* AKPlayable.swift */,
+				F4926010254891F2009844FA /* AKPlayerView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		195C5F0E23B2AEFA593D9E7C6E800D2A /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EDAD3995C4B447493FD2D859BD441C6F /* Pods-AKPlayer_Tests-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		203C0F21460B8410CB0A17A9F33322DC /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E29422DA76BAB77BB47D93FCB08A3DBB /* Pods-AKPlayer_Example-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9A1DDA4F45FAD35963376FBACD1BAE05 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				795B91DDCED9ABDC351BE5D3AAC9E5BF /* AKPlayer-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		972D705C1D5C866AD82B61BBDD953606 /* Pods-AKPlayer_Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A422A15A36D1E1F29E09C435BE3ACE66 /* Build configuration list for PBXNativeTarget "Pods-AKPlayer_Tests" */;
+			buildPhases = (
+				195C5F0E23B2AEFA593D9E7C6E800D2A /* Headers */,
+				E7ADCC92C84E4A210717C064440DFB8F /* Sources */,
+				21A3C55B2C0E39738E882840C636F549 /* Frameworks */,
+				03D581FDD3A6B13695769F6CCEE538B8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				582A5D6A6F617FD82459F3BCE6E4A3CA /* PBXTargetDependency */,
+			);
+			name = "Pods-AKPlayer_Tests";
+			productName = "Pods-AKPlayer_Tests";
+			productReference = D0807855CA531C5D2C477247767FA6AB /* Pods_AKPlayer_Tests.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		AC0A666710EFE219C9B03A77465799D2 /* Pods-AKPlayer_Example */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C5C358BDE7142C36D09D8217FB5E1939 /* Build configuration list for PBXNativeTarget "Pods-AKPlayer_Example" */;
+			buildPhases = (
+				203C0F21460B8410CB0A17A9F33322DC /* Headers */,
+				50A61D2A48A669CDB00BCA078260EFCB /* Sources */,
+				B669002546E2A3CEBA75852EB16CAAC7 /* Frameworks */,
+				3032E05D11771E3A117EE03E01560299 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9B00FB2C14456E386774CE1E14D1A3CC /* PBXTargetDependency */,
+			);
+			name = "Pods-AKPlayer_Example";
+			productName = "Pods-AKPlayer_Example";
+			productReference = DE862BBF8A1ADB89460F7BFF10B6F908 /* Pods_AKPlayer_Example.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		B29A593F2453CEE064207F3DE35FC1E9 /* AKPlayer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A83F7201D177ED53B38AB0E0B61A678 /* Build configuration list for PBXNativeTarget "AKPlayer" */;
+			buildPhases = (
+				9A1DDA4F45FAD35963376FBACD1BAE05 /* Headers */,
+				6852F38C3241923A037B834B809228B5 /* Sources */,
+				31920758069D9F1DF6F0733BFAC77871 /* Frameworks */,
+				705D26D813790348F0F93EF5EFFCF1D4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AKPlayer;
+			productName = AKPlayer;
+			productReference = 06B3C10689165C65A525E119BA79CD89 /* AKPlayer.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BFDFE7DC352907FC980B868725387E98 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1100;
+				LastUpgradeCheck = 1100;
+				TargetAttributes = {
+					B29A593F2453CEE064207F3DE35FC1E9 = {
+						LastSwiftMigration = 1130;
+					};
+				};
+			};
+			buildConfigurationList = 4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = CF1408CF629C7361332E53B88F7BD30C;
+			productRefGroup = 25CC96492EAC687A0D2C6E5D846B58A5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B29A593F2453CEE064207F3DE35FC1E9 /* AKPlayer */,
+				AC0A666710EFE219C9B03A77465799D2 /* Pods-AKPlayer_Example */,
+				972D705C1D5C866AD82B61BBDD953606 /* Pods-AKPlayer_Tests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		03D581FDD3A6B13695769F6CCEE538B8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3032E05D11771E3A117EE03E01560299 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		705D26D813790348F0F93EF5EFFCF1D4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		50A61D2A48A669CDB00BCA078260EFCB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1468E0C787FD681825069A9DA56835A7 /* Pods-AKPlayer_Example-dummy.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6852F38C3241923A037B834B809228B5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F492601B254891F2009844FA /* AKFailedState.swift in Sources */,
+				F4926027254891F2009844FA /* AKAudioSessionInterruptionObservingService.swift in Sources */,
+				F4926028254891F2009844FA /* AKPlayableMetadata.swift in Sources */,
+				F492601E254891F2009844FA /* AKPlayerItemStatusObservingService.swift in Sources */,
+				F492602D254891F2009844FA /* AKPlayerUnavailableActionReason.swift in Sources */,
+				F4926021254891F2009844FA /* AKPlayerItemInitializationService.swift in Sources */,
+				F4926039254891F2009844FA /* AKPlayerPlugin.swift in Sources */,
+				F4926025254891F2009844FA /* AKPlayerPlaybackObservingService.swift in Sources */,
+				F492601A254891F2009844FA /* AKBufferingState.swift in Sources */,
+				F492602B254891F2009844FA /* AKPlayerDefaultConfiguration.swift in Sources */,
+				F492603C254891F2009844FA /* AKPlayer.swift in Sources */,
+				F4926036254891F2009844FA /* AKPlayerManageable.swift in Sources */,
+				F4926022254891F2009844FA /* AKPlayerRouteChangeObservingService.swift in Sources */,
+				F492602E254891F2009844FA /* AKPlayerLogger.swift in Sources */,
+				F4926038254891F2009844FA /* AKMedia.swift in Sources */,
+				F4926019254891F2009844FA /* AKPlayingState.swift in Sources */,
+				F4926024254891F2009844FA /* AKPlayerSeekService.swift in Sources */,
+				F492601F254891F2009844FA /* AKPlayerNowPlayingMetadataService.swift in Sources */,
+				F4926023254891F2009844FA /* AKNowPlayableCommandService.swift in Sources */,
+				F4926020254891F2009844FA /* AKPlayerItemBufferObservingService.swift in Sources */,
+				F4926032254891F2009844FA /* AKPlayerLoggerDomain.swift in Sources */,
+				F492601D254891F2009844FA /* AKPlayerTimeControlStatusObservingService.swift in Sources */,
+				F4926033254891F2009844FA /* AKMediaMetadata.swift in Sources */,
+				F4926017254891F2009844FA /* AKInitState.swift in Sources */,
+				F4926034254891F2009844FA /* AKPlayerManager.swift in Sources */,
+				F4926026254891F2009844FA /* AKAudioSessionServiceable.swift in Sources */,
+				F492603A254891F2009844FA /* AKPlayable.swift in Sources */,
+				F4926037254891F2009844FA /* AKNowPlayableCommand.swift in Sources */,
+				F4926015254891F2009844FA /* AKLoadingState.swift in Sources */,
+				F492601C254891F2009844FA /* AKPlayerTimeObservingService.swift in Sources */,
+				F492603B254891F2009844FA /* AKPlayerView.swift in Sources */,
+				F4926035254891F2009844FA /* AKPlayerError.swift in Sources */,
+				F4926018254891F2009844FA /* AKWaitingForNetworkState.swift in Sources */,
+				F4926013254891F2009844FA /* AKLoadedState.swift in Sources */,
+				F492602F254891F2009844FA /* AKMediaItem.swift in Sources */,
+				F4926014254891F2009844FA /* AKPausedState.swift in Sources */,
+				F492602A254891F2009844FA /* AKPlayerStateControllable.swift in Sources */,
+				F4926031254891F2009844FA /* AKMediaItemPlayable.swift in Sources */,
+				F4926030254891F2009844FA /* AKMediaType.swift in Sources */,
+				F492602C254891F2009844FA /* AKPlayerConfiguration.swift in Sources */,
+				5D4003A5053C52955B977F921AE6B3A7 /* AKPlayer-dummy.m in Sources */,
+				F4926012254891F2009844FA /* AKPlayerDelegate.swift in Sources */,
+				F4926016254891F2009844FA /* AKStoppedState.swift in Sources */,
+				F4926029254891F2009844FA /* AKPlayerCommand.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7ADCC92C84E4A210717C064440DFB8F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D78A2065F1B45407454D45616C304ABC /* Pods-AKPlayer_Tests-dummy.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		582A5D6A6F617FD82459F3BCE6E4A3CA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Pods-AKPlayer_Example";
+			target = AC0A666710EFE219C9B03A77465799D2 /* Pods-AKPlayer_Example */;
+			targetProxy = 7E49014F406DA129DD7CF642FA94B1E7 /* PBXContainerItemProxy */;
+		};
+		9B00FB2C14456E386774CE1E14D1A3CC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AKPlayer;
+			target = B29A593F2453CEE064207F3DE35FC1E9 /* AKPlayer */;
+			targetProxy = DD97B3CE0C616E4F638B82077D0A9D50 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0911A1BA349C9834D7B62BB8F3525F5C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C370E3321814362F1E1D0E79DFACA5F0 /* Pods-AKPlayer_Tests.debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Target Support Files/Pods-AKPlayer_Tests/Pods-AKPlayer_Tests-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				MODULEMAP_FILE = "Target Support Files/Pods-AKPlayer_Tests/Pods-AKPlayer_Tests.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		0BD3A6E0F791D2BC248AB1873CF84249 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 112AEC7F771ED2EC09E1D4A4DD89448B /* Pods-AKPlayer_Example.debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Target Support Files/Pods-AKPlayer_Example/Pods-AKPlayer_Example-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				MODULEMAP_FILE = "Target Support Files/Pods-AKPlayer_Example/Pods-AKPlayer_Example.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		264A9F638BB029C9415E7128794E01AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"POD_CONFIGURATION_RELEASE=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 5.0;
+				SYMROOT = "${SRCROOT}/../build";
+			};
+			name = Release;
+		};
+		31059FC4CDCFE28D42E245A795B024B8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"POD_CONFIGURATION_DEBUG=1",
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				SYMROOT = "${SRCROOT}/../build";
+			};
+			name = Debug;
+		};
+		39B75E7CE427F6F0847160AC8D99AC69 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AC6688AE314FAAED0D6A1C950D3DE68F /* AKPlayer.release.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GCC_PREFIX_HEADER = "Target Support Files/AKPlayer/AKPlayer-prefix.pch";
+				INFOPLIST_FILE = "Target Support Files/AKPlayer/AKPlayer-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/AKPlayer/AKPlayer.modulemap";
+				PRODUCT_MODULE_NAME = AKPlayer;
+				PRODUCT_NAME = AKPlayer;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		6DE6AD19D19E1CB95B32AE4D3D27AE21 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 55CCB772C30F86649C277BC9B52F82BB /* Pods-AKPlayer_Example.release.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Target Support Files/Pods-AKPlayer_Example/Pods-AKPlayer_Example-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				MODULEMAP_FILE = "Target Support Files/Pods-AKPlayer_Example/Pods-AKPlayer_Example.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		762645D6E236E5C13352A5EB8B984BB3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 221BE4EFCC5D3C00B3273B449B2406E9 /* AKPlayer.debug.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GCC_PREFIX_HEADER = "Target Support Files/AKPlayer/AKPlayer-prefix.pch";
+				INFOPLIST_FILE = "Target Support Files/AKPlayer/AKPlayer-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MODULEMAP_FILE = "Target Support Files/AKPlayer/AKPlayer.modulemap";
+				PRODUCT_MODULE_NAME = AKPlayer;
+				PRODUCT_NAME = AKPlayer;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		D3CE3C338420E045631D1B76D56F1DC3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C8368EB2950E10350A15475D436221BA /* Pods-AKPlayer_Tests.release.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CODE_SIGN_IDENTITY = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "Target Support Files/Pods-AKPlayer_Tests/Pods-AKPlayer_Tests-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				MODULEMAP_FILE = "Target Support Files/Pods-AKPlayer_Tests/Pods-AKPlayer_Tests.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				31059FC4CDCFE28D42E245A795B024B8 /* Debug */,
+				264A9F638BB029C9415E7128794E01AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A83F7201D177ED53B38AB0E0B61A678 /* Build configuration list for PBXNativeTarget "AKPlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				762645D6E236E5C13352A5EB8B984BB3 /* Debug */,
+				39B75E7CE427F6F0847160AC8D99AC69 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A422A15A36D1E1F29E09C435BE3ACE66 /* Build configuration list for PBXNativeTarget "Pods-AKPlayer_Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0911A1BA349C9834D7B62BB8F3525F5C /* Debug */,
+				D3CE3C338420E045631D1B76D56F1DC3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C5C358BDE7142C36D09D8217FB5E1939 /* Build configuration list for PBXNativeTarget "Pods-AKPlayer_Example" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BD3A6E0F791D2BC248AB1873CF84249 /* Debug */,
+				6DE6AD19D19E1CB95B32AE4D3D27AE21 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+}
