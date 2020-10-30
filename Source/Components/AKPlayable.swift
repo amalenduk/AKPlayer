@@ -30,4 +30,6 @@ public protocol AKPlayable {
     var type: AKMediaType { get }
     var options: [String: Any]? { get }
     var staticMetadata: AKPlayableStaticMetadata? { get }
+    
+    func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata)
 }

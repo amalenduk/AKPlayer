@@ -41,6 +41,8 @@ final class AKStoppedState: AKPlayerStateControllable {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         manager.player.pause()
+        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didStopped: media, at: manager.currentTime)})
         startPlayerTimeObserving()
         if !flag {
             seek(to: 0) { [unowned self] (finished) in
@@ -58,6 +60,8 @@ final class AKStoppedState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+    
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)

@@ -31,7 +31,7 @@ public class AKNowPlayableCommandService {
     
     // MARK: - Properties
     
-    public var defaultRegisteredCommands: [AKNowPlayableCommand] {
+    public var defaultCommands: [AKNowPlayableCommand] {
         return [.play, .pause, .skipForward, .skipBackward, .changePlaybackPosition]
     }
     
@@ -57,7 +57,7 @@ public class AKNowPlayableCommandService {
     }
     
     private func addHandlers() {
-        for command in defaultRegisteredCommands {
+        for command in defaultCommands {
             command.removeHandler()
             command.addHandler(handleCommand(command:event:))
         }

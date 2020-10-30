@@ -53,7 +53,9 @@ final class AKLoadingState: AKPlayerStateControllable {
         self.autoPlay = autoPlay
         self.position = position
         resetPlayerForNewMedia()
+        manager.plugins.forEach({$0.playerPlugin(willStartLoading: media)})
         createPlayerItem(with: media)
+        manager.plugins.forEach({$0.playerPlugin(didStartLoading: media)})
         startAudioSessionInterruptionObserving()
         manager.setNowPlayingMetadata()
         manager.setNowPlayingPlaybackInfo()
@@ -62,6 +64,8 @@ final class AKLoadingState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+    
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
@@ -89,7 +93,7 @@ final class AKLoadingState: AKPlayerStateControllable {
     
     func play() {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .waitTillMediaLoaded)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
     }
     
     func pause() {
@@ -106,13 +110,13 @@ final class AKLoadingState: AKPlayerStateControllable {
     
     func seek(to time: CMTime, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .waitTillMediaLoaded)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
         completionHandler(false)
     }
     
     func seek(to time: CMTime) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .waitTillMediaLoaded)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
     }
     
     func seek(to time: Double, completionHandler: @escaping (Bool) -> Void) {
@@ -125,12 +129,12 @@ final class AKLoadingState: AKPlayerStateControllable {
     
     func seek(offset: Double) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .waitTillMediaLoaded)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
     }
     
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .loadMediaFirst)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
     

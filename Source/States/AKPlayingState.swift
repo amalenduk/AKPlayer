@@ -44,6 +44,8 @@ final class AKPlayingState: AKPlayerStateControllable {
     init(manager: AKPlayerManageable) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+        guard let media = manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didStartPlaying: media, at: manager.currentTime)})
         startPlayerPlaybackObserving()
         startAudioSessionInterruptionObserving()
         startPlayerTimeObserving()
@@ -55,6 +57,8 @@ final class AKPlayingState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+    
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
@@ -78,7 +82,7 @@ final class AKPlayingState: AKPlayerStateControllable {
     
     func play() {
         AKPlayerLogger.shared.log(message: "Already playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .alreadyPlaying)
+        manager.delegate?.playerManager(unavailableAction: .alreadyPlaying)
     }
     
     func pause() {
@@ -134,6 +138,8 @@ final class AKPlayingState: AKPlayerStateControllable {
         
         playerPlaybackObservingService.onPlayerItemDidPlayToEndTime = { [unowned self] in
             self.manager.delegate?.playerManager(didItemPlayToEndTime: self.manager.currentTime)
+            guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+            self.manager.plugins.forEach({$0.playerPlugin(didPlayToEnd: media, at: self.manager.currentTime)})
             /* It is necessary to remove the callbacks for time control status before change state to stopped state,
              Eighter it will cause an infinite loop between paused state and the time control staus to call on waiting
              for the network state. */

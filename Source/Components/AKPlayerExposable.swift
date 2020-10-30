@@ -1,5 +1,5 @@
 //
-//  AKMediaItem.swift
+//  AKPlayerExposable.swift
 //  AKPlayer
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -23,38 +23,16 @@
 //  SOFTWARE.
 //
 
-import AVFoundation.AVPlayerItem
+import AVFoundation
 
-public class AKMediaItem: AKMediaItemPlayable {
-    
-    // MARK: - Properties
-    
-    public let item: AVPlayerItem
-    
-    public let url: URL
-    
-    public let type: AKMediaType
-    
-    public let options: [String : Any]?
-    
-    public var staticMetadata: AKPlayableStaticMetadata?
-    
-    // MARK: - Init
-    
-    public init?(item: AVPlayerItem,
-                 type: AKMediaType,
-                 options: [String : Any]? = nil,
-                 staticMetadata: AKPlayableStaticMetadata? = nil) {
-        self.item = item
-        self.type = type
-        self.options = options
-        self.staticMetadata = staticMetadata
-        
-        guard let url = (item.asset as? AVURLAsset)?.url else { return nil }
-        self.url = url
-    }
+public protocol AKPlayerExposable: class, AKPlayerCommand {
+    var currentMedia: AKPlayable? { get }
+    var currentItem: AVPlayerItem? { get }
+    var currentTime: CMTime { get }
+    var itemDuration: CMTime? { get }
+    var player: AVPlayer { get }
+    var state: AKPlayer.State { get }
 
-    public func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata) {
-        self.staticMetadata = staticMetadata
-    }
+    func setNowPlayingMetadata()
+    func setNowPlayingPlaybackInfo()
 }

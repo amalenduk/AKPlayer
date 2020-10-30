@@ -59,6 +59,7 @@
 		F492603A254891F2009844FA /* AKPlayable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492600F254891F2009844FA /* AKPlayable.swift */; };
 		F492603B254891F2009844FA /* AKPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926010254891F2009844FA /* AKPlayerView.swift */; };
 		F492603C254891F2009844FA /* AKPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926011254891F2009844FA /* AKPlayer.swift */; };
+		F499BAE0254C81E000ABF30D /* AKPlayerExposable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F499BADF254C81E000ABF30D /* AKPlayerExposable.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -154,6 +155,7 @@
 		F492600F254891F2009844FA /* AKPlayable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayable.swift; sourceTree = "<group>"; };
 		F4926010254891F2009844FA /* AKPlayerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerView.swift; sourceTree = "<group>"; };
 		F4926011254891F2009844FA /* AKPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayer.swift; sourceTree = "<group>"; };
+		F499BADF254C81E000ABF30D /* AKPlayerExposable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AKPlayerExposable.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -385,6 +387,7 @@
 				F492600E254891F2009844FA /* AKPlayerPlugin.swift */,
 				F492600F254891F2009844FA /* AKPlayable.swift */,
 				F4926010254891F2009844FA /* AKPlayerView.swift */,
+				F499BADF254C81E000ABF30D /* AKPlayerExposable.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -571,6 +574,7 @@
 				F4926033254891F2009844FA /* AKMediaMetadata.swift in Sources */,
 				F4926017254891F2009844FA /* AKInitState.swift in Sources */,
 				F4926034254891F2009844FA /* AKPlayerManager.swift in Sources */,
+				F499BAE0254C81E000ABF30D /* AKPlayerExposable.swift in Sources */,
 				F4926026254891F2009844FA /* AKAudioSessionServiceable.swift in Sources */,
 				F492603A254891F2009844FA /* AKPlayable.swift in Sources */,
 				F4926037254891F2009844FA /* AKNowPlayableCommand.swift in Sources */,

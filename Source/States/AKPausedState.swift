@@ -42,6 +42,8 @@ final class AKPausedState: AKPlayerStateControllable {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         manager.player.pause()
+        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didPaused: media, at: manager.currentTime)})
         startAudioSessionInterruptionObserving()
         startPlayerTimeObserving()
         manager.setNowPlayingPlaybackInfo()
@@ -50,6 +52,8 @@ final class AKPausedState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+    
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
@@ -86,7 +90,7 @@ final class AKPausedState: AKPlayerStateControllable {
     
     func pause() {
         AKPlayerLogger.shared.log(message: "Already paused", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .alreadyPaused)
+        manager.delegate?.playerManager(unavailableAction: .alreadyPaused)
     }
     
     func stop() {

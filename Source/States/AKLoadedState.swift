@@ -40,7 +40,9 @@ final class AKLoadedState: AKPlayerStateControllable {
     init(manager: AKPlayerManageable) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
-        manager.delegate?.playerManager(didItemDurationChange: manager.currentItem!.duration)
+        guard let media = manager.currentMedia, let currentItem = manager.currentItem else { assertionFailure("Media and Current item should available"); return }
+        manager.delegate?.playerManager(didItemDurationChange: currentItem.duration)
+        manager.plugins.forEach({$0.playerPlugin(didLoad: media, with: currentItem.duration)})
         startPlayerTimeObserving()
         setMetadata()
     }
@@ -48,6 +50,8 @@ final class AKLoadedState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)

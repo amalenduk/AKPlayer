@@ -27,11 +27,14 @@ import Foundation
 
 enum DemoScreen: CaseIterable {
     case simpleVideo
+    case playerControl
     
     var id: String {
         switch self {
         case .simpleVideo:
             return "SimpleVideo"
+        case .playerControl:
+            return "Control"
         }
     }
     
@@ -39,6 +42,8 @@ enum DemoScreen: CaseIterable {
         switch self {
         case .simpleVideo:
             return "SimpleVideoViewController"
+        case .playerControl:
+            return "PlayerWithUIControlViewController"
         }
     }
     
@@ -46,6 +51,8 @@ enum DemoScreen: CaseIterable {
         switch self {
         case .simpleVideo:
             return "Simple Video"
+        case .playerControl:
+            return "Controlled Player"
         }
     }
 }

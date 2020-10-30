@@ -92,7 +92,6 @@ public enum AKNowPlayableCommand: CaseIterable {
     
     // Install a handler for this command.
     public func addHandler(_ handler: @escaping (AKNowPlayableCommand, MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus) {
-        
         switch self {
         case .changePlaybackRate:
             MPRemoteCommandCenter.shared().changePlaybackRateCommand.supportedPlaybackRates = [1.0, 2.0]

@@ -26,12 +26,17 @@
 import AVFoundation
 import Foundation
 
-open class AKPlayerManager: AKPlayerManageable, AKPlayerCommand {
+open class AKPlayerManager: AKPlayerManageable {
     
     // MARK: - Properties
-    
-    open private (set) var currentMedia: AKPlayable?
-    
+
+    open private (set) var currentMedia: AKPlayable? {
+        didSet {
+            guard let media = currentMedia else { assertionFailure("Media should available"); return }
+            plugins.forEach({$0.playerPlugin(didChanged: media)})
+        }
+    }
+
     open var currentItem: AVPlayerItem? {
         return player.currentItem
     }
@@ -41,10 +46,15 @@ open class AKPlayerManager: AKPlayerManageable, AKPlayerCommand {
     }
     
     open var itemDuration: CMTime? {
-        return player.currentItem?.duration
+        return currentItem?.duration
     }
     
     open private (set) var player: AVPlayer
+
+    /// Current state of the player
+    open var state: AKPlayer.State {
+        return controller.state
+    }
     
     open private (set) var plugins: [AKPlayerPlugin]
     
@@ -55,16 +65,14 @@ open class AKPlayerManager: AKPlayerManageable, AKPlayerCommand {
             delegate?.playerManager(didStateChange: controller.state)
         }
     }
-    
-    open var state: AKPlayer.State {
-        return controller.state
-    }
-    
+
     open weak var delegate: AKPlayerManageableDelegate?
     
     public let audioSessionService: AKAudioSessionServiceable
+
     public var playerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServiceable?
-    public private(set) var remoteCommands: AKNowPlayableCommandService?
+
+    public private(set) var remoteCommandsService: AKNowPlayableCommandService?
     
     // MARK: - Init
     
@@ -78,13 +86,16 @@ open class AKPlayerManager: AKPlayerManageable, AKPlayerCommand {
         self.configuration = configuration
         self.audioSessionService = audioSessionService
         self.playerNowPlayingMetadataService = playerNowPlayingMetadataService
+
+        if configuration.isRemoteCommandsEnabled {
+            remoteCommandsService = AKNowPlayableCommandService(with: player, configuration: configuration, manager: self)
+            remoteCommandsService?.enable()
+        }
         
         setAudioSessionCategory()
         
         defer {
             controller = AKInitState(manager: self)
-            remoteCommands = AKNowPlayableCommandService(with: player, configuration: configuration, manager: self)
-            remoteCommands?.enable()
         }
     }
     
@@ -95,7 +106,9 @@ open class AKPlayerManager: AKPlayerManageable, AKPlayerCommand {
     open func change(_ controller: AKPlayerStateControllable) {
         self.controller = controller
     }
-    
+
+    // MARK: - Commands
+
     open func load(media: AKPlayable) {
         currentMedia = media
         controller.load(media: media)
@@ -173,23 +186,23 @@ open class AKPlayerManager: AKPlayerManageable, AKPlayerCommand {
     // MARK: - Additional Helper Functions
     
     private func unaivalableCommand(reason: AKPlayerUnavailableActionReason) {
-        delegate?.playerManager(unavailableActionReason: reason)
+        delegate?.playerManager(unavailableAction: reason)
         AKPlayerLogger.shared.log(message: reason.description, domain: .unavailableCommand)
     }
     
     open func setAudioSessionCategory() {
         audioSessionService.setCategory(configuration.audioSessionCategory, mode: configuration.audioSessionMode, options: configuration.audioSessionCategoryOptions)
     }
-    
-    // MARK: - Observers
-    
+
     public func setNowPlayingMetadata() {
+        guard configuration.isRemoteCommandsEnabled else { return }
         guard let media = currentMedia else { assertionFailure("Media should exist here"); return }
         guard let staticMetadata = media.staticMetadata, let playerNowPlayingMetadataService = playerNowPlayingMetadataService else { return }
         playerNowPlayingMetadataService.setNowPlayingMetadata(staticMetadata)
     }
     
     public func setNowPlayingPlaybackInfo() {
+        guard configuration.isRemoteCommandsEnabled else { return }
         guard let playerNowPlayingMetadataService = playerNowPlayingMetadataService else { return }
         playerNowPlayingMetadataService.setNowPlayingPlaybackInfo(AKMediaDynamicMetadata(rate: player.rate, position: Float(currentTime.seconds), duration: Float(player.currentItem?.duration.seconds ?? 0), currentLanguageOptions: [], availableLanguageOptionGroups: []))
     }

@@ -41,6 +41,8 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
     init(manager: AKPlayerManageable) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didStartWaitingForNetwork: media)})
         startPlayerTimeControlStatusObserving()
         startPlayerTimeObserving()
         manager.setNowPlayingPlaybackInfo()
@@ -49,6 +51,8 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+    
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
