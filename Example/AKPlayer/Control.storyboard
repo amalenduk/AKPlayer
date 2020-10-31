@@ -15,9 +15,92 @@
                     <view key="view" contentMode="scaleToFill" id="qld-Zi-EY6">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="oAa-qW-IT6" customClass="AKVideoPlayer" customModule="AKPlayer_Example" customModuleProvider="target">
+                                <rect key="frame" x="0.0" y="44" width="414" height="233"/>
+                                <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="oAa-qW-IT6" secondAttribute="height" multiplier="16:9" id="qRP-NR-jG4"/>
+                                </constraints>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="qRP-NR-jG4"/>
+                                    </mask>
+                                </variation>
+                                <variation key="heightClass=regular-widthClass=compact">
+                                    <mask key="constraints">
+                                        <include reference="qRP-NR-jG4"/>
+                                    </mask>
+                                </variation>
+                            </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fha-fq-8RS">
+                                <rect key="frame" x="0.0" y="277" width="414" height="585"/>
+                                <color key="backgroundColor" systemColor="tertiarySystemGroupedBackgroundColor" red="0.94901960780000005" green="0.94901960780000005" blue="0.96862745100000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </view>
+                        </subviews>
                         <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                        <constraints>
+                            <constraint firstItem="oAa-qW-IT6" firstAttribute="leading" secondItem="bkb-c6-Gpe" secondAttribute="leading" id="Apo-xk-FOc"/>
+                            <constraint firstAttribute="bottom" secondItem="oAa-qW-IT6" secondAttribute="bottom" id="AqP-HH-l5t">
+                                <variation key="heightClass=compact-widthClass=regular" constant="0.0"/>
+                            </constraint>
+                            <constraint firstItem="fha-fq-8RS" firstAttribute="top" secondItem="oAa-qW-IT6" secondAttribute="bottom" id="GQk-Pd-GDt"/>
+                            <constraint firstItem="bkb-c6-Gpe" firstAttribute="trailing" secondItem="fha-fq-8RS" secondAttribute="trailing" id="Kti-1q-rAi"/>
+                            <constraint firstItem="oAa-qW-IT6" firstAttribute="trailing" secondItem="bkb-c6-Gpe" secondAttribute="trailing" id="T1w-4l-6CJ"/>
+                            <constraint firstItem="oAa-qW-IT6" firstAttribute="top" secondItem="bkb-c6-Gpe" secondAttribute="top" id="TX0-2C-hO6"/>
+                            <constraint firstItem="fha-fq-8RS" firstAttribute="leading" secondItem="bkb-c6-Gpe" secondAttribute="leading" id="gCY-uf-rtS"/>
+                            <constraint firstItem="bkb-c6-Gpe" firstAttribute="bottom" secondItem="fha-fq-8RS" secondAttribute="bottom" id="kln-UX-jAO"/>
+                            <constraint firstItem="oAa-qW-IT6" firstAttribute="top" secondItem="bkb-c6-Gpe" secondAttribute="top" id="lvP-NC-Tcj"/>
+                            <constraint firstItem="oAa-qW-IT6" firstAttribute="leading" secondItem="qld-Zi-EY6" secondAttribute="leading" id="oGS-V3-y8F"/>
+                            <constraint firstAttribute="trailing" secondItem="oAa-qW-IT6" secondAttribute="trailing" id="w99-WL-YZX">
+                                <variation key="heightClass=compact-widthClass=regular" constant="0.0"/>
+                            </constraint>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="bkb-c6-Gpe"/>
+                        <variation key="default">
+                            <mask key="constraints">
+                                <exclude reference="Apo-xk-FOc"/>
+                                <exclude reference="T1w-4l-6CJ"/>
+                                <exclude reference="TX0-2C-hO6"/>
+                                <exclude reference="lvP-NC-Tcj"/>
+                                <exclude reference="oGS-V3-y8F"/>
+                                <exclude reference="AqP-HH-l5t"/>
+                                <exclude reference="Kti-1q-rAi"/>
+                                <exclude reference="kln-UX-jAO"/>
+                                <exclude reference="w99-WL-YZX"/>
+                                <exclude reference="GQk-Pd-GDt"/>
+                                <exclude reference="gCY-uf-rtS"/>
+                            </mask>
+                        </variation>
+                        <variation key="widthClass=regular">
+                            <mask key="subviews">
+                                <exclude reference="fha-fq-8RS"/>
+                            </mask>
+                        </variation>
+                        <variation key="heightClass=compact-widthClass=regular">
+                            <mask key="constraints">
+                                <include reference="lvP-NC-Tcj"/>
+                                <include reference="oGS-V3-y8F"/>
+                                <include reference="AqP-HH-l5t"/>
+                                <include reference="w99-WL-YZX"/>
+                            </mask>
+                        </variation>
+                        <variation key="heightClass=regular-widthClass=compact">
+                            <mask key="constraints">
+                                <include reference="Apo-xk-FOc"/>
+                                <include reference="T1w-4l-6CJ"/>
+                                <include reference="TX0-2C-hO6"/>
+                                <include reference="Kti-1q-rAi"/>
+                                <include reference="kln-UX-jAO"/>
+                                <include reference="GQk-Pd-GDt"/>
+                                <include reference="gCY-uf-rtS"/>
+                            </mask>
+                        </variation>
                     </view>
+                    <connections>
+                        <outlet property="bottomContainerView" destination="fha-fq-8RS" id="SuQ-bp-AKE"/>
+                        <outlet property="videoPlayer" destination="oAa-qW-IT6" id="Yed-XR-NNe"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="2rJ-d4-NPK" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>

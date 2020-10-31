@@ -49,6 +49,11 @@ open class AKPlayer: AKPlayerExposable {
         return manager.state
     }
 
+    open var rate: Float {
+        get { return manager.rate }
+        set { manager.rate = newValue }
+    }
+
     public let player: AVPlayer
     
     public let manager: AKPlayerManager
@@ -60,10 +65,12 @@ open class AKPlayer: AKPlayerExposable {
     public init(player: AVPlayer = AVPlayer(),
                 plugins: [AKPlayerPlugin] = [],
                 configuration: AKPlayerConfiguration = AKPlayerDefaultConfiguration(),
-                loggerDomains: [AKPlayerLoggerDomain] = []) {
+                audioSessionService: AKAudioSessionServiceable = AKAudioSessionService()) {
         self.player = player
-        AKPlayerLogger.setup.domains = loggerDomains
-        manager = AKPlayerManager(player: player, plugins: plugins, configuration: configuration)
+        manager = AKPlayerManager(player: player,
+                                  plugins: plugins,
+                                  configuration: configuration,
+                                  audioSessionService: audioSessionService)
         manager.delegate = self
     }
 

@@ -141,14 +141,19 @@ final class AKLoadingState: AKPlayerStateControllable {
     // MARK: - Additional Helper Functions
     
     private func createPlayerItem(with media: AKPlayable) {
-        playerIemInitializationService = AKPlayerItemInitializationService(with: media, configuration: manager.configuration)
-        playerIemInitializationService.onCompletedCreatingPlayerItem = { [unowned self] result in
-            switch result {
-            case .success(let item):
-                self.manager.player.replaceCurrentItem(with: item)
-                self.startObservingStatus(for: item)
-            case .failure(let error):
-                self.assetFailedToPrepareForPlayback(with: error)
+        if let item = media as? AKMediaItemPlayable {
+            self.manager.player.replaceCurrentItem(with: item.item)
+            self.startObservingStatus(for: item.item)
+        }else {
+            playerIemInitializationService = AKPlayerItemInitializationService(with: media, configuration: manager.configuration)
+            playerIemInitializationService.onCompletedCreatingPlayerItem = { [unowned self] result in
+                switch result {
+                case .success(let item):
+                    self.manager.player.replaceCurrentItem(with: item)
+                    self.startObservingStatus(for: item)
+                case .failure(let error):
+                    self.assetFailedToPrepareForPlayback(with: error)
+                }
             }
         }
     }

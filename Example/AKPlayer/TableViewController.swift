@@ -54,10 +54,17 @@ class TableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard let navVC = navigationController else { assertionFailure(); return }
-
         let screen = DemoScreen.allCases[indexPath.row]
         let sb = UIStoryboard(name: screen.id, bundle: Bundle.main)
         let vc = sb.instantiateViewController(withIdentifier: screen.screen)
-        navVC.pushViewController(vc, animated: true)
+
+        if screen.screen == "PlayerWithUIControlViewController" {
+            vc.providesPresentationContextTransitionStyle = true
+            vc.definesPresentationContext = true
+            vc.modalPresentationStyle = .overFullScreen
+            present(vc, animated: true, completion: nil)
+        }else {
+            navVC.pushViewController(vc, animated: true)
+        }
     }
 }

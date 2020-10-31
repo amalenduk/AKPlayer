@@ -41,8 +41,9 @@ class SimpleVideoViewController: UIViewController {
     @IBOutlet weak var indicator: UIActivityIndicatorView!
     
     private let player: AKPlayer = {
+        AKPlayerLogger.setup.domains = [.state, .error]
         let configuration = AKPlayerDefaultConfiguration()
-        return AKPlayer(plugins: [], configuration: configuration, loggerDomains: [.state, .error])
+        return AKPlayer(plugins: [], configuration: configuration)
     }()
     
     override func viewDidLoad() {

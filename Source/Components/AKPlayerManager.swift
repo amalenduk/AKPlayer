@@ -49,11 +49,16 @@ open class AKPlayerManager: AKPlayerManageable {
         return currentItem?.duration
     }
     
-    open private (set) var player: AVPlayer
+    public let player: AVPlayer
 
     /// Current state of the player
     open var state: AKPlayer.State {
         return controller.state
+    }
+
+    open var rate: Float {
+        get { return player.rate }
+        set { player.rate = newValue }
     }
     
     open private (set) var plugins: [AKPlayerPlugin]
@@ -63,6 +68,7 @@ open class AKPlayerManager: AKPlayerManageable {
     open private (set) var controller: AKPlayerStateControllable! {
         didSet {
             delegate?.playerManager(didStateChange: controller.state)
+            plugins.forEach({$0.playerPlugin(didChanged: controller.state)})
         }
     }
 
@@ -79,15 +85,14 @@ open class AKPlayerManager: AKPlayerManageable {
     public init(player: AVPlayer,
                 plugins: [AKPlayerPlugin],
                 configuration: AKPlayerConfiguration,
-                audioSessionService: AKAudioSessionServiceable = AKAudioSessionService(),
-                playerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServiceable = AKPlayerNowPlayingMetadataService()) {
+                audioSessionService: AKAudioSessionServiceable = AKAudioSessionService()) {
         self.player = player
         self.plugins = plugins
         self.configuration = configuration
         self.audioSessionService = audioSessionService
-        self.playerNowPlayingMetadataService = playerNowPlayingMetadataService
 
         if configuration.isRemoteCommandsEnabled {
+            playerNowPlayingMetadataService = AKPlayerNowPlayingMetadataService()
             remoteCommandsService = AKNowPlayableCommandService(with: player, configuration: configuration, manager: self)
             remoteCommandsService?.enable()
         }

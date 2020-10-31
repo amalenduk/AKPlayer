@@ -1,5 +1,5 @@
 //
-//  AKPlayerExposable.swift
+//  CMTime+Extension.swift
 //  AKPlayer
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -25,15 +25,18 @@
 
 import AVFoundation
 
-public protocol AKPlayerExposable: class, AKPlayerCommand {
-    var currentMedia: AKPlayable? { get }
-    var currentItem: AVPlayerItem? { get }
-    var currentTime: CMTime { get }
-    var itemDuration: CMTime? { get }
-    var player: AVPlayer { get }
-    var state: AKPlayer.State { get }
-    var rate: Float { get }
-
-    func setNowPlayingMetadata()
-    func setNowPlayingPlaybackInfo()
+public extension CMTime {
+    var roundedSeconds: TimeInterval {
+        return seconds.rounded()
+    }
+    var hours:  Int { return Int(roundedSeconds / 3600) }
+    var minute: Int { return Int(roundedSeconds.truncatingRemainder(dividingBy: 3600) / 60) }
+    var second: Int { return Int(roundedSeconds.truncatingRemainder(dividingBy: 60)) }
+    var positionalTime: String {
+        return hours > 0 ?
+            String(format: "%d:%02d:%02d",
+                   hours, minute, second) :
+            String(format: "%02d:%02d",
+                   minute, second)
+    }
 }
