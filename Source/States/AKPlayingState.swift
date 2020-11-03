@@ -128,6 +128,10 @@ final class AKPlayingState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
+
+    func seek(to percentage: Float, completionHandler: @escaping (Bool) -> Void) {
+        
+    }
     
     // MARK: - Additional Helper Functions
     
@@ -197,7 +201,8 @@ final class AKPlayingState: AKPlayerStateControllable {
             case .paused:
                 self.pause()
             case .waitingToPlayAtSpecifiedRate:
-                assertionFailure("Should be not here, `AVPlayerItemFailedToPlayToEndTime` called first")
+                let controller = AKBufferingState(manager: self.manager)
+                self.manager.change(controller)
             default:
                 break
             }

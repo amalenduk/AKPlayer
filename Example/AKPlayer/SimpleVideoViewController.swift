@@ -1,6 +1,6 @@
 //
 //  SimpleVideoViewController.swift
-//  AKPlayer
+//  AKPlayer_Example
 //
 //  Copyright (c) 2020 Amalendu Kar
 //
@@ -84,14 +84,14 @@ class SimpleVideoViewController: UIViewController {
     }
     
     @IBAction func load(_ sender: Any) {
-        let url = URL(string: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4")!
+        let url = URL(string: "https://5b44cf20b0388.streamlock.net:8443/vod/smil:bbb.smil/playlist.m3u8")!
         let metadata = AKMediaStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "Bal", artwork: nil, albumArtist: "dfgg", albumTitle: "ggee")
         let media = AKMedia(url: url, type: .clip, staticMetadata: metadata)
         player.load(media: media)
     }
     
     @IBAction func loadAndPlay(_ sender: Any) {
-        let url = URL(string: "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mov-file.mov")!
+        let url = URL(string: "https://5b44cf20b0388.streamlock.net:8443/vod/smil:bbb.smil/playlist.m3u8")!
         let metadata = AKMediaStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "By Google", artwork: nil, albumArtist: "dfgg", albumTitle: "ggee")
         let media = AKMedia(url: url, type: .clip, staticMetadata: metadata)
         player.load(media: media, autoPlay: true, at: CMTime(seconds: 10, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))

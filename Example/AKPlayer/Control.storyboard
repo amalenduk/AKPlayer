@@ -35,7 +35,20 @@
                             </view>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fha-fq-8RS">
                                 <rect key="frame" x="0.0" y="277" width="414" height="585"/>
+                                <subviews>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="b9J-It-6n6">
+                                        <rect key="frame" x="190" y="277.5" width="34" height="30"/>
+                                        <state key="normal" title="Load"/>
+                                        <connections>
+                                            <action selector="loadButtonAction:" destination="gVa-fz-rTk" eventType="touchUpInside" id="DyY-fV-rw2"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
                                 <color key="backgroundColor" systemColor="tertiarySystemGroupedBackgroundColor" red="0.94901960780000005" green="0.94901960780000005" blue="0.96862745100000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstItem="b9J-It-6n6" firstAttribute="centerY" secondItem="fha-fq-8RS" secondAttribute="centerY" id="LpB-og-om0"/>
+                                    <constraint firstItem="b9J-It-6n6" firstAttribute="centerX" secondItem="fha-fq-8RS" secondAttribute="centerX" id="Um0-Tc-fIv"/>
+                                </constraints>
                             </view>
                         </subviews>
                         <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
@@ -59,14 +72,14 @@
                         <viewLayoutGuide key="safeArea" id="bkb-c6-Gpe"/>
                         <variation key="default">
                             <mask key="constraints">
+                                <exclude reference="Kti-1q-rAi"/>
+                                <exclude reference="kln-UX-jAO"/>
                                 <exclude reference="Apo-xk-FOc"/>
+                                <exclude reference="AqP-HH-l5t"/>
                                 <exclude reference="T1w-4l-6CJ"/>
                                 <exclude reference="TX0-2C-hO6"/>
                                 <exclude reference="lvP-NC-Tcj"/>
                                 <exclude reference="oGS-V3-y8F"/>
-                                <exclude reference="AqP-HH-l5t"/>
-                                <exclude reference="Kti-1q-rAi"/>
-                                <exclude reference="kln-UX-jAO"/>
                                 <exclude reference="w99-WL-YZX"/>
                                 <exclude reference="GQk-Pd-GDt"/>
                                 <exclude reference="gCY-uf-rtS"/>
@@ -79,19 +92,19 @@
                         </variation>
                         <variation key="heightClass=compact-widthClass=regular">
                             <mask key="constraints">
+                                <include reference="AqP-HH-l5t"/>
                                 <include reference="lvP-NC-Tcj"/>
                                 <include reference="oGS-V3-y8F"/>
-                                <include reference="AqP-HH-l5t"/>
                                 <include reference="w99-WL-YZX"/>
                             </mask>
                         </variation>
                         <variation key="heightClass=regular-widthClass=compact">
                             <mask key="constraints">
+                                <include reference="Kti-1q-rAi"/>
+                                <include reference="kln-UX-jAO"/>
                                 <include reference="Apo-xk-FOc"/>
                                 <include reference="T1w-4l-6CJ"/>
                                 <include reference="TX0-2C-hO6"/>
-                                <include reference="Kti-1q-rAi"/>
-                                <include reference="kln-UX-jAO"/>
                                 <include reference="GQk-Pd-GDt"/>
                                 <include reference="gCY-uf-rtS"/>
                             </mask>
@@ -99,6 +112,7 @@
                     </view>
                     <connections>
                         <outlet property="bottomContainerView" destination="fha-fq-8RS" id="SuQ-bp-AKE"/>
+                        <outlet property="loadButton" destination="b9J-It-6n6" id="IIO-Dg-qQv"/>
                         <outlet property="videoPlayer" destination="oAa-qW-IT6" id="Yed-XR-NNe"/>
                     </connections>
                 </viewController>

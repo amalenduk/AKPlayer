@@ -52,6 +52,7 @@ final class AKLoadingState: AKPlayerStateControllable {
         self.media = media
         self.autoPlay = autoPlay
         self.position = position
+        manager.delegate?.playerManager(didCurrentMediaChange: media)
         resetPlayerForNewMedia()
         manager.plugins.forEach({$0.playerPlugin(willStartLoading: media)})
         createPlayerItem(with: media)
@@ -70,25 +71,22 @@ final class AKLoadingState: AKPlayerStateControllable {
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
         manager.change(controller)
-        manager.delegate?.playerManager(didCurrentMediaChange: media)
     }
     
     func load(media: AKPlayable, autoPlay: Bool) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay)
         manager.change(controller)
-        manager.delegate?.playerManager(didCurrentMediaChange: media)
     }
     
     func load(media: AKPlayable, autoPlay: Bool, at position: CMTime) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay, at: position)
         manager.change(controller)
-        manager.delegate?.playerManager(didCurrentMediaChange: media)
     }
     
     func load(media: AKPlayable, autoPlay: Bool, at position: Double) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay, at: CMTime(seconds: position, preferredTimescale: manager.configuration.preferredTimescale))
-        manager.change(controller)
         manager.delegate?.playerManager(didCurrentMediaChange: media)
+        manager.change(controller)
     }
     
     func play() {

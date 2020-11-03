@@ -1,5 +1,5 @@
 //
-//  PlayerWithUIControlViewController.swift
+//  ProgressAndBufferedSlider.swift
 //  AKPlayer_Example
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -23,37 +23,56 @@
 //  SOFTWARE.
 //
 
+import Foundation
 import UIKit
-import AKPlayer
 
-class PlayerWithUIControlViewController: UIViewController {
-    
-    // MARK: - UIElements
-    
-    @IBOutlet weak var videoPlayer: AKVideoPlayer!
-    @IBOutlet weak var bottomContainerView: UIView!
-    @IBOutlet weak var loadButton: UIButton!
+@IBDesignable class AKProgressAndTimeRangesSlider: UISlider {
 
-    // MARK: - Variables
+    var timerangesProgressView: UIProgressView!
 
-    var url: URL!
-    var metadata: AKMediaStaticMetadata!
-    var media: AKMedia!
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        navigationItem.title = "Controlled Player"
-        
-        url = URL(string: "https://www.radiantmediaplayer.com/media/big-buck-bunny-360p.mp4")!
-        metadata = AKMediaStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "Amalendu Kar", artwork: nil, albumArtist: "Amalendu Kar", albumTitle: "Amalendu Kar")
-        media = AKMedia(url: url, type: .clip, staticMetadata: metadata)
-        view.bringSubviewToFront(videoPlayer)
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        commonInit()
     }
 
-    // MARK: - User Interactions
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        commonInit()
+    }
 
-    @IBAction func loadButtonAction(_ sender: Any) {
-        videoPlayer.load(media: media, autoPlay: true)
+    open func commonInit() {
+        setupUI()
+        applyDesigns()
+        resetControls()
+        addUIElements()
+        makeViewConstraints()
+    }
+
+    open func setupUI() {
+        timerangesProgressView = UIProgressView()
+    }
+
+    open func applyDesigns() {
+        setThumbImage(UIImage(named: "ic.track.thumb"), for: .normal)
+        minimumTrackTintColor = .red
+        maximumTrackTintColor = .darkGray
+
+        timerangesProgressView.tintColor = .white
+        timerangesProgressView.progressTintColor = .white
+    }
+
+    open func resetControls() {
+        minimumValue = 0
+        maximumValue = 1
+        value = 0
+        timerangesProgressView.progress = 0.8
+    }
+
+    open func addUIElements() {
+        addSubview(timerangesProgressView)
+    }
+
+    open func makeViewConstraints() {
+
     }
 }
