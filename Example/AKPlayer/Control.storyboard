@@ -2,7 +2,6 @@
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15702" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
-        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15704"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -43,11 +42,17 @@
                                             <action selector="loadButtonAction:" destination="gVa-fz-rTk" eventType="touchUpInside" id="DyY-fV-rw2"/>
                                         </connections>
                                     </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mNU-4Z-cV4" customClass="AKPlaybackRateButton" customModule="AKPlayer_Example" customModuleProvider="target">
+                                        <rect key="frame" x="191" y="323.5" width="32" height="30"/>
+                                        <state key="normal" title="Rate"/>
+                                    </button>
                                 </subviews>
                                 <color key="backgroundColor" systemColor="tertiarySystemGroupedBackgroundColor" red="0.94901960780000005" green="0.94901960780000005" blue="0.96862745100000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
                                     <constraint firstItem="b9J-It-6n6" firstAttribute="centerY" secondItem="fha-fq-8RS" secondAttribute="centerY" id="LpB-og-om0"/>
+                                    <constraint firstItem="mNU-4Z-cV4" firstAttribute="centerX" secondItem="fha-fq-8RS" secondAttribute="centerX" id="TBn-uy-hsr"/>
                                     <constraint firstItem="b9J-It-6n6" firstAttribute="centerX" secondItem="fha-fq-8RS" secondAttribute="centerX" id="Um0-Tc-fIv"/>
+                                    <constraint firstItem="mNU-4Z-cV4" firstAttribute="top" secondItem="b9J-It-6n6" secondAttribute="bottom" constant="16" id="guw-qI-8aA"/>
                                 </constraints>
                             </view>
                         </subviews>
@@ -113,6 +118,7 @@
                     <connections>
                         <outlet property="bottomContainerView" destination="fha-fq-8RS" id="SuQ-bp-AKE"/>
                         <outlet property="loadButton" destination="b9J-It-6n6" id="IIO-Dg-qQv"/>
+                        <outlet property="rateButton" destination="mNU-4Z-cV4" id="5Kz-51-mC9"/>
                         <outlet property="videoPlayer" destination="oAa-qW-IT6" id="Yed-XR-NNe"/>
                     </connections>
                 </viewController>

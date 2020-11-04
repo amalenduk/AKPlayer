@@ -87,7 +87,7 @@ public class AKNowPlayableCommandService {
             return .noSuchContent
         case .changePlaybackRate:
             guard let event = event as? MPChangePlaybackRateCommandEvent else { return .commandFailed }
-            manager.player.rate = event.playbackRate
+            manager.playbackRate = AKPlaybackRate(rate: event.playbackRate)
         case .seekBackward:
             guard let event = event as? MPSeekCommandEvent else { return .commandFailed }
             manager.player.rate = (event.type == .beginSeeking ? -3.0 : 1.0)

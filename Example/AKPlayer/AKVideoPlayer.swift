@@ -27,7 +27,7 @@ import UIKit
 import AVFoundation
 import AKPlayer
 
-class AKVideoPlayer: UIView {
+open class AKVideoPlayer: UIView {
     
     // MARK:- UIElements
     
@@ -37,8 +37,13 @@ class AKVideoPlayer: UIView {
 
     // MARK:- Variables
     
-    private var player: AKPlayer!
-    private let configuration = AKPlayerDefaultConfiguration()
+    open private(set) var player: AKPlayer!
+    public let configuration = AKPlayerDefaultConfiguration()
+
+    open var playbackRate: AKPlaybackRate {
+        get { player.playbackRate }
+        set { player.playbackRate = newValue }
+    }
     
     weak var delegate: AKPlayerDelegate? {
         didSet {
@@ -58,10 +63,15 @@ class AKVideoPlayer: UIView {
         commonInit()
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         super.init(coder: coder)
         
         commonInit()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
     }
     
     // MARK: Layout
@@ -95,16 +105,14 @@ class AKVideoPlayer: UIView {
     
     @objc private func timeSliderSlideEndedAction(_ sender: UISlider) {
         if let duration = player.itemDuration, duration.isValid && duration.isNumeric {
-            player.seek(to: duration.seconds * Double(sender.value)) { (finished) in
-                
-            }
+            player.seek(to: duration.seconds * Double(sender.value))
         }
     }
     
     // MARK: Additional Helpers
     
     /// Override this function to add targets to buttons
-    func addTargets() {
+    open func addTargets() {
         controlView.playbackButton.addTarget(self, action: #selector(playPauseButtonAction(_ :)), for: .touchUpInside)
         controlView.minimizeButton.action = #selector(minimizeBarButtonAction(_ :))
         
@@ -116,6 +124,10 @@ class AKVideoPlayer: UIView {
         
         controlView.progressSlider.addTarget(self, action: #selector(timeSliderSlideEndedAction(_:)),
                                              for: [.touchUpInside, .touchCancel, .touchUpOutside])
+
+        controlView.playbackrateButton.onRateChange { (rate) in
+            self.player.playbackRate = rate
+        }
     }
     
     /// Called by both `init(frame: CGRect)` and `init?(coder: NSCoder)`,
@@ -124,14 +136,13 @@ class AKVideoPlayer: UIView {
         contentView.frame = self.bounds
         contentView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         addSubview(contentView)
-        clipsToBounds = false
-        contentView.clipsToBounds = false
         setupPlayer()
         addTargets()
+        addObserbers()
     }
     
     private func setupPlayer() {
-        AKPlayerLogger.setup.domains = [.state, .error]
+        AKPlayerLogger.setup.domains = AKPlayerLoggerDomain.allCases
         player = AKPlayer(plugins: [self], configuration: configuration)
         player.delegate = self
         playerView.playerLayer.player = player.player
@@ -144,121 +155,80 @@ class AKVideoPlayer: UIView {
             controlView.progressSlider.isEnabled = true
         }
     }
+
+    private func addObserbers() {
+        NotificationCenter.default.addObserver(self, selector: #selector(didEnterInBackground(_ :)), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(didEnterInForeground(_ :)), name: UIApplication.willEnterForegroundNotification, object: nil)
+    }
+
+    // MARK: - Obserbers
+
+    @objc func didEnterInBackground(_ notification: Notification) {
+        playerView.player = nil
+    }
+
+    @objc func didEnterInForeground(_ notification: Notification) {
+        playerView.player = player.player
+    }
 }
 
 // MARK: - AKPlayerPlugin
 
-extension AKVideoPlayer: AKPlayerPlugin {
-    func playerPlugin(didInit player: AVPlayer) {
-        
-    }
-    
-    func playerPlugin(didChanged state: AKPlayer.State) {
-        
-    }
-    
-    func playerPlugin(didChanged media: AKPlayable) {
-        
-    }
-    
-    func playerPlugin(willStartLoading media: AKPlayable) {
-        
-    }
-    
-    func playerPlugin(didStartLoading media: AKPlayable) {
-        
-    }
-    
-    func playerPlugin(didStartBuffering media: AKPlayable) {
-        
-    }
-    
-    func playerPlugin(didLoad media: AKPlayable, with duration: CMTime) {
-        
-    }
-    
-    func playerPlugin(willStartPlaying media: AKPlayable, at position: CMTime) {
-        
-    }
-    
-    func playerPlugin(didStartPlaying media: AKPlayable, at position: CMTime) {
-        
-    }
-    
-    func playerPlugin(didPaused media: AKPlayable, at position: CMTime) {
-        
-    }
-    
-    func playerPlugin(didStopped media: AKPlayable, at position: CMTime) {
-        
-    }
-    
-    func playerPlugin(didStartWaitingForNetwork media: AKPlayable) {
-        
-    }
-    
-    func playerPlugin(didFailed media: AKPlayable, with error: AKPlayerError) {
-        
-    }
-    
-    func playerPlugin(didPlayToEnd media: AKPlayable, at endTime: CMTime) {
-        
-    }
-}
+extension AKVideoPlayer: AKPlayerPlugin { }
 
 // MARK: - AKPlayerCommand
 
 extension AKVideoPlayer: AKPlayerCommand {
     
-    func load(media: AKPlayable) {
+    public func load(media: AKPlayable) {
         player.load(media: media)
     }
     
-    func load(media: AKPlayable, autoPlay: Bool) {
+    public func load(media: AKPlayable, autoPlay: Bool) {
         player.load(media: media, autoPlay: autoPlay)
     }
     
-    func load(media: AKPlayable, autoPlay: Bool, at position: CMTime) {
+    public func load(media: AKPlayable, autoPlay: Bool, at position: CMTime) {
         player.load(media: media, autoPlay: autoPlay, at: position)
     }
     
-    func load(media: AKPlayable, autoPlay: Bool, at position: Double) {
+    public func load(media: AKPlayable, autoPlay: Bool, at position: Double) {
         player.load(media: media, autoPlay: autoPlay, at: position)
     }
     
-    func play() {
+    public func play() {
         player.play()
     }
     
-    func pause() {
+    public func pause() {
         player.pause()
     }
     
-    func stop() {
+    public func stop() {
         player.stop()
     }
     
-    func seek(to time: CMTime, completionHandler: @escaping (Bool) -> Void) {
+    public func seek(to time: CMTime, completionHandler: @escaping (Bool) -> Void) {
         player.seek(to: time, completionHandler: completionHandler)
     }
     
-    func seek(to time: CMTime) {
+    public func seek(to time: CMTime) {
         player.seek(to: time)
     }
     
-    func seek(to time: Double, completionHandler: @escaping (Bool) -> Void) {
+    public func seek(to time: Double, completionHandler: @escaping (Bool) -> Void) {
         player.seek(to: time, completionHandler: completionHandler)
     }
     
-    func seek(to time: Double) {
+    public func seek(to time: Double) {
         player.seek(to: time)
     }
     
-    func seek(offset: Double) {
+    public func seek(offset: Double) {
         player.seek(to: offset)
     }
     
-    func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
+    public func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         player.seek(to: offset, completionHandler: completionHandler)
     }
 }
@@ -266,7 +236,8 @@ extension AKVideoPlayer: AKPlayerCommand {
 // MARK: - AKPlayerDelegate
 
 extension AKVideoPlayer: AKPlayerDelegate {
-    func akPlayer(_ player: AKPlayer, didStateChange state: AKPlayer.State) {
+
+    public func akPlayer(_ player: AKPlayer, didStateChange state: AKPlayer.State) {
         switch state {
         case .buffering:
             controlView.playbackButton.changePlayback(.playing)
@@ -305,14 +276,14 @@ extension AKVideoPlayer: AKPlayerDelegate {
         }
     }
     
-    func akPlayer(_ player: AKPlayer, didCurrentMediaChange media: AKPlayable) {
+    public func akPlayer(_ player: AKPlayer, didCurrentMediaChange media: AKPlayable) {
         DispatchQueue.main.async {
             self.controlView.resetControlls()
             self.progressSlider(!media.isLive())
         }
     }
     
-    func akPlayer(_ player: AKPlayer, didCurrentTimeChange currentTime: CMTime) {
+    public func akPlayer(_ player: AKPlayer, didCurrentTimeChange currentTime: CMTime) {
         DispatchQueue.main.async {
             self.controlView.currentTimeLabel.text = currentTime.positionalTime
             if let duration = self.player.itemDuration, self.player.currentMedia!.type == .clip {
@@ -323,7 +294,7 @@ extension AKVideoPlayer: AKPlayerDelegate {
         }
     }
     
-    func akPlayer(_ player: AKPlayer, didItemDurationChange itemDuration: CMTime) {
+    public func akPlayer(_ player: AKPlayer, didItemDurationChange itemDuration: CMTime) {
         if itemDuration.isValid && itemDuration.isNumeric {
             DispatchQueue.main.async {
                 self.controlView.totalDurationLabel.text = itemDuration.positionalTime
@@ -332,15 +303,19 @@ extension AKVideoPlayer: AKPlayerDelegate {
         }
     }
     
-    func akPlayer(_ player: AKPlayer, unavailableAction reason: AKPlayerUnavailableActionReason) {
+    public func akPlayer(_ player: AKPlayer, unavailableAction reason: AKPlayerUnavailableActionReason) {
         
     }
     
-    func akPlayer(_ player: AKPlayer, didItemPlayToEndTime endTime: CMTime) {
+    public func akPlayer(_ player: AKPlayer, didItemPlayToEndTime endTime: CMTime) {
         
     }
     
-    func akPlayer(_ player: AKPlayer, didFailedWith error: AKPlayerError) {
+    public func akPlayer(_ player: AKPlayer, didFailedWith error: AKPlayerError) {
         
+    }
+
+    public func akPlayer(_ player: AKPlayer, didPlaybackRateChange playbackRate: AKPlaybackRate) {
+        controlView.playbackrateButton.change(playbackRate)
     }
 }

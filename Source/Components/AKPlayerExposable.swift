@@ -32,7 +32,7 @@ public protocol AKPlayerExposable: class, AKPlayerCommand {
     var itemDuration: CMTime? { get }
     var player: AVPlayer { get }
     var state: AKPlayer.State { get }
-    var rate: Float { get }
+    var playbackRate: AKPlaybackRate { get set }
 
     func setNowPlayingMetadata()
     func setNowPlayingPlaybackInfo()

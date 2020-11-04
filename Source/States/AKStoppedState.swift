@@ -85,7 +85,7 @@ final class AKStoppedState: AKPlayerStateControllable {
     
     func play() {
         if manager.currentItem?.status == .readyToPlay {
-            if manager.currentTime == manager.itemDuration { seek(to: 0) }
+            if manager.currentTime.seconds >= (manager.itemDuration?.seconds ?? 0) { seek(to: 0) }
             let controller = AKBufferingState(manager: manager)
             manager.change(controller)
             controller.playCommand()

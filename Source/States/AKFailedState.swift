@@ -76,7 +76,11 @@ final class AKFailedState: AKPlayerStateControllable {
     func play() {
         guard let media = manager.currentMedia
             else { assertionFailure("Should not possible to be in failed state without load any media"); return }
-        load(media: media, autoPlay: true, at: manager.currentTime)
+        if manager.currentTime.isValid && manager.currentTime.isNumeric {
+            load(media: media, autoPlay: true, at: manager.currentTime)
+        }else {
+            load(media: media, autoPlay: true)
+        }
     }
     
     func pause() {

@@ -33,6 +33,7 @@ class PlayerWithUIControlViewController: UIViewController {
     @IBOutlet weak var videoPlayer: AKVideoPlayer!
     @IBOutlet weak var bottomContainerView: UIView!
     @IBOutlet weak var loadButton: UIButton!
+    @IBOutlet weak var rateButton: AKPlaybackRateButton!
 
     // MARK: - Variables
 
@@ -49,6 +50,11 @@ class PlayerWithUIControlViewController: UIViewController {
         metadata = AKMediaStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "Amalendu Kar", artwork: nil, albumArtist: "Amalendu Kar", albumTitle: "Amalendu Kar")
         media = AKMedia(url: url, type: .clip, staticMetadata: metadata)
         view.bringSubviewToFront(videoPlayer)
+
+        rateButton.onRateChange { [weak self] (rate) in
+            guard let strongSelf = self else { return }
+            strongSelf.videoPlayer.playbackRate = rate
+        }
     }
 
     // MARK: - User Interactions

@@ -61,6 +61,8 @@
 		F492603B254891F2009844FA /* AKPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926010254891F2009844FA /* AKPlayerView.swift */; };
 		F492603C254891F2009844FA /* AKPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4926011254891F2009844FA /* AKPlayer.swift */; };
 		F499BAE0254C81E000ABF30D /* AKPlayerExposable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F499BADF254C81E000ABF30D /* AKPlayerExposable.swift */; };
+		F4C897132552AB0F0006C7D2 /* AKPlaybackRate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4C897122552AB0F0006C7D2 /* AKPlaybackRate.swift */; };
+		F4C8971825530BF30006C7D2 /* AKPlayerRateObservingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4C8971725530BF30006C7D2 /* AKPlayerRateObservingService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -158,6 +160,8 @@
 		F4926010254891F2009844FA /* AKPlayerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayerView.swift; sourceTree = "<group>"; };
 		F4926011254891F2009844FA /* AKPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AKPlayer.swift; sourceTree = "<group>"; };
 		F499BADF254C81E000ABF30D /* AKPlayerExposable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AKPlayerExposable.swift; sourceTree = "<group>"; };
+		F4C897122552AB0F0006C7D2 /* AKPlaybackRate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AKPlaybackRate.swift; sourceTree = "<group>"; };
+		F4C8971725530BF30006C7D2 /* AKPlayerRateObservingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AKPlayerRateObservingService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -371,6 +375,7 @@
 				F4925FF9254891F1009844FA /* AKPlayerPlaybackObservingService.swift */,
 				F4925FFA254891F1009844FA /* AKAudioSessionServiceable.swift */,
 				F4925FFB254891F1009844FA /* AKAudioSessionInterruptionObservingService.swift */,
+				F4C8971725530BF30006C7D2 /* AKPlayerRateObservingService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -399,6 +404,7 @@
 				F492600F254891F2009844FA /* AKPlayable.swift */,
 				F4926010254891F2009844FA /* AKPlayerView.swift */,
 				F499BADF254C81E000ABF30D /* AKPlayerExposable.swift */,
+				F4C897122552AB0F0006C7D2 /* AKPlaybackRate.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -602,9 +608,11 @@
 				F4926031254891F2009844FA /* AKMediaItemPlayable.swift in Sources */,
 				F4926030254891F2009844FA /* AKMediaType.swift in Sources */,
 				F492602C254891F2009844FA /* AKPlayerConfiguration.swift in Sources */,
+				F4C8971825530BF30006C7D2 /* AKPlayerRateObservingService.swift in Sources */,
 				5D4003A5053C52955B977F921AE6B3A7 /* AKPlayer-dummy.m in Sources */,
 				F4926012254891F2009844FA /* AKPlayerDelegate.swift in Sources */,
 				F4926016254891F2009844FA /* AKStoppedState.swift in Sources */,
+				F4C897132552AB0F0006C7D2 /* AKPlaybackRate.swift in Sources */,
 				F4926029254891F2009844FA /* AKPlayerCommand.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -29,14 +29,14 @@ import Foundation
 open class AKPlayerManager: AKPlayerManageable {
     
     // MARK: - Properties
-
-    open private (set) var currentMedia: AKPlayable? {
+    
+    open private(set) var currentMedia: AKPlayable? {
         didSet {
             guard let media = currentMedia else { assertionFailure("Media should available"); return }
             plugins.forEach({$0.playerPlugin(didChanged: media)})
         }
     }
-
+    
     open var currentItem: AVPlayerItem? {
         return player.currentItem
     }
@@ -50,35 +50,42 @@ open class AKPlayerManager: AKPlayerManageable {
     }
     
     public let player: AVPlayer
-
-    /// Current state of the player
+    
     open var state: AKPlayer.State {
         return controller.state
     }
-
-    open var rate: Float {
-        get { return player.rate }
-        set { player.rate = newValue }
+    
+    open var playbackRate: AKPlaybackRate {
+        get { return AKPlaybackRate(rate: player.rate) }
+        set { lastPlaybackRate = newValue
+            setPlaybackRate(controller: controller)
+        }
     }
     
-    open private (set) var plugins: [AKPlayerPlugin]
+    open private(set) var plugins: [AKPlayerPlugin]
     
-    open private (set) var configuration: AKPlayerConfiguration
+    open private(set) var configuration: AKPlayerConfiguration
     
-    open private (set) var controller: AKPlayerStateControllable! {
+    open private(set) var controller: AKPlayerStateControllable! {
         didSet {
             delegate?.playerManager(didStateChange: controller.state)
             plugins.forEach({$0.playerPlugin(didChanged: controller.state)})
         }
     }
-
+    
     open weak var delegate: AKPlayerManageableDelegate?
     
     public let audioSessionService: AKAudioSessionServiceable
-
+    
     public var playerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServiceable?
-
+    
     public private(set) var remoteCommandsService: AKNowPlayableCommandService?
+    
+    private var playerRateObservingService: AKPlayerRateObservingServiceable?
+    
+    private var lastPlaybackRate: AKPlaybackRate = .normal {
+        didSet { delegate?.playerManager(didPlaybackRateChange: lastPlaybackRate) }
+    }
     
     // MARK: - Init
     
@@ -90,14 +97,15 @@ open class AKPlayerManager: AKPlayerManageable {
         self.plugins = plugins
         self.configuration = configuration
         self.audioSessionService = audioSessionService
-
+        
+        setAudioSessionCategory()
+        startPlaybackRateObserving()
+        
         if configuration.isRemoteCommandsEnabled {
             playerNowPlayingMetadataService = AKPlayerNowPlayingMetadataService()
             remoteCommandsService = AKNowPlayableCommandService(with: player, configuration: configuration, manager: self)
             remoteCommandsService?.enable()
         }
-        
-        setAudioSessionCategory()
         
         defer {
             controller = AKInitState(manager: self)
@@ -109,11 +117,12 @@ open class AKPlayerManager: AKPlayerManageable {
     }
     
     open func change(_ controller: AKPlayerStateControllable) {
+        setPlaybackRate(controller: controller)
         self.controller = controller
     }
-
+    
     // MARK: - Commands
-
+    
     open func load(media: AKPlayable) {
         currentMedia = media
         controller.load(media: media)
@@ -190,6 +199,21 @@ open class AKPlayerManager: AKPlayerManageable {
     
     // MARK: - Additional Helper Functions
     
+    private func startPlaybackRateObserving() {
+        playerRateObservingService = AKPlayerRateObservingService(with: player)
+        playerRateObservingService?.onChangePlaybackRate = { playbackRate in
+            AKPlayerLogger.shared.log(message: "Rate changed \(playbackRate.rate)", domain: .service)
+        }
+    }
+    
+    private func setPlaybackRate(controller: AKPlayerStateControllable) {
+        if controller.state == .buffering
+            || controller.state == .waitingForNetwork
+            || controller.state == .playing {
+            player.rate = lastPlaybackRate.rate
+        }
+    }
+    
     private func unaivalableCommand(reason: AKPlayerUnavailableActionReason) {
         delegate?.playerManager(unavailableAction: reason)
         AKPlayerLogger.shared.log(message: reason.description, domain: .unavailableCommand)
@@ -198,7 +222,7 @@ open class AKPlayerManager: AKPlayerManageable {
     open func setAudioSessionCategory() {
         audioSessionService.setCategory(configuration.audioSessionCategory, mode: configuration.audioSessionMode, options: configuration.audioSessionCategoryOptions)
     }
-
+    
     public func setNowPlayingMetadata() {
         guard configuration.isRemoteCommandsEnabled else { return }
         guard let media = currentMedia else { assertionFailure("Media should exist here"); return }

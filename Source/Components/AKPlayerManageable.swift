@@ -28,6 +28,7 @@ import AVFoundation
 
 public protocol AKPlayerManageableDelegate: class {
     func playerManager(didStateChange state: AKPlayer.State)
+    func playerManager(didPlaybackRateChange playbackRate: AKPlaybackRate)
     func playerManager(didCurrentMediaChange media: AKPlayable)
     func playerManager(didCurrentTimeChange currentTime: CMTime)
     func playerManager(didItemDurationChange itemDuration: CMTime)

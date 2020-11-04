@@ -49,9 +49,9 @@ open class AKPlayer: AKPlayerExposable {
         return manager.state
     }
 
-    open var rate: Float {
-        get { return manager.rate }
-        set { manager.rate = newValue }
+    open var playbackRate: AKPlaybackRate {
+        get { return manager.playbackRate }
+        set { manager.playbackRate = newValue }
     }
 
     public let player: AVPlayer
@@ -167,6 +167,10 @@ extension AKPlayer: AKPlayerManageableDelegate {
 
     public func playerManager(didFailedWith error: AKPlayerError) {
         delegate?.akPlayer(self, didFailedWith: error)
+    }
+
+    public func playerManager(didPlaybackRateChange playbackRate: AKPlaybackRate) {
+        delegate?.akPlayer(self, didPlaybackRateChange: playbackRate)
     }
 }
 

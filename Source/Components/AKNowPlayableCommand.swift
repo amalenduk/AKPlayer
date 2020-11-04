@@ -94,7 +94,7 @@ public enum AKNowPlayableCommand: CaseIterable {
     public func addHandler(_ handler: @escaping (AKNowPlayableCommand, MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus) {
         switch self {
         case .changePlaybackRate:
-            MPRemoteCommandCenter.shared().changePlaybackRateCommand.supportedPlaybackRates = [1.0, 2.0]
+            MPRemoteCommandCenter.shared().changePlaybackRateCommand.supportedPlaybackRates = AKPlaybackRate.allCases.map({NSNumber(value: $0.rate)})
         case .skipBackward:
             MPRemoteCommandCenter.shared().skipBackwardCommand.preferredIntervals = [15.0]
         case .skipForward:

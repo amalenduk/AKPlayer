@@ -25,6 +25,7 @@ class AKVideoPlayerControlView: UIView {
     @IBOutlet weak var totalDurationLabel: UILabel!
     @IBOutlet weak var progressSlider: UISlider!
     @IBOutlet weak var fullscreenButton: UIButton!
+    @IBOutlet weak var playbackrateButton: AKPlaybackRateButton!
 
     // MARK: Lifecycle
 

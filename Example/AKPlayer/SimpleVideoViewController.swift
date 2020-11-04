@@ -157,4 +157,8 @@ extension SimpleVideoViewController: AKPlayerDelegate {
             self.errorLabel.text = "Error: " + error.localizedDescription
         }
     }
+
+    func akPlayer(_ player: AKPlayer, didPlaybackRateChange playbackRate: AKPlaybackRate) {
+        
+    }
 }

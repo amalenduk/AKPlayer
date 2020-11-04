@@ -26,6 +26,7 @@
 		F492604325489400009844FA /* TableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492604225489400009844FA /* TableViewController.swift */; };
 		F492604625489459009844FA /* SimpleVideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F492604525489459009844FA /* SimpleVideoViewController.swift */; };
 		F49260492548947C009844FA /* SimpleVideo.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F49260482548947C009844FA /* SimpleVideo.storyboard */; };
+		F4C897162552B4FF0006C7D2 /* AKPlaybackRateButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4C897152552B4FF0006C7D2 /* AKPlaybackRateButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +70,7 @@
 		F492604225489400009844FA /* TableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableViewController.swift; sourceTree = "<group>"; };
 		F492604525489459009844FA /* SimpleVideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleVideoViewController.swift; sourceTree = "<group>"; };
 		F49260482548947C009844FA /* SimpleVideo.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = SimpleVideo.storyboard; sourceTree = "<group>"; };
+		F4C897152552B4FF0006C7D2 /* AKPlaybackRateButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AKPlaybackRateButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -216,6 +218,7 @@
 		F48CF84D25493F7C00F64886 /* AKVideoPlayer */ = {
 			isa = PBXGroup;
 			children = (
+				F4C897142552B4E10006C7D2 /* AKPlaybackRateButton */,
 				F44E64952551D83C00B7BB4D /* AKProgressAndTimeRangesSlider */,
 				F44E64942551D83200B7BB4D /* AKPlaybackButton */,
 				F44E64932551D80600B7BB4D /* AKVideoPlayerControlView */,
@@ -262,6 +265,14 @@
 				F49260482548947C009844FA /* SimpleVideo.storyboard */,
 			);
 			name = SimpleVideoViewController;
+			sourceTree = "<group>";
+		};
+		F4C897142552B4E10006C7D2 /* AKPlaybackRateButton */ = {
+			isa = PBXGroup;
+			children = (
+				F4C897152552B4FF0006C7D2 /* AKPlaybackRateButton.swift */,
+			);
+			name = AKPlaybackRateButton;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -450,6 +461,7 @@
 				F48CF84F25493F9300F64886 /* AKVideoPlayer.swift in Sources */,
 				F48CF84C25493E9600F64886 /* PlayerWithUIControlViewController.swift in Sources */,
 				F492604625489459009844FA /* SimpleVideoViewController.swift in Sources */,
+				F4C897162552B4FF0006C7D2 /* AKPlaybackRateButton.swift in Sources */,
 				607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

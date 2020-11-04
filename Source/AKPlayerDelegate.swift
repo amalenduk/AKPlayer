@@ -33,4 +33,5 @@ public protocol AKPlayerDelegate: class {
     func akPlayer(_ player: AKPlayer, unavailableAction reason: AKPlayerUnavailableActionReason)
     func akPlayer(_ player: AKPlayer, didItemPlayToEndTime endTime: CMTime)
     func akPlayer(_ player: AKPlayer, didFailedWith error: AKPlayerError)
+    func akPlayer(_ player: AKPlayer, didPlaybackRateChange playbackRate: AKPlaybackRate)
 }
