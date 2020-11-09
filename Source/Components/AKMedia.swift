@@ -35,7 +35,7 @@ public class AKMedia: AKPlayable {
     
     public let options: [String : Any]?
     
-    public let staticMetadata: AKPlayableStaticMetadata?
+    public var staticMetadata: AKPlayableStaticMetadata?
     
     // MARK: - Init
     
@@ -46,6 +46,10 @@ public class AKMedia: AKPlayable {
         self.url = url
         self.type = type
         self.options = options
+        self.staticMetadata = staticMetadata
+    }
+
+    public func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata) {
         self.staticMetadata = staticMetadata
     }
 }

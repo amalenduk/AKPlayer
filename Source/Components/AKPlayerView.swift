@@ -30,12 +30,12 @@ import AVFoundation
 open class AKPlayerView: UIView {
     
     /// The player from which to source the media content for the view controller.
-    public var player: AVPlayer? {
+    open var player: AVPlayer? {
         get { return playerLayer.player }
         set { playerLayer.player = newValue }
     }
     
-    var playerLayer: AVPlayerLayer {
+    open var playerLayer: AVPlayerLayer {
         return layer as! AVPlayerLayer
     }
     

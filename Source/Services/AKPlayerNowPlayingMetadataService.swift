@@ -52,7 +52,6 @@ open class AKPlayerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServicea
         let nowPlayingInfoCenter = MPNowPlayingInfoCenter.default()
         var nowPlayingInfo = [String: Any]()
         
-        AKPlayerLogger.shared.log(message: "**** Set track metadata: title \(metadata.title)", domain: .service)
         nowPlayingInfo[MPNowPlayingInfoPropertyAssetURL] = metadata.assetURL
         nowPlayingInfo[MPNowPlayingInfoPropertyMediaType] = metadata.mediaType.rawValue
         nowPlayingInfo[MPNowPlayingInfoPropertyIsLiveStream] = metadata.isLiveStream
@@ -71,8 +70,6 @@ open class AKPlayerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServicea
         
         let nowPlayingInfoCenter = MPNowPlayingInfoCenter.default()
         var nowPlayingInfo = nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
-        
-        AKPlayerLogger.shared.log(message: "**** Set playback info: rate \(metadata.rate), position \(metadata.position), duration \(metadata.duration ?? 0)", domain: .service)
         
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = metadata.duration
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = metadata.position

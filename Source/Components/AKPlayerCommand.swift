@@ -40,4 +40,6 @@ public protocol AKPlayerCommand {
     func seek(to time: Double)
     func seek(offset: Double)
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void)
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void)
+    func seek(toPercentage value: Double)
 }

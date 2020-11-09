@@ -1,5 +1,5 @@
 //
-//  AKPlayerDelegate.swift
+//  CMTime+Extension.swift
 //  AKPlayer
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -25,13 +25,18 @@
 
 import AVFoundation
 
-public protocol AKPlayerDelegate: class {
-    func akPlayer(_ player: AKPlayer, didStateChange state: AKPlayer.State)
-    func akPlayer(_ player: AKPlayer, didCurrentMediaChange media: AKPlayable)
-    func akPlayer(_ player: AKPlayer, didCurrentTimeChange currentTime: CMTime)
-    func akPlayer(_ player: AKPlayer, didItemDurationChange itemDuration: CMTime)
-    func akPlayer(_ player: AKPlayer, unavailableAction reason: AKPlayerUnavailableActionReason)
-    func akPlayer(_ player: AKPlayer, didItemPlayToEndTime endTime: CMTime)
-    func akPlayer(_ player: AKPlayer, didFailedWith error: AKPlayerError)
-    func akPlayer(_ player: AKPlayer, didPlaybackRateChange playbackRate: AKPlaybackRate)
+public extension CMTime {
+    var roundedSeconds: TimeInterval {
+        return seconds.rounded()
+    }
+    var hours:  Int { return Int(roundedSeconds / 3600) }
+    var minute: Int { return Int(roundedSeconds.truncatingRemainder(dividingBy: 3600) / 60) }
+    var second: Int { return Int(roundedSeconds.truncatingRemainder(dividingBy: 60)) }
+    var positionalTime: String {
+        return hours > 0 ?
+            String(format: "%d:%02d:%02d",
+                   hours, minute, second) :
+            String(format: "%02d:%02d",
+                   minute, second)
+    }
 }

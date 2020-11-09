@@ -28,27 +28,22 @@ import AVFoundation
 
 public protocol AKPlayerManageableDelegate: class {
     func playerManager(didStateChange state: AKPlayer.State)
+    func playerManager(didPlaybackRateChange playbackRate: AKPlaybackRate)
     func playerManager(didCurrentMediaChange media: AKPlayable)
     func playerManager(didCurrentTimeChange currentTime: CMTime)
-    func playerManager(didItemDurationChange itemDuration: CMTime?)
-    func playerManager(unavailableActionReason: AKPlayerUnavailableActionReason)
+    func playerManager(didItemDurationChange itemDuration: CMTime)
+    func playerManager(unavailableAction reason: AKPlayerUnavailableActionReason)
     func playerManager(didItemPlayToEndTime endTime: CMTime)
+    func playerManager(didFailedWith error: AKPlayerError)
 }
 
-public protocol AKPlayerManageable: class {
+public protocol AKPlayerManageable: AKPlayerExposable {
     var audioSessionService: AKAudioSessionServiceable { get }
     var playerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServiceable? { get }
-    var currentMedia: AKPlayable? { get }
-    var currentItem: AVPlayerItem? { get }
-    var currentTime: CMTime { get }
     var configuration: AKPlayerConfiguration { get }
     var controller: AKPlayerStateControllable! { get }
     var delegate: AKPlayerManageableDelegate? { get }
-    var player: AVPlayer { get }
     var plugins: [AKPlayerPlugin] { get }
-    var state: AKPlayer.State { get }
     
     func change(_ controller: AKPlayerStateControllable)
-    func setNowPlayingMetadata()
-    func setNowPlayingPlaybackInfo()
 }

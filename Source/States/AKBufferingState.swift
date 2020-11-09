@@ -44,6 +44,8 @@ final class AKBufferingState: AKPlayerStateControllable {
     init(manager: AKPlayerManageable) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+        guard let media = manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didStartBuffering: media)})
         startplayerItemBufferObserving()
         startPlayerTimeObserving()
         startAudioSessionInterruptionObserving()
@@ -55,6 +57,8 @@ final class AKBufferingState: AKPlayerStateControllable {
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
+    
+    // MARK: - Commands
     
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
@@ -78,7 +82,7 @@ final class AKBufferingState: AKPlayerStateControllable {
     
     func play() {
         AKPlayerLogger.shared.log(message: "Already trying to play", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .alreadyTryingToPlay)
+        manager.delegate?.playerManager(unavailableAction: .alreadyTryingToPlay)
     }
     
     func pause() {
@@ -120,11 +124,19 @@ final class AKBufferingState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
+
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
+    }
+
+    func seek(toPercentage value: Double) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value)
+    }
     
     // MARK: - Additional Helper Functions
     
     private func startplayerItemBufferObserving() {
-        guard let playerItem = manager.currentItem else { assertionFailure("Player item should be available"); return }
+        guard let playerItem = manager.currentItem else { assertionFailure("Player item should available"); return }
         playerItemBufferObservingService = AKPlayerItemBufferObservingService(with: playerItem, configuration: manager.configuration)
         
         playerItemBufferObservingService?.onChangePlaybackBufferEmptyStatus = { [unowned self] flag in
@@ -161,6 +173,8 @@ final class AKBufferingState: AKPlayerStateControllable {
     
     private func change(_ controller: AKPlayerStateControllable) {
         playerItemBufferObservingService?.stop(clearCallBacks: true)
+        guard let media = manager.currentMedia else { assertionFailure("Media and Current item should available"); return }
+        if controller is AKPlayingState { manager.plugins.forEach({$0.playerPlugin(didStartPlaying: media, at: manager.currentTime)})}
         manager.change(controller)
     }
     

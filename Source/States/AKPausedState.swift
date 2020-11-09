@@ -35,6 +35,7 @@ final class AKPausedState: AKPlayerStateControllable {
     
     private var audioSessionInterruptionObservingService: AKAudioSessionInterruptionObservingServiceable!
     private var playerTimeObservingService: AKPlayerTimeObservingServiceable!
+    private var playerTimeControlStatusObservingService: AKPlayerTimeControlStatusObservingServiceable?
     
     // MARK: - Init
     
@@ -42,8 +43,11 @@ final class AKPausedState: AKPlayerStateControllable {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         manager.player.pause()
+        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didPaused: media, at: manager.currentTime)})
         startAudioSessionInterruptionObserving()
         startPlayerTimeObserving()
+        startPlayerTimeControlStatusObserving()
         manager.setNowPlayingPlaybackInfo()
     }
     
@@ -51,34 +55,36 @@ final class AKPausedState: AKPlayerStateControllable {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
     
+    // MARK: - Commands
+    
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
-        manager.change(controller)
+        change(controller)
     }
     
     func load(media: AKPlayable, autoPlay: Bool) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay)
-        manager.change(controller)
+        change(controller)
     }
     
     func load(media: AKPlayable, autoPlay: Bool, at position: CMTime) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay, at: position)
-        manager.change(controller)
+        change(controller)
     }
     
     func load(media: AKPlayable, autoPlay: Bool, at position: Double) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay, at: CMTime(seconds: position, preferredTimescale: manager.configuration.preferredTimescale))
-        manager.change(controller)
+        change(controller)
     }
     
     func play() {
         if manager.currentItem?.status == .readyToPlay {
             let controller = AKBufferingState(manager: manager)
-            manager.change(controller)
+            change(controller)
             controller.playCommand()
         } else if let media = manager.currentMedia {
             let controller = AKLoadingState(manager: manager, media: media)
-            manager.change(controller)
+            change(controller)
         } else {
             assertionFailure("Sould not be here")
         }
@@ -86,12 +92,12 @@ final class AKPausedState: AKPlayerStateControllable {
     
     func pause() {
         AKPlayerLogger.shared.log(message: "Already paused", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableActionReason: .alreadyPaused)
+        manager.delegate?.playerManager(unavailableAction: .alreadyPaused)
     }
     
     func stop() {
         let controller = AKStoppedState(manager: manager)
-        manager.change(controller)
+        change(controller)
     }
     
     func seek(to time: CMTime, completionHandler: @escaping (Bool) -> Void) {
@@ -119,8 +125,21 @@ final class AKPausedState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
+
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
+    }
+
+    func seek(toPercentage value: Double) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value)
+    }
     
     // MARK: - Additional Helper Functions
+    
+    private func change(_ controller: AKPlayerStateControllable) {
+        playerTimeControlStatusObservingService?.stop(clearCallBacks: true)
+        manager.change(controller)
+    }
     
     private func startAudioSessionInterruptionObserving() {
         audioSessionInterruptionObservingService = AKAudioSessionInterruptionObservingService()
@@ -142,6 +161,16 @@ final class AKPausedState: AKPlayerStateControllable {
         
         playerTimeObservingService.onChangePeriodicTime = { [unowned self] time in
             self.manager.delegate?.playerManager(didCurrentTimeChange: time)
+        }
+    }
+    
+    private func startPlayerTimeControlStatusObserving() {
+        playerTimeControlStatusObservingService = AKPlayerTimeControlStatusObservingService(with: manager.player, configuration: manager.configuration)
+        
+        playerTimeControlStatusObservingService?.onChangeTimeControlStatus = { [unowned self] status in
+            guard status == .playing else { return }
+            let controller = AKPlayingState(manager: self.manager)
+            self.change(controller)
         }
     }
 }

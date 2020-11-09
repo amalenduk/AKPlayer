@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15702" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
-    <device id="retina6_1" orientation="portrait" appearance="light"/>
+    <device id="retina6_1" orientation="landscape" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15704"/>
@@ -11,127 +11,268 @@
         <!--Simple Video View Controller-->
         <scene sceneID="LRU-ba-JSv">
             <objects>
-                <viewController storyboardIdentifier="SimpleVideoViewController" id="ZCJ-Il-0yo" customClass="SimpleVideoViewController" customModule="AKPlayer" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="SimpleVideoViewController" id="ZCJ-Il-0yo" customClass="SimpleVideoViewController" customModule="AKPlayer_Example" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="1Rq-Rn-J0u">
-                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                        <rect key="frame" x="0.0" y="0.0" width="896" height="414"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="P1R-9Z-j4R" userLabel="PlayerVideo" customClass="AKPlayerView" customModule="AKPlayer">
-                                <rect key="frame" x="0.0" y="44" width="414" height="319"/>
-                                <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                                <rect key="frame" x="0.0" y="0.0" width="896" height="414"/>
+                                <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="P1R-9Z-j4R" secondAttribute="height" multiplier="16:9" priority="499" id="CzX-wU-djo"/>
+                                </constraints>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="CzX-wU-djo"/>
+                                    </mask>
+                                </variation>
+                                <variation key="heightClass=regular-widthClass=compact">
+                                    <mask key="constraints">
+                                        <include reference="CzX-wU-djo"/>
+                                    </mask>
+                                </variation>
                             </view>
-                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="6Oj-4Q-td3" userLabel="Labels">
-                                <rect key="frame" x="20" y="406" width="374" height="72"/>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="DGS-7t-mA7">
+                                <rect key="frame" x="0.0" y="0.0" width="852" height="414"/>
                                 <subviews>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="State: Load Media First" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tq5-Dh-1tR">
-                                        <rect key="frame" x="0.0" y="0.0" width="374" height="24"/>
-                                        <fontDescription key="fontDescription" type="system" weight="medium" pointSize="20"/>
-                                        <nil key="textColor"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Current Timing" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ID2-Do-jtI">
-                                        <rect key="frame" x="0.0" y="24" width="374" height="24"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="18"/>
-                                        <nil key="textColor"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Duration" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="0jp-Ns-ONb">
-                                        <rect key="frame" x="0.0" y="48" width="374" height="24"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="18"/>
-                                        <nil key="textColor"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
+                                    <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="Qlc-BL-9Rx">
+                                        <rect key="frame" x="84" y="40" width="728" height="313"/>
+                                        <subviews>
+                                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="6Oj-4Q-td3" userLabel="Labels">
+                                                <rect key="frame" x="0.0" y="0.0" width="728" height="96"/>
+                                                <subviews>
+                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="State: Load Media First" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tq5-Dh-1tR">
+                                                        <rect key="frame" x="0.0" y="0.0" width="728" height="24"/>
+                                                        <fontDescription key="fontDescription" type="system" weight="medium" pointSize="20"/>
+                                                        <color key="textColor" systemColor="systemGreenColor" red="0.20392156859999999" green="0.78039215689999997" blue="0.34901960780000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <nil key="highlightedColor"/>
+                                                    </label>
+                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Current Timing:" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ID2-Do-jtI">
+                                                        <rect key="frame" x="0.0" y="24" width="728" height="24"/>
+                                                        <fontDescription key="fontDescription" type="system" pointSize="18"/>
+                                                        <color key="textColor" systemColor="systemGreenColor" red="0.20392156859999999" green="0.78039215689999997" blue="0.34901960780000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <nil key="highlightedColor"/>
+                                                    </label>
+                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Duration:" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="0jp-Ns-ONb">
+                                                        <rect key="frame" x="0.0" y="48" width="728" height="24"/>
+                                                        <fontDescription key="fontDescription" type="system" pointSize="18"/>
+                                                        <color key="textColor" systemColor="systemGreenColor" red="0.20392156859999999" green="0.78039215689999997" blue="0.34901960780000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <nil key="highlightedColor"/>
+                                                    </label>
+                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="vyt-EB-OJx">
+                                                        <rect key="frame" x="0.0" y="72" width="728" height="24"/>
+                                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                        <color key="textColor" systemColor="systemRedColor" red="1" green="0.23137254900000001" blue="0.18823529410000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <nil key="highlightedColor"/>
+                                                    </label>
+                                                </subviews>
+                                            </stackView>
+                                            <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" translatesAutoresizingMaskIntoConstraints="NO" id="MyH-CG-jfd">
+                                                <rect key="frame" x="0.0" y="104" width="728" height="209"/>
+                                                <subviews>
+                                                    <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" alignment="top" spacing="10" translatesAutoresizingMaskIntoConstraints="NO" id="yZp-zE-gfY" userLabel="CommandPlay">
+                                                        <rect key="frame" x="0.0" y="0.0" width="364" height="209"/>
+                                                        <subviews>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="WpD-qs-YMb" userLabel="Play">
+                                                                <rect key="frame" x="0.0" y="0.0" width="30" height="34"/>
+                                                                <state key="normal" title="Play">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="play:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="m3m-YZ-j3B"/>
+                                                                </connections>
+                                                            </button>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="73L-q8-0Km" userLabel="Pause">
+                                                                <rect key="frame" x="0.0" y="44" width="42" height="33.5"/>
+                                                                <state key="normal" title="Pause">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="pause:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="6Vy-s0-lFp"/>
+                                                                </connections>
+                                                            </button>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="y0h-8s-M4M" userLabel="Pause">
+                                                                <rect key="frame" x="0.0" y="87.5" width="34" height="34"/>
+                                                                <state key="normal" title="Load">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="load:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="Wzm-xr-YNI"/>
+                                                                </connections>
+                                                            </button>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Y63-q9-8Sd" userLabel="Pause">
+                                                                <rect key="frame" x="0.0" y="131.5" width="98" height="33.5"/>
+                                                                <state key="normal" title="Load And Play">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="load:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="wBn-ro-36g"/>
+                                                                    <action selector="loadAndPlay:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="CL5-Ui-v8n"/>
+                                                                </connections>
+                                                            </button>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Zb2-TW-oEh" userLabel="Stop">
+                                                                <rect key="frame" x="0.0" y="175" width="32" height="34"/>
+                                                                <state key="normal" title="Stop">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="stop:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="gYf-gQ-n2K"/>
+                                                                </connections>
+                                                            </button>
+                                                        </subviews>
+                                                    </stackView>
+                                                    <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillEqually" alignment="top" spacing="10" translatesAutoresizingMaskIntoConstraints="NO" id="jVD-0h-Wkx" userLabel="Seek">
+                                                        <rect key="frame" x="364" y="0.0" width="364" height="209"/>
+                                                        <subviews>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="auK-72-oMt">
+                                                                <rect key="frame" x="0.0" y="0.0" width="30" height="99.5"/>
+                                                                <state key="normal" title="-15">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="prevSeek:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="iGz-pd-VTV"/>
+                                                                </connections>
+                                                            </button>
+                                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="JZo-ls-sDx">
+                                                                <rect key="frame" x="0.0" y="109.5" width="30" height="99.5"/>
+                                                                <state key="normal" title="+15">
+                                                                    <color key="titleColor" systemColor="systemTealColor" red="0.35294117650000001" green="0.7843137255" blue="0.98039215690000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </state>
+                                                                <connections>
+                                                                    <action selector="nextSeek:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="Ypc-f3-K4H"/>
+                                                                </connections>
+                                                            </button>
+                                                        </subviews>
+                                                    </stackView>
+                                                </subviews>
+                                            </stackView>
+                                        </subviews>
+                                    </stackView>
                                 </subviews>
-                            </stackView>
-                            <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" alignment="center" spacing="10" translatesAutoresizingMaskIntoConstraints="NO" id="yZp-zE-gfY" userLabel="CommandPlay">
-                                <rect key="frame" x="20" y="538" width="374" height="30"/>
-                                <subviews>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="WpD-qs-YMb" userLabel="Play">
-                                        <rect key="frame" x="0.0" y="0.0" width="67" height="30"/>
-                                        <state key="normal" title="Play"/>
-                                        <connections>
-                                            <action selector="play:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="m3m-YZ-j3B"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="73L-q8-0Km" userLabel="Pause">
-                                        <rect key="frame" x="77" y="0.0" width="66.5" height="30"/>
-                                        <state key="normal" title="Pause"/>
-                                        <connections>
-                                            <action selector="pause:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="6Vy-s0-lFp"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="y0h-8s-M4M" userLabel="Pause">
-                                        <rect key="frame" x="153.5" y="0.0" width="67" height="30"/>
-                                        <state key="normal" title="Load"/>
-                                        <connections>
-                                            <action selector="load:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="Wzm-xr-YNI"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Y63-q9-8Sd" userLabel="Pause">
-                                        <rect key="frame" x="230.5" y="0.0" width="66.5" height="30"/>
-                                        <state key="normal" title="Load And Play"/>
-                                        <connections>
-                                            <action selector="load:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="wBn-ro-36g"/>
-                                            <action selector="loadAndPlay:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="CL5-Ui-v8n"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Zb2-TW-oEh" userLabel="Stop">
-                                        <rect key="frame" x="307" y="0.0" width="67" height="30"/>
-                                        <state key="normal" title="Stop"/>
-                                        <connections>
-                                            <action selector="stop:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="gYf-gQ-n2K"/>
-                                        </connections>
-                                    </button>
-                                </subviews>
-                            </stackView>
-                            <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="10" translatesAutoresizingMaskIntoConstraints="NO" id="jVD-0h-Wkx" userLabel="Seek">
-                                <rect key="frame" x="20" y="588" width="374" height="30"/>
-                                <subviews>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="auK-72-oMt">
-                                        <rect key="frame" x="0.0" y="0.0" width="118" height="30"/>
-                                        <state key="normal" title="-15"/>
-                                        <connections>
-                                            <action selector="prevSeek:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="iGz-pd-VTV"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1Vf-eH-JH8" userLabel="Loop">
-                                        <rect key="frame" x="128" y="0.0" width="118" height="30"/>
-                                        <state key="normal" title="Loop"/>
-                                        <connections>
-                                            <action selector="loop:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="EfH-Yy-xEj"/>
-                                        </connections>
-                                    </button>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="JZo-ls-sDx">
-                                        <rect key="frame" x="256" y="0.0" width="118" height="30"/>
-                                        <state key="normal" title="+15"/>
-                                        <connections>
-                                            <action selector="nextSeek:" destination="ZCJ-Il-0yo" eventType="touchUpInside" id="Ypc-f3-K4H"/>
-                                        </connections>
-                                    </button>
-                                </subviews>
-                            </stackView>
+                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstAttribute="bottom" relation="greaterThanOrEqual" secondItem="Qlc-BL-9Rx" secondAttribute="bottom" constant="16" id="0aP-t5-vJC"/>
+                                    <constraint firstItem="Qlc-BL-9Rx" firstAttribute="top" secondItem="DGS-7t-mA7" secondAttribute="topMargin" constant="32" id="7JJ-fI-2Dv"/>
+                                    <constraint firstAttribute="trailing" secondItem="Qlc-BL-9Rx" secondAttribute="trailing" constant="32" id="CDE-tV-WLn"/>
+                                    <constraint firstItem="Qlc-BL-9Rx" firstAttribute="leading" secondItem="DGS-7t-mA7" secondAttribute="leadingMargin" constant="32" id="NjC-fN-RVb"/>
+                                    <constraint firstAttribute="bottomMargin" secondItem="Qlc-BL-9Rx" secondAttribute="bottom" constant="32" id="W0h-KM-bbk"/>
+                                    <constraint firstItem="Qlc-BL-9Rx" firstAttribute="top" secondItem="DGS-7t-mA7" secondAttribute="top" constant="16" id="ahH-l4-eGK"/>
+                                    <constraint firstAttribute="trailingMargin" secondItem="Qlc-BL-9Rx" secondAttribute="trailing" constant="32" id="mKt-9X-oFj"/>
+                                    <constraint firstItem="Qlc-BL-9Rx" firstAttribute="leading" secondItem="DGS-7t-mA7" secondAttribute="leading" constant="32" id="xw3-dN-Efl"/>
+                                </constraints>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="0aP-t5-vJC"/>
+                                        <exclude reference="7JJ-fI-2Dv"/>
+                                        <exclude reference="CDE-tV-WLn"/>
+                                        <exclude reference="NjC-fN-RVb"/>
+                                        <exclude reference="W0h-KM-bbk"/>
+                                        <exclude reference="ahH-l4-eGK"/>
+                                        <exclude reference="mKt-9X-oFj"/>
+                                        <exclude reference="xw3-dN-Efl"/>
+                                    </mask>
+                                </variation>
+                                <variation key="heightClass=compact-widthClass=regular">
+                                    <mask key="constraints">
+                                        <include reference="7JJ-fI-2Dv"/>
+                                        <include reference="NjC-fN-RVb"/>
+                                        <include reference="W0h-KM-bbk"/>
+                                        <include reference="mKt-9X-oFj"/>
+                                    </mask>
+                                </variation>
+                                <variation key="heightClass=regular-widthClass=compact">
+                                    <mask key="constraints">
+                                        <include reference="0aP-t5-vJC"/>
+                                        <include reference="CDE-tV-WLn"/>
+                                        <include reference="ahH-l4-eGK"/>
+                                        <include reference="xw3-dN-Efl"/>
+                                    </mask>
+                                </variation>
+                            </view>
+                            <activityIndicatorView hidden="YES" opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" hidesWhenStopped="YES" style="large" translatesAutoresizingMaskIntoConstraints="NO" id="Rsd-6C-lBT">
+                                <rect key="frame" x="429.5" y="188.5" width="37" height="37"/>
+                                <color key="color" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                            </activityIndicatorView>
                         </subviews>
                         <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
                         <constraints>
-                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="leading" secondItem="hbO-Ce-Mhf" secondAttribute="leading" id="0xf-8N-4Vs"/>
-                            <constraint firstItem="hbO-Ce-Mhf" firstAttribute="trailing" secondItem="P1R-9Z-j4R" secondAttribute="trailing" id="1YI-3J-5en"/>
-                            <constraint firstItem="jVD-0h-Wkx" firstAttribute="trailing" secondItem="yZp-zE-gfY" secondAttribute="trailing" id="2eW-e1-7Zm"/>
-                            <constraint firstItem="yZp-zE-gfY" firstAttribute="centerX" secondItem="1Rq-Rn-J0u" secondAttribute="centerX" id="8kq-gi-pxh"/>
-                            <constraint firstItem="6Oj-4Q-td3" firstAttribute="leading" secondItem="yZp-zE-gfY" secondAttribute="leading" id="BlB-Sd-FvB"/>
-                            <constraint firstItem="6Oj-4Q-td3" firstAttribute="top" secondItem="P1R-9Z-j4R" secondAttribute="bottom" constant="43" id="L9S-S1-QAQ"/>
-                            <constraint firstItem="yZp-zE-gfY" firstAttribute="centerY" secondItem="hbO-Ce-Mhf" secondAttribute="centerY" constant="100" id="PrA-PM-t0B"/>
-                            <constraint firstItem="hbO-Ce-Mhf" firstAttribute="trailing" secondItem="yZp-zE-gfY" secondAttribute="trailing" constant="20" id="RtO-Yk-P2C"/>
-                            <constraint firstItem="yZp-zE-gfY" firstAttribute="top" secondItem="6Oj-4Q-td3" secondAttribute="bottom" constant="60" id="TLd-W9-bem"/>
-                            <constraint firstItem="6Oj-4Q-td3" firstAttribute="trailing" secondItem="yZp-zE-gfY" secondAttribute="trailing" id="YJZ-L2-xWK"/>
-                            <constraint firstItem="jVD-0h-Wkx" firstAttribute="top" secondItem="yZp-zE-gfY" secondAttribute="bottom" constant="20" id="d0b-YH-AHH"/>
-                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="top" secondItem="hbO-Ce-Mhf" secondAttribute="top" id="iFs-qb-PnG"/>
-                            <constraint firstItem="jVD-0h-Wkx" firstAttribute="leading" secondItem="yZp-zE-gfY" secondAttribute="leading" id="u9N-3y-foR"/>
-                            <constraint firstItem="yZp-zE-gfY" firstAttribute="leading" secondItem="hbO-Ce-Mhf" secondAttribute="leading" constant="20" id="v4K-rv-Xba"/>
+                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="top" secondItem="hbO-Ce-Mhf" secondAttribute="top" id="1Pp-pB-VDA"/>
+                            <constraint firstItem="DGS-7t-mA7" firstAttribute="trailing" secondItem="hbO-Ce-Mhf" secondAttribute="trailing" id="6HY-Jg-LRN"/>
+                            <constraint firstItem="Rsd-6C-lBT" firstAttribute="centerX" secondItem="P1R-9Z-j4R" secondAttribute="centerX" id="7hs-rr-zVj"/>
+                            <constraint firstItem="DGS-7t-mA7" firstAttribute="leading" secondItem="hbO-Ce-Mhf" secondAttribute="leading" id="CGb-Mf-wcf"/>
+                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="leading" secondItem="hbO-Ce-Mhf" secondAttribute="leading" id="GiX-UR-VYc"/>
+                            <constraint firstItem="hbO-Ce-Mhf" firstAttribute="trailing" secondItem="DGS-7t-mA7" secondAttribute="trailing" id="IHQ-D6-Ilj"/>
+                            <constraint firstAttribute="bottom" secondItem="DGS-7t-mA7" secondAttribute="bottom" id="REh-PG-2fg"/>
+                            <constraint firstItem="DGS-7t-mA7" firstAttribute="leading" secondItem="1Rq-Rn-J0u" secondAttribute="leading" id="Sxo-vi-mHi"/>
+                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="leading" secondItem="1Rq-Rn-J0u" secondAttribute="leading" id="g0a-OP-bmW"/>
+                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="top" secondItem="hbO-Ce-Mhf" secondAttribute="top" id="gL0-T7-Oqy"/>
+                            <constraint firstAttribute="bottom" secondItem="P1R-9Z-j4R" secondAttribute="bottom" id="gnI-cn-CGA"/>
+                            <constraint firstItem="DGS-7t-mA7" firstAttribute="bottom" secondItem="hbO-Ce-Mhf" secondAttribute="bottom" id="j9k-aN-h0J"/>
+                            <constraint firstItem="P1R-9Z-j4R" firstAttribute="trailing" secondItem="hbO-Ce-Mhf" secondAttribute="trailing" id="jvH-y1-Kbl"/>
+                            <constraint firstItem="Rsd-6C-lBT" firstAttribute="centerY" secondItem="P1R-9Z-j4R" secondAttribute="centerY" id="nhg-bT-cLJ"/>
+                            <constraint firstAttribute="trailing" secondItem="P1R-9Z-j4R" secondAttribute="trailing" id="oLT-Jc-mzS"/>
+                            <constraint firstItem="Rsd-6C-lBT" firstAttribute="centerY" secondItem="P1R-9Z-j4R" secondAttribute="centerY" id="pGK-RY-078"/>
+                            <constraint firstItem="Rsd-6C-lBT" firstAttribute="centerX" secondItem="P1R-9Z-j4R" secondAttribute="centerX" id="sBk-qI-Ox3"/>
+                            <constraint firstItem="DGS-7t-mA7" firstAttribute="top" secondItem="P1R-9Z-j4R" secondAttribute="bottom" id="uXl-oO-yEN"/>
+                            <constraint firstItem="DGS-7t-mA7" firstAttribute="top" secondItem="hbO-Ce-Mhf" secondAttribute="top" id="ztP-bd-hbV"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="hbO-Ce-Mhf"/>
+                        <variation key="default">
+                            <mask key="constraints">
+                                <exclude reference="6HY-Jg-LRN"/>
+                                <exclude reference="CGb-Mf-wcf"/>
+                                <exclude reference="REh-PG-2fg"/>
+                                <exclude reference="Sxo-vi-mHi"/>
+                                <exclude reference="j9k-aN-h0J"/>
+                                <exclude reference="uXl-oO-yEN"/>
+                                <exclude reference="ztP-bd-hbV"/>
+                                <exclude reference="1Pp-pB-VDA"/>
+                                <exclude reference="GiX-UR-VYc"/>
+                                <exclude reference="g0a-OP-bmW"/>
+                                <exclude reference="gL0-T7-Oqy"/>
+                                <exclude reference="gnI-cn-CGA"/>
+                                <exclude reference="jvH-y1-Kbl"/>
+                                <exclude reference="oLT-Jc-mzS"/>
+                                <exclude reference="IHQ-D6-Ilj"/>
+                                <exclude reference="7hs-rr-zVj"/>
+                                <exclude reference="nhg-bT-cLJ"/>
+                                <exclude reference="pGK-RY-078"/>
+                                <exclude reference="sBk-qI-Ox3"/>
+                            </mask>
+                        </variation>
+                        <variation key="heightClass=compact-widthClass=regular">
+                            <mask key="constraints">
+                                <include reference="REh-PG-2fg"/>
+                                <include reference="Sxo-vi-mHi"/>
+                                <include reference="ztP-bd-hbV"/>
+                                <include reference="1Pp-pB-VDA"/>
+                                <include reference="g0a-OP-bmW"/>
+                                <include reference="gnI-cn-CGA"/>
+                                <include reference="oLT-Jc-mzS"/>
+                                <include reference="IHQ-D6-Ilj"/>
+                                <include reference="7hs-rr-zVj"/>
+                                <include reference="nhg-bT-cLJ"/>
+                            </mask>
+                        </variation>
+                        <variation key="heightClass=regular-widthClass=compact">
+                            <mask key="constraints">
+                                <include reference="6HY-Jg-LRN"/>
+                                <include reference="CGb-Mf-wcf"/>
+                                <include reference="j9k-aN-h0J"/>
+                                <include reference="uXl-oO-yEN"/>
+                                <include reference="GiX-UR-VYc"/>
+                                <include reference="gL0-T7-Oqy"/>
+                                <include reference="jvH-y1-Kbl"/>
+                                <include reference="pGK-RY-078"/>
+                                <include reference="sBk-qI-Ox3"/>
+                            </mask>
+                        </variation>
                     </view>
                     <connections>
                         <outlet property="durationLabel" destination="0jp-Ns-ONb" id="EaQ-Eh-ifL"/>
+                        <outlet property="errorLabel" destination="vyt-EB-OJx" id="nFc-wd-5qu"/>
+                        <outlet property="indicator" destination="Rsd-6C-lBT" id="TR8-2I-YZ4"/>
                         <outlet property="nextSeek" destination="JZo-ls-sDx" id="5nM-O3-mJY"/>
                         <outlet property="playerVideo" destination="P1R-9Z-j4R" id="lfc-zx-6zU"/>
                         <outlet property="prevSeek" destination="auK-72-oMt" id="MKe-6m-meU"/>

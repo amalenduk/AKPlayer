@@ -1,6 +1,6 @@
 //
 //  TableViewController.swift
-//  AKPlayer
+//  AKPlayer_Example
 //
 //  Copyright (c) 2020 Amalendu Kar
 //
@@ -26,38 +26,45 @@
 import UIKit
 
 class TableViewController: UITableViewController {
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         navigationItem.title = "Examples"
         tableView.tableFooterView = UIView()
     }
-
+    
     // MARK: - Table view data source
-
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         // #warning Incomplete implementation, return the number of sections
         return 1
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
         return DemoScreen.allCases.count
     }
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         cell.textLabel?.text = DemoScreen.allCases[indexPath.row].description
         return cell
     }
-
+    
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard let navVC = navigationController else { assertionFailure(); return }
-
         let screen = DemoScreen.allCases[indexPath.row]
         let sb = UIStoryboard(name: screen.id, bundle: Bundle.main)
         let vc = sb.instantiateViewController(withIdentifier: screen.screen)
-        navVC.pushViewController(vc, animated: true)
+        
+        if screen.screen == "PlayerWithUIControlViewController" {
+            vc.providesPresentationContextTransitionStyle = true
+            vc.definesPresentationContext = true
+            vc.modalPresentationStyle = .overFullScreen
+            present(vc, animated: true, completion: nil)
+        }else {
+            navVC.pushViewController(vc, animated: true)
+        }
     }
 }

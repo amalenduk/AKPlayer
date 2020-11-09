@@ -36,11 +36,6 @@ final class AKPlayerSeekService: AKPlayerSeekServiceable {
     private let playerItem: AVPlayerItem
     private let configuration: AKPlayerConfiguration
     
-    /**
-     The `NSKeyValueObservation` for the KVO on `\AVPlayer.timeControlStatus`.
-     */
-    private var playerTimeControlStatusObserver: NSKeyValueObservation?
-    
     // MARK: - Init
     
     init(with playerItem: AVPlayerItem, configuration: AKPlayerConfiguration) {

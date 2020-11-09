@@ -1,5 +1,5 @@
 //
-//  DemoScreen.swift
+//  ProgressAndBufferedSlider.swift
 //  AKPlayer_Example
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -24,35 +24,55 @@
 //
 
 import Foundation
+import UIKit
 
-enum DemoScreen: CaseIterable {
-    case simpleVideo
-    case playerControl
-    
-    var id: String {
-        switch self {
-        case .simpleVideo:
-            return "SimpleVideo"
-        case .playerControl:
-            return "Control"
-        }
+@IBDesignable class AKProgressAndTimeRangesSlider: UISlider {
+
+    var timerangesProgressView: UIProgressView!
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        commonInit()
     }
-    
-    var screen: String {
-        switch self {
-        case .simpleVideo:
-            return "SimpleVideoViewController"
-        case .playerControl:
-            return "PlayerWithUIControlViewController"
-        }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        commonInit()
     }
-    
-    var description: String {
-        switch self {
-        case .simpleVideo:
-            return "Simple Video"
-        case .playerControl:
-            return "Controlled Player"
-        }
+
+    open func commonInit() {
+        setupUI()
+        applyDesigns()
+        resetControls()
+        addUIElements()
+        makeViewConstraints()
+    }
+
+    open func setupUI() {
+        timerangesProgressView = UIProgressView()
+    }
+
+    open func applyDesigns() {
+        setThumbImage(UIImage(named: "ic.track.thumb"), for: .normal)
+        minimumTrackTintColor = .red
+        maximumTrackTintColor = .darkGray
+
+        timerangesProgressView.tintColor = .white
+        timerangesProgressView.progressTintColor = .white
+    }
+
+    open func resetControls() {
+        minimumValue = 0
+        maximumValue = 1
+        value = 0
+        timerangesProgressView.progress = 0.8
+    }
+
+    open func addUIElements() {
+        addSubview(timerangesProgressView)
+    }
+
+    open func makeViewConstraints() {
+
     }
 }

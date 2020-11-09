@@ -25,10 +25,35 @@
 
 import AVFoundation
 
-open class AKPlayer: AKPlayerCommand {
-    
+open class AKPlayer: AKPlayerExposable {
+
     // MARK: - Properties
     
+    open var currentMedia: AKPlayable? {
+        return manager.currentMedia
+    }
+
+    open var currentItem: AVPlayerItem? {
+        return manager.currentItem
+    }
+
+    open var currentTime: CMTime {
+        return manager.currentTime
+    }
+
+    open var itemDuration: CMTime? {
+        return manager.itemDuration
+    }
+
+    open var state: AKPlayer.State {
+        return manager.state
+    }
+
+    open var playbackRate: AKPlaybackRate {
+        get { return manager.playbackRate }
+        set { manager.playbackRate = newValue }
+    }
+
     public let player: AVPlayer
     
     public let manager: AKPlayerManager
@@ -40,12 +65,16 @@ open class AKPlayer: AKPlayerCommand {
     public init(player: AVPlayer = AVPlayer(),
                 plugins: [AKPlayerPlugin] = [],
                 configuration: AKPlayerConfiguration = AKPlayerDefaultConfiguration(),
-                loggerDomains: [AKPlayerLoggerDomain] = []) {
+                audioSessionService: AKAudioSessionServiceable = AKAudioSessionService()) {
         self.player = player
-        AKPlayerLogger.setup.domains = loggerDomains
-        manager = AKPlayerManager(player: player, plugins: plugins, configuration: configuration)
+        manager = AKPlayerManager(player: player,
+                                  plugins: plugins,
+                                  configuration: configuration,
+                                  audioSessionService: audioSessionService)
         manager.delegate = self
     }
+
+    // MARK: - Commands
     
     open func load(media: AKPlayable) {
         manager.load(media: media)
@@ -98,12 +127,28 @@ open class AKPlayer: AKPlayerCommand {
     open func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         manager.seek(offset: offset, completionHandler: completionHandler)
     }
+
+    open func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        manager.seek(toPercentage: value, completionHandler: completionHandler)
+    }
+
+    open func seek(toPercentage value: Double) {
+        manager.seek(toPercentage: value)
+    }
+
+    open func setNowPlayingMetadata() {
+        manager.setNowPlayingMetadata()
+    }
+
+    open func setNowPlayingPlaybackInfo() {
+        manager.setNowPlayingPlaybackInfo()
+    }
 }
 
 // MARK: - AKPlayerManageableDelegate
 
 extension AKPlayer: AKPlayerManageableDelegate {
-    
+
     public func playerManager(didStateChange state: AKPlayer.State) {
         delegate?.akPlayer(self, didStateChange: state)
     }
@@ -116,16 +161,24 @@ extension AKPlayer: AKPlayerManageableDelegate {
         delegate?.akPlayer(self, didCurrentTimeChange: currentTime)
     }
     
-    public func playerManager(didItemDurationChange itemDuration: CMTime?) {
+    public func playerManager(didItemDurationChange itemDuration: CMTime) {
         delegate?.akPlayer(self, didItemDurationChange: itemDuration)
     }
     
-    public func playerManager(unavailableActionReason: AKPlayerUnavailableActionReason) {
-        delegate?.akPlayer(self, unavailableActionReason: unavailableActionReason)
+    public func playerManager(unavailableAction reason: AKPlayerUnavailableActionReason) {
+        delegate?.akPlayer(self, unavailableAction: reason)
     }
     
     public func playerManager(didItemPlayToEndTime endTime: CMTime) {
         delegate?.akPlayer(self, didItemPlayToEndTime: endTime)
+    }
+
+    public func playerManager(didFailedWith error: AKPlayerError) {
+        delegate?.akPlayer(self, didFailedWith: error)
+    }
+
+    public func playerManager(didPlaybackRateChange playbackRate: AKPlaybackRate) {
+        delegate?.akPlayer(self, didPlaybackRateChange: playbackRate)
     }
 }
 

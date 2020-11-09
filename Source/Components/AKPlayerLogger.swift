@@ -25,16 +25,16 @@
 
 import Foundation
 
-final class AKPlayerLoggerInputParam {
-    var domains: [AKPlayerLoggerDomain]?
+final public class AKPlayerLoggerInputParam {
+    public var domains: [AKPlayerLoggerDomain]?
 }
 
-final class AKPlayerLogger {
+final public class AKPlayerLogger {
     
     // MARK: - Properties
     
     static let shared = AKPlayerLogger()
-    static let setup = AKPlayerLoggerInputParam()
+    public static let setup = AKPlayerLoggerInputParam()
     
     private var domains: [AKPlayerLoggerDomain] = []
     private let formatter = DateFormatter()

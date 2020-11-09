@@ -1,6 +1,6 @@
 //
 //  AppDelegate.swift
-//  AKPlayer
+//  AKPlayer_Example
 //
 //  Copyright (c) 2020 Amalendu Kar
 //

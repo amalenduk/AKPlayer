@@ -1,6 +1,6 @@
 //
-//  AKMediaItem.swift
-//  AKPlayer
+//  PlayerWithUIControlViewController.swift
+//  AKPlayer_Example
 //
 //  Copyright (c) 2020 Amalendu Kar
 //
@@ -23,38 +23,37 @@
 //  SOFTWARE.
 //
 
-import AVFoundation.AVPlayerItem
+import UIKit
+import AKPlayer
 
-public class AKMediaItem: AKMediaItemPlayable {
+class PlayerWithUIControlViewController: UIViewController {
     
-    // MARK: - Properties
+    // MARK: - UIElements
     
-    public let item: AVPlayerItem
-    
-    public let url: URL
-    
-    public let type: AKMediaType
-    
-    public let options: [String : Any]?
-    
-    public var staticMetadata: AKPlayableStaticMetadata?
-    
-    // MARK: - Init
-    
-    public init?(item: AVPlayerItem,
-                 type: AKMediaType,
-                 options: [String : Any]? = nil,
-                 staticMetadata: AKPlayableStaticMetadata? = nil) {
-        self.item = item
-        self.type = type
-        self.options = options
-        self.staticMetadata = staticMetadata
+    @IBOutlet weak var videoPlayer: AKVideoPlayer!
+    @IBOutlet weak var bottomContainerView: UIView!
+    @IBOutlet weak var loadButton: UIButton!
+
+    // MARK: - Variables
+
+    var url: URL!
+    var metadata: AKMediaStaticMetadata!
+    var media: AKMedia!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
         
-        guard let url = (item.asset as? AVURLAsset)?.url else { return nil }
-        self.url = url
+        navigationItem.title = "Controlled Player"
+        
+        url = URL(string: "https://www.radiantmediaplayer.com/media/big-buck-bunny-360p.mp4")!
+        metadata = AKMediaStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "Amalendu Kar", artwork: nil, albumArtist: "Amalendu Kar", albumTitle: "Amalendu Kar")
+        media = AKMedia(url: url, type: .clip, staticMetadata: metadata)
+        view.bringSubviewToFront(videoPlayer)
     }
 
-    public func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata) {
-        self.staticMetadata = staticMetadata
+    // MARK: - User Interactions
+
+    @IBAction func loadButtonAction(_ sender: Any) {
+        videoPlayer.load(media: media, autoPlay: true)
     }
 }

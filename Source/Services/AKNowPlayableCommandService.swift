@@ -31,7 +31,7 @@ public class AKNowPlayableCommandService {
     
     // MARK: - Properties
     
-    public var defaultRegisteredCommands: [AKNowPlayableCommand] {
+    public var defaultCommands: [AKNowPlayableCommand] {
         return [.play, .pause, .skipForward, .skipBackward, .changePlaybackPosition]
     }
     
@@ -57,7 +57,7 @@ public class AKNowPlayableCommandService {
     }
     
     private func addHandlers() {
-        for command in defaultRegisteredCommands {
+        for command in defaultCommands {
             command.removeHandler()
             command.addHandler(handleCommand(command:event:))
         }
@@ -87,7 +87,7 @@ public class AKNowPlayableCommandService {
             return .noSuchContent
         case .changePlaybackRate:
             guard let event = event as? MPChangePlaybackRateCommandEvent else { return .commandFailed }
-            manager.player.rate = event.playbackRate
+            manager.playbackRate = AKPlaybackRate(rate: event.playbackRate)
         case .seekBackward:
             guard let event = event as? MPSeekCommandEvent else { return .commandFailed }
             manager.player.rate = (event.type == .beginSeeking ? -3.0 : 1.0)

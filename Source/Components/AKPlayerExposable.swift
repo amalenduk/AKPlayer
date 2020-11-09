@@ -1,5 +1,5 @@
 //
-//  AKPlayerDelegate.swift
+//  AKPlayerExposable.swift
 //  AKPlayer
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -25,13 +25,15 @@
 
 import AVFoundation
 
-public protocol AKPlayerDelegate: class {
-    func akPlayer(_ player: AKPlayer, didStateChange state: AKPlayer.State)
-    func akPlayer(_ player: AKPlayer, didCurrentMediaChange media: AKPlayable)
-    func akPlayer(_ player: AKPlayer, didCurrentTimeChange currentTime: CMTime)
-    func akPlayer(_ player: AKPlayer, didItemDurationChange itemDuration: CMTime)
-    func akPlayer(_ player: AKPlayer, unavailableAction reason: AKPlayerUnavailableActionReason)
-    func akPlayer(_ player: AKPlayer, didItemPlayToEndTime endTime: CMTime)
-    func akPlayer(_ player: AKPlayer, didFailedWith error: AKPlayerError)
-    func akPlayer(_ player: AKPlayer, didPlaybackRateChange playbackRate: AKPlaybackRate)
+public protocol AKPlayerExposable: class, AKPlayerCommand {
+    var currentMedia: AKPlayable? { get }
+    var currentItem: AVPlayerItem? { get }
+    var currentTime: CMTime { get }
+    var itemDuration: CMTime? { get }
+    var player: AVPlayer { get }
+    var state: AKPlayer.State { get }
+    var playbackRate: AKPlaybackRate { get set }
+
+    func setNowPlayingMetadata()
+    func setNowPlayingPlaybackInfo()
 }

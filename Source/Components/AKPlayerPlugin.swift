@@ -28,13 +28,13 @@ import AVFoundation
 
 public protocol AKPlayerPlugin {
     func playerPlugin(didInit player: AVPlayer)
+    func playerPlugin(didChanged media: AKPlayable)
     func playerPlugin(willStartLoading media: AKPlayable)
     func playerPlugin(didStartLoading media: AKPlayable)
     func playerPlugin(didStartBuffering media: AKPlayable)
-    func playerPlugin(didChanged media: AKPlayable, with previousMedia: AKPlayable?)
     func playerPlugin(didLoad media: AKPlayable, with duration: CMTime)
     func playerPlugin(willStartPlaying media: AKPlayable, at position: CMTime)
-    func playerPlugin(didStartPlaying media: AKPlayable)
+    func playerPlugin(didStartPlaying media: AKPlayable, at position: CMTime)
     func playerPlugin(didPaused media: AKPlayable, at position: CMTime)
     func playerPlugin(didStopped media: AKPlayable, at position: CMTime)
     func playerPlugin(didStartWaitingForNetwork media: AKPlayable)
@@ -42,15 +42,15 @@ public protocol AKPlayerPlugin {
     func playerPlugin(didPlayToEnd media: AKPlayable, at endTime: CMTime)
 }
 
-extension AKPlayerPlugin {
+public extension AKPlayerPlugin {
     func playerPlugin(didInit player: AVPlayer) { }
+    func playerPlugin(didChanged media: AKPlayable) { }
     func playerPlugin(willStartLoading media: AKPlayable) { }
     func playerPlugin(didStartLoading media: AKPlayable) { }
     func playerPlugin(didStartBuffering media: AKPlayable) { }
-    func playerPlugin(didChanged media: AKPlayable, with previousMedia: AKPlayable?) { }
     func playerPlugin(didLoad media: AKPlayable, with duration: CMTime) { }
     func playerPlugin(willStartPlaying media: AKPlayable, at position: CMTime) { }
-    func playerPlugin(didStartPlaying media: AKPlayable) { }
+    func playerPlugin(didStartPlaying media: AKPlayable, at position: CMTime) { }
     func playerPlugin(didPaused media: AKPlayable, at position: CMTime) { }
     func playerPlugin(didStopped media: AKPlayable, at position: CMTime) { }
     func playerPlugin(didStartWaitingForNetwork media: AKPlayable) { }
