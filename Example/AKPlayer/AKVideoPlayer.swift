@@ -34,12 +34,12 @@ open class AKVideoPlayer: UIView {
     @IBOutlet private var contentView: UIView!
     @IBOutlet private weak var playerView: AKPlayerView!
     @IBOutlet private weak var controlView: AKVideoPlayerControlView!
-
+    
     // MARK:- Variables
     
     open private(set) var player: AKPlayer!
     public let configuration = AKPlayerDefaultConfiguration()
-
+    
     open var playbackRate: AKPlaybackRate {
         get { player.playbackRate }
         set { player.playbackRate = newValue }
@@ -68,67 +68,15 @@ open class AKVideoPlayer: UIView {
         
         commonInit()
     }
-
+    
     deinit {
         NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
     }
     
     // MARK: Layout
-
-    // MARK: User Interaction
-    
-    @objc private func playPauseButtonAction(_ sender: UIButton) {
-        switch player.state {
-        case .playing, .buffering, .loading, .waitingForNetwork:
-            player.pause()
-        case .initialization, .failed:
-            player.play()
-        case .loaded, .paused, .stopped:
-            player.play()
-        }
-    }
-    
-    @objc private func minimizeBarButtonAction(_ sender: UIButton) {
-        
-    }
-
-    @objc private func timeSliderTouchDownAction(_ sender: UISlider) {
-        if let duration = player.itemDuration, duration.isValid && duration.isNumeric { }
-    }
-    
-    @objc private func timeSliderValueChangedAction(_ sender: UISlider) {
-        if let duration = player.itemDuration, duration.isValid && duration.isNumeric {
-            controlView.currentTimeLabel.text = String(describing: CMTime(seconds: (duration.seconds * Double(sender.value)), preferredTimescale: configuration.preferredTimescale).positionalTime)
-        }
-    }
-    
-    @objc private func timeSliderSlideEndedAction(_ sender: UISlider) {
-        if let duration = player.itemDuration, duration.isValid && duration.isNumeric {
-            player.seek(to: duration.seconds * Double(sender.value))
-        }
-    }
     
     // MARK: Additional Helpers
-    
-    /// Override this function to add targets to buttons
-    open func addTargets() {
-        controlView.playbackButton.addTarget(self, action: #selector(playPauseButtonAction(_ :)), for: .touchUpInside)
-        controlView.minimizeButton.action = #selector(minimizeBarButtonAction(_ :))
-        
-        controlView.progressSlider.addTarget(self, action: #selector(timeSliderTouchDownAction(_:)),
-                                             for: .touchDown)
-        
-        controlView.progressSlider.addTarget(self, action: #selector(timeSliderValueChangedAction(_:)),
-                                             for: .valueChanged)
-        
-        controlView.progressSlider.addTarget(self, action: #selector(timeSliderSlideEndedAction(_:)),
-                                             for: [.touchUpInside, .touchCancel, .touchUpOutside])
-
-        controlView.playbackrateButton.onRateChange { (rate) in
-            self.player.playbackRate = rate
-        }
-    }
     
     /// Called by both `init(frame: CGRect)` and `init?(coder: NSCoder)`,
     open func commonInit() {
@@ -136,8 +84,8 @@ open class AKVideoPlayer: UIView {
         contentView.frame = self.bounds
         contentView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         addSubview(contentView)
+        controlView.delegate = self
         setupPlayer()
-        addTargets()
         addObserbers()
     }
     
@@ -147,26 +95,18 @@ open class AKVideoPlayer: UIView {
         player.delegate = self
         playerView.playerLayer.player = player.player
     }
-
-    open func progressSlider(_ isAvailable: Bool) {
-        if isAvailable {
-            controlView.progressSlider.isEnabled = false
-        }else {
-            controlView.progressSlider.isEnabled = true
-        }
-    }
-
+    
     private func addObserbers() {
         NotificationCenter.default.addObserver(self, selector: #selector(didEnterInBackground(_ :)), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(didEnterInForeground(_ :)), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
-
+    
     // MARK: - Obserbers
-
+    
     @objc func didEnterInBackground(_ notification: Notification) {
         playerView.player = nil
     }
-
+    
     @objc func didEnterInForeground(_ notification: Notification) {
         playerView.player = player.player
     }
@@ -231,75 +171,41 @@ extension AKVideoPlayer: AKPlayerCommand {
     public func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         player.seek(to: offset, completionHandler: completionHandler)
     }
+    
+    public func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        player.seek(toPercentage: value, completionHandler: completionHandler)
+    }
+    
+    public func seek(toPercentage value: Double) {
+        player.seek(toPercentage: value)
+    }
 }
 
 // MARK: - AKPlayerDelegate
 
 extension AKVideoPlayer: AKPlayerDelegate {
-
+    
     public func akPlayer(_ player: AKPlayer, didStateChange state: AKPlayer.State) {
-        switch state {
-        case .buffering:
-            controlView.playbackButton.changePlayback(.playing)
-            controlView.playbackButton.isHidden = true
-            controlView.indicator.startAnimating()
-        case .failed:
-            controlView.playbackButton.changePlayback(.failed)
-            controlView.playbackButton.isHidden = false
-            controlView.indicator.stopAnimating()
-        case .initialization:
-            break
-        case .loaded:
-            controlView.playbackButton.changePlayback(.paused)
-            controlView.playbackButton.isHidden = false
-            controlView.indicator.stopAnimating()
-        case .loading:
-            controlView.playbackButton.changePlayback(.paused)
-            controlView.playbackButton.isHidden = true
-            controlView.indicator.startAnimating()
-        case .paused:
-            controlView.playbackButton.changePlayback(.paused)
-            controlView.playbackButton.isHidden = false
-            controlView.indicator.stopAnimating()
-        case .playing:
-            controlView.playbackButton.changePlayback(.playing)
-            controlView.playbackButton.isHidden = false
-            controlView.indicator.stopAnimating()
-        case .stopped:
-            controlView.playbackButton.changePlayback(.stopped)
-            controlView.playbackButton.isHidden = false
-            controlView.indicator.stopAnimating()
-        case .waitingForNetwork:
-            controlView.playbackButton.changePlayback(.playing)
-            controlView.playbackButton.isHidden = true
-            controlView.indicator.startAnimating()
-        }
+        controlView.changedPlayerState(state)
     }
     
     public func akPlayer(_ player: AKPlayer, didCurrentMediaChange media: AKPlayable) {
         DispatchQueue.main.async {
             self.controlView.resetControlls()
-            self.progressSlider(!media.isLive())
+            self.controlView.progressSlider(!media.isLive())
         }
     }
     
     public func akPlayer(_ player: AKPlayer, didCurrentTimeChange currentTime: CMTime) {
         DispatchQueue.main.async {
-            self.controlView.currentTimeLabel.text = currentTime.positionalTime
-            if let duration = self.player.itemDuration, self.player.currentMedia!.type == .clip {
-                if !self.controlView.progressSlider.isTracking {
-                    self.controlView.progressSlider.value = Float(self.player.currentTime.seconds / (duration.seconds))
-                }
-            }
+            self.controlView.setCurrentTime(currentTime)
+            self.controlView.setSliderProgress(currentTime, itemDuration: player.itemDuration)
         }
     }
     
     public func akPlayer(_ player: AKPlayer, didItemDurationChange itemDuration: CMTime) {
-        if itemDuration.isValid && itemDuration.isNumeric {
-            DispatchQueue.main.async {
-                self.controlView.totalDurationLabel.text = itemDuration.positionalTime
-                self.controlView.progressSlider.isEnabled = true
-            }
+        DispatchQueue.main.async {
+            self.controlView.setDuration(itemDuration)
         }
     }
     
@@ -314,8 +220,36 @@ extension AKVideoPlayer: AKPlayerDelegate {
     public func akPlayer(_ player: AKPlayer, didFailedWith error: AKPlayerError) {
         
     }
-
+    
     public func akPlayer(_ player: AKPlayer, didPlaybackRateChange playbackRate: AKPlaybackRate) {
-        controlView.playbackrateButton.change(playbackRate)
+        
+    }
+}
+
+// MARK: - AKVideoPlayerControlViewDelegate
+
+extension AKVideoPlayer: AKVideoPlayerControlViewDelegate {
+    
+    func controlView(_ view: AKVideoPlayerControlView, didTapPlaybackButton button: AKPlaybackButton) {
+        switch player.state {
+        case .playing, .buffering, .loading, .waitingForNetwork:
+            player.pause()
+        case .initialization, .failed:
+            player.play()
+        case .loaded, .paused, .stopped:
+            player.play()
+        }
+    }
+    
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didChanged value: Float) {
+        if let duration = player.itemDuration, duration.isValid, duration.isNumeric {
+            controlView.setCurrentTime(CMTime(seconds: (duration.seconds * Double(slider.value)), preferredTimescale: configuration.preferredTimescale))
+        }
+    }
+    
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didStartTrackingWith value: Float) { }
+    
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didEndTrackingWith value: Float) {
+        seek(toPercentage: Double(slider.value))
     }
 }

@@ -128,6 +128,14 @@ open class AKPlayer: AKPlayerExposable {
         manager.seek(offset: offset, completionHandler: completionHandler)
     }
 
+    open func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        manager.seek(toPercentage: value, completionHandler: completionHandler)
+    }
+
+    open func seek(toPercentage value: Double) {
+        manager.seek(toPercentage: value)
+    }
+
     open func setNowPlayingMetadata() {
         manager.setNowPlayingMetadata()
     }

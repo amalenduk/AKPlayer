@@ -132,8 +132,19 @@ final class AKLoadingState: AKPlayerStateControllable {
     
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
         completionHandler(false)
+    }
+
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
+        completionHandler(false)
+    }
+
+    func seek(toPercentage value: Double) {
+        AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
     }
     
     // MARK: - Additional Helper Functions

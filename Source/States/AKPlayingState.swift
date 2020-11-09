@@ -129,10 +129,14 @@ final class AKPlayingState: AKPlayerStateControllable {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
 
-    func seek(to percentage: Float, completionHandler: @escaping (Bool) -> Void) {
-        
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
     }
-    
+
+    func seek(toPercentage value: Double) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value)
+    }
+
     // MARK: - Additional Helper Functions
     
     private func startPlayerPlaybackObserving() {

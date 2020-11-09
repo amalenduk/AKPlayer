@@ -86,16 +86,14 @@ import UIKit
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
-        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .allowUserInteraction, animations: {
-            self.transform = .identity
+        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.3, initialSpringVelocity: 0.3, options: .allowUserInteraction, animations: {
+            self.transform = CGAffineTransform(scaleX: 0.7, y: 0.7)
         }, completion: nil)
         super.touchesBegan(touches, with: event)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
-        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .allowUserInteraction, animations: {
+        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.3, initialSpringVelocity: 0.3, options: .allowUserInteraction, animations: {
             self.transform = .identity
         }, completion: nil)
         super.touchesEnded(touches, with: event)

@@ -101,7 +101,7 @@ final class AKFailedState: AKPlayerStateControllable {
     
     func seek(to time: CMTime) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
     
     func seek(to time: Double, completionHandler: @escaping (Bool) -> Void) {
@@ -114,12 +114,23 @@ final class AKFailedState: AKPlayerStateControllable {
     
     func seek(offset: Double) {
         AKPlayerLogger.shared.log(message: "Unable to seek, load a media first", domain: .unavailableCommand)
-        manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
     
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Unable to seek, load a media first", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
+    }
+
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        AKPlayerLogger.shared.log(message: "Unable to seek, load a media first", domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
+        completionHandler(false)
+    }
+
+    func seek(toPercentage value: Double) {
+        AKPlayerLogger.shared.log(message: "Unable to seek, load a media first", domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
 }

@@ -44,16 +44,7 @@ final class AKStoppedState: AKPlayerStateControllable {
         guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didStopped: media, at: manager.currentTime)})
         startPlayerTimeObserving()
-        if !flag {
-            seek(to: 0) { [unowned self] (finished) in
-                if finished {
-                    self.manager.delegate?.playerManager(didCurrentTimeChange: CMTime(seconds: 0, preferredTimescale: self.manager.configuration.preferredTimescale))
-                }else {
-                    assertionFailure("Should seek to position 0 when playerItemDidPlayToEndTime is not true and item stopped playing")
-                }
-            }
-        }
-        
+        if !flag { seek(to: 0) }
         manager.setNowPlayingPlaybackInfo()
     }
     
@@ -129,6 +120,14 @@ final class AKStoppedState: AKPlayerStateControllable {
     
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
+    }
+
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
+    }
+
+    func seek(toPercentage value: Double) {
+        seek(to: (manager.itemDuration?.seconds ?? 0) / value)
     }
     
     // MARK: - Additional Helper Functions

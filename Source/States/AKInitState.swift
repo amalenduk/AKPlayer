@@ -111,4 +111,15 @@ final class AKInitState: AKPlayerStateControllable {
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
+
+    func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
+        completionHandler(false)
+    }
+
+    func seek(toPercentage value: Double) {
+        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
+    }
 }

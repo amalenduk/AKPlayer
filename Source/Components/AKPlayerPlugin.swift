@@ -28,7 +28,6 @@ import AVFoundation
 
 public protocol AKPlayerPlugin {
     func playerPlugin(didInit player: AVPlayer)
-    func playerPlugin(didChanged state: AKPlayer.State)
     func playerPlugin(didChanged media: AKPlayable)
     func playerPlugin(willStartLoading media: AKPlayable)
     func playerPlugin(didStartLoading media: AKPlayable)
@@ -45,7 +44,6 @@ public protocol AKPlayerPlugin {
 
 public extension AKPlayerPlugin {
     func playerPlugin(didInit player: AVPlayer) { }
-    func playerPlugin(didChanged state: AKPlayer.State) { }
     func playerPlugin(didChanged media: AKPlayable) { }
     func playerPlugin(willStartLoading media: AKPlayable) { }
     func playerPlugin(didStartLoading media: AKPlayable) { }

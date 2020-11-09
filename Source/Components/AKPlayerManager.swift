@@ -27,7 +27,7 @@ import AVFoundation
 import Foundation
 
 open class AKPlayerManager: AKPlayerManageable {
-    
+
     // MARK: - Properties
     
     open private(set) var currentMedia: AKPlayable? {
@@ -58,6 +58,7 @@ open class AKPlayerManager: AKPlayerManageable {
     open var playbackRate: AKPlaybackRate {
         get { return AKPlaybackRate(rate: player.rate) }
         set { lastPlaybackRate = newValue
+            delegate?.playerManager(didPlaybackRateChange: newValue)
             setPlaybackRate(controller: controller)
         }
     }
@@ -69,7 +70,6 @@ open class AKPlayerManager: AKPlayerManageable {
     open private(set) var controller: AKPlayerStateControllable! {
         didSet {
             delegate?.playerManager(didStateChange: controller.state)
-            plugins.forEach({$0.playerPlugin(didChanged: controller.state)})
         }
     }
     
@@ -83,9 +83,7 @@ open class AKPlayerManager: AKPlayerManageable {
     
     private var playerRateObservingService: AKPlayerRateObservingServiceable?
     
-    private var lastPlaybackRate: AKPlaybackRate = .normal {
-        didSet { delegate?.playerManager(didPlaybackRateChange: lastPlaybackRate) }
-    }
+    private var lastPlaybackRate: AKPlaybackRate = .normal
     
     // MARK: - Init
     
@@ -172,10 +170,17 @@ open class AKPlayerManager: AKPlayerManageable {
     }
     
     open func seek(to time: CMTime) {
-        seek(to: time) { (finished) in
-            if !finished {
-                AKPlayerLogger.shared.log(message: "Seek to time: \(time.seconds) is not completed", domain: .state)
-            }
+        guard let item = currentItem else { unaivalableCommand(reason: .loadMediaFirst); return }
+
+        let seekService = AKPlayerSeekService(with: item, configuration: configuration)
+        let result = seekService.boundedTime(time)
+
+        if let seekTime = result.time {
+            controller.seek(to: seekTime)
+        } else if let reason = result.reason {
+            unaivalableCommand(reason: reason)
+        } else {
+            assertionFailure("BoundedPosition should return at least value or reason")
         }
     }
     
@@ -195,6 +200,14 @@ open class AKPlayerManager: AKPlayerManageable {
     open func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         let position = currentTime.seconds + offset
         seek(to: position, completionHandler: completionHandler)
+    }
+
+    open func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
+        seek(to: (itemDuration?.seconds ?? 0) * value, completionHandler: completionHandler)
+    }
+
+    open func seek(toPercentage value: Double) {
+        seek(to: (itemDuration?.seconds ?? 0) * value)
     }
     
     // MARK: - Additional Helper Functions
