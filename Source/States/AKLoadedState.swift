@@ -29,26 +29,53 @@ final class AKLoadedState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     var state: AKPlayer.State = .loaded
+
+    private let autoPlay: Bool
+    private let position: CMTime?
     
     private var playerTimeObservingService: AKPlayerTimeObservingServiceable!
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable) {
+    init(manager: AKPlayerManagerProtocol,
+         autoPlay: Bool,
+         at position: CMTime? = nil) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+        self.autoPlay = autoPlay
+        self.position = position
+    }
+    
+    deinit {
+        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+    }
+
+    func stateUpdated() {
         guard let media = manager.currentMedia, let currentItem = manager.currentItem else { assertionFailure("Media and Current item should available"); return }
         manager.delegate?.playerManager(didItemDurationChange: currentItem.duration)
         manager.plugins.forEach({$0.playerPlugin(didLoad: media, with: currentItem.duration)})
         startPlayerTimeObserving()
         setMetadata()
-    }
-    
-    deinit {
-        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+
+        if let position = position {
+            guard let item = manager.currentItem else { assertionFailure("Current item should be available"); return }
+
+            let seekService = AKPlayerSeekService(with: item, configuration: manager.configuration)
+            let result = seekService.boundedTime(position)
+
+            if let seekTime = result.time {
+                seek(to: seekTime)
+            } else if let reason = result.reason {
+                AKPlayerLogger.shared.log(message: reason.description, domain: .unavailableCommand)
+            } else {
+                assertionFailure("BoundedPosition should return at least value or reason")
+            }
+        }
+
+        if autoPlay { play() }
     }
 
     // MARK: - Commands

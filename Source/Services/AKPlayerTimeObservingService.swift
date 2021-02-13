@@ -27,6 +27,7 @@ import AVFoundation
 
 protocol AKPlayerTimeObservingServiceable {
     var onChangePeriodicTime: ((_ time: CMTime) -> Void)? { get set }
+    func stop(clearCallBacks flag: Bool)
 }
 
 final class AKPlayerTimeObservingService: AKPlayerTimeObservingServiceable {
@@ -39,7 +40,6 @@ final class AKPlayerTimeObservingService: AKPlayerTimeObservingServiceable {
     private var periodicTimeObserverToken : Any?
     
     var onChangePeriodicTime: ((_ time: CMTime) -> Void)?
-    var onChangeBoundaryTime: (() -> Void)?
     
     // MARK: - Init
     
@@ -52,6 +52,13 @@ final class AKPlayerTimeObservingService: AKPlayerTimeObservingServiceable {
     
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleService)
+        removePeriodicTimeObserver(player: player)
+    }
+
+    func stop(clearCallBacks flag: Bool) {
+        if flag {
+            onChangePeriodicTime = nil
+        }
         removePeriodicTimeObserver(player: player)
     }
     

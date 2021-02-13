@@ -102,19 +102,19 @@ final class AKPlayerItemBufferObservingService: AKPlayerItemBufferObservingServi
     // MARK: - Additional Helper Functions
     
     private func startObservation(playerItem: AVPlayerItem) {
-        playerItemIsPlaybackLikelyToKeepUpObserver = playerItem.observe(\AVPlayerItem.isPlaybackLikelyToKeepUp, options: [.new]) { [unowned self] (item, _) in
+        playerItemIsPlaybackLikelyToKeepUpObserver = playerItem.observe(\AVPlayerItem.isPlaybackLikelyToKeepUp, options: [.initial, .new]) { [unowned self] (item, _) in
             DispatchQueue.main.async {
                 self.onChangePlaybackLikelyToKeepUpStatus?(item.isPlaybackLikelyToKeepUp)
             }
         }
         
-        playerItemIsPlaybackBufferFullObserver = playerItem.observe(\AVPlayerItem.isPlaybackBufferFull, options: [.new]) { [unowned self] (item, _) in
+        playerItemIsPlaybackBufferFullObserver = playerItem.observe(\AVPlayerItem.isPlaybackBufferFull, options: [.initial, .new]) { [unowned self] (item, _) in
             DispatchQueue.main.async {
                 self.onChangePlaybackBufferFullStatus?(item.isPlaybackBufferFull)
             }
         }
         
-        playerItemIsPlaybackBufferEmptyObserver = playerItem.observe(\AVPlayerItem.isPlaybackBufferEmpty, options: [.new]) { [unowned self] (item, _) in
+        playerItemIsPlaybackBufferEmptyObserver = playerItem.observe(\AVPlayerItem.isPlaybackBufferEmpty, options: [.initial, .new]) { [unowned self] (item, _) in
             DispatchQueue.main.async {
                 self.onChangePlaybackBufferEmptyStatus?(item.isPlaybackBufferEmpty)
             }

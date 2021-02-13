@@ -1,5 +1,5 @@
 //
-//  AKPlayerExposable.swift
+//  AKPlayerEngine.swift
 //  AKPlayer
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -25,14 +25,14 @@
 
 import AVFoundation
 
-public protocol AKPlayerExposable: class, AKPlayerCommand {
+public protocol AKPlayerEngine: class, AKPlayerCommand {
     var currentMedia: AKPlayable? { get }
     var currentItem: AVPlayerItem? { get }
     var currentTime: CMTime { get }
     var itemDuration: CMTime? { get }
     var player: AVPlayer { get }
-    var state: AKPlayer.State { get }
     var playbackRate: AKPlaybackRate { get set }
+    var state: AKPlayer.State { get }
 
     func setNowPlayingMetadata()
     func setNowPlayingPlaybackInfo()

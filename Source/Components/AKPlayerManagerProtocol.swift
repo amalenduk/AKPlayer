@@ -1,5 +1,5 @@
 //
-//  AKPlayerManageable.swift
+//  AKPlayerManagerProtocol.swift
 //  AKPlayer
 //
 //  Copyright (c) 2020 Amalendu Kar
@@ -26,7 +26,7 @@
 import Foundation
 import AVFoundation
 
-public protocol AKPlayerManageableDelegate: class {
+public protocol AKPlayerManagerDelegate: class {
     func playerManager(didStateChange state: AKPlayer.State)
     func playerManager(didPlaybackRateChange playbackRate: AKPlaybackRate)
     func playerManager(didCurrentMediaChange media: AKPlayable)
@@ -37,12 +37,12 @@ public protocol AKPlayerManageableDelegate: class {
     func playerManager(didFailedWith error: AKPlayerError)
 }
 
-public protocol AKPlayerManageable: AKPlayerExposable {
+public protocol AKPlayerManagerProtocol: AKPlayerEngine {
     var audioSessionService: AKAudioSessionServiceable { get }
     var playerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServiceable? { get }
     var configuration: AKPlayerConfiguration { get }
     var controller: AKPlayerStateControllable! { get }
-    var delegate: AKPlayerManageableDelegate? { get }
+    var delegate: AKPlayerManagerDelegate? { get }
     var plugins: [AKPlayerPlugin] { get }
     
     func change(_ controller: AKPlayerStateControllable)

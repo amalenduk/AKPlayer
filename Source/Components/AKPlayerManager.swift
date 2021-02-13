@@ -26,7 +26,7 @@
 import AVFoundation
 import Foundation
 
-open class AKPlayerManager: AKPlayerManageable {
+open class AKPlayerManager: AKPlayerManagerProtocol {
 
     // MARK: - Properties
     
@@ -70,10 +70,11 @@ open class AKPlayerManager: AKPlayerManageable {
     open private(set) var controller: AKPlayerStateControllable! {
         didSet {
             delegate?.playerManager(didStateChange: controller.state)
+            controller.stateUpdated()
         }
     }
     
-    open weak var delegate: AKPlayerManageableDelegate?
+    open weak var delegate: AKPlayerManagerDelegate?
     
     public let audioSessionService: AKAudioSessionServiceable
     

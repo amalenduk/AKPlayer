@@ -46,7 +46,7 @@ public struct AKPlayerDefaultConfiguration: AKPlayerConfiguration {
                 preferredTimescale: CMTimeScale = CMTimeScale(NSEC_PER_SEC),
                 itemLoadedAssetKeys: [String] = ["playable", "duration", "availableMetadataFormats", "lyrics"],
                 boundaryTimeObserverMultiplier: Double = 0.20,
-                bufferObservingTimeout: TimeInterval = 10,
+                bufferObservingTimeout: TimeInterval = 15,
                 bufferObservingTimeInterval: TimeInterval = 0.3,
                 audioSessionCategory: AVAudioSession.Category = .playback,
                 audioSessionMode: AVAudioSession.Mode = .moviePlayback,

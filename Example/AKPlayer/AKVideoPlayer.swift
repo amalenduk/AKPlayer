@@ -90,7 +90,7 @@ open class AKVideoPlayer: UIView {
     }
     
     private func setupPlayer() {
-        AKPlayerLogger.setup.domains = AKPlayerLoggerDomain.allCases
+        AKPlayerLogger.setup.domains = [AKPlayerLoggerDomain.state, .lifecycleState]
         player = AKPlayer(plugins: [self], configuration: configuration)
         player.delegate = self
         playerView.playerLayer.player = player.player
@@ -241,15 +241,18 @@ extension AKVideoPlayer: AKVideoPlayerControlViewDelegate {
         }
     }
     
-    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didChanged value: Float) {
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: AKProgressAndTimeRangesSlider, didChanged value: Float) {
         if let duration = player.itemDuration, duration.isValid, duration.isNumeric {
             controlView.setCurrentTime(CMTime(seconds: (duration.seconds * Double(slider.value)), preferredTimescale: configuration.preferredTimescale))
+            slider.isSeekFinished = false
         }
     }
     
-    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didStartTrackingWith value: Float) { }
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: AKProgressAndTimeRangesSlider, didStartTrackingWith value: Float) { }
     
-    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didEndTrackingWith value: Float) {
-        seek(toPercentage: Double(slider.value))
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: AKProgressAndTimeRangesSlider, didEndTrackingWith value: Float) {
+        seek(toPercentage: Double(slider.value)) { (finished) in
+            self.controlView.progressSlider.isSeekFinished = true
+        }
     }
 }

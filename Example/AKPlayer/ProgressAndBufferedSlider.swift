@@ -27,19 +27,19 @@ import Foundation
 import UIKit
 
 @IBDesignable class AKProgressAndTimeRangesSlider: UISlider {
-
-    var timerangesProgressView: UIProgressView!
-
+    
+    var isSeekFinished: Bool = true
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         commonInit()
     }
-
+    
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         commonInit()
     }
-
+    
     open func commonInit() {
         setupUI()
         applyDesigns()
@@ -47,32 +47,26 @@ import UIKit
         addUIElements()
         makeViewConstraints()
     }
-
+    
     open func setupUI() {
-        timerangesProgressView = UIProgressView()
     }
-
+    
     open func applyDesigns() {
         setThumbImage(UIImage(named: "ic.track.thumb"), for: .normal)
         minimumTrackTintColor = .red
         maximumTrackTintColor = .darkGray
-
-        timerangesProgressView.tintColor = .white
-        timerangesProgressView.progressTintColor = .white
     }
-
+    
     open func resetControls() {
         minimumValue = 0
         maximumValue = 1
         value = 0
-        timerangesProgressView.progress = 0.8
+        isSeekFinished = true
     }
-
+    
     open func addUIElements() {
-        addSubview(timerangesProgressView)
     }
-
+    
     open func makeViewConstraints() {
-
     }
 }

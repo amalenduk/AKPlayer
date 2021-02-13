@@ -25,12 +25,12 @@
 
 import AVFoundation
 
-final class AKPlayerItemStatusObservingService {
+final class AKPlayerItemStatusObservingService: NSObject {
     
     // MARK: - Properties
     
-    private let playerItem: AVPlayerItem
-    private let itemStatusCallback: (AVPlayerItem.Status) -> Void
+    unowned let playerItem: AVPlayerItem
+    private let itemStatusCallback: ((AVPlayerItem.Status) -> Void)
     
     /**
      The `NSKeyValueObservation` for the KVO on `\AVPlayerItem.status`.
@@ -43,12 +43,13 @@ final class AKPlayerItemStatusObservingService {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleService)
         self.playerItem = playerItem
         self.itemStatusCallback = callback
+        super.init()
         /*
          Register as an observer of the player item's status property
          Observe the player item "status" key to determine when it is ready to play.
          */
         playerItemStatusObserver = playerItem.observe(\.status, options: [.new], changeHandler: { [unowned self] (playerItem, change) in
-            self.itemStatusCallback(playerItem.status)
+            return self.itemStatusCallback(playerItem.status)
         })
     }
     

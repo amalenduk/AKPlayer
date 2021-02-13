@@ -23,6 +23,8 @@
 //  SOFTWARE.
 //
 
+// https://www.swiftbysundell.com/articles/different-categories-of-swift-protocols/
+
 import Foundation
 
 enum DemoScreen: CaseIterable {

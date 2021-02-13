@@ -29,7 +29,7 @@ final class AKPlayingState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     var state: AKPlayer.State = .playing
     
@@ -41,9 +41,16 @@ final class AKPlayingState: AKPlayerStateControllable {
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable) {
+    init(manager: AKPlayerManagerProtocol) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+    }
+    
+    deinit {
+        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+    }
+
+    func stateUpdated() {
         guard let media = manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didStartPlaying: media, at: manager.currentTime)})
         startPlayerPlaybackObserving()
@@ -52,10 +59,6 @@ final class AKPlayingState: AKPlayerStateControllable {
         startRouteChangeObserving()
         startPlayerTimeControlStatusObserving()
         manager.setNowPlayingPlaybackInfo()
-    }
-    
-    deinit {
-        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
     
     // MARK: - Commands
@@ -128,15 +131,15 @@ final class AKPlayingState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
     }
-
+    
     // MARK: - Additional Helper Functions
     
     private func startPlayerPlaybackObserving() {

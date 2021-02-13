@@ -29,7 +29,7 @@ final class AKLoadingState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     var state: AKPlayer.State = .loading
     
@@ -43,7 +43,7 @@ final class AKLoadingState: AKPlayerStateControllable {
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable,
+    init(manager: AKPlayerManagerProtocol,
          media: AKPlayable,
          autoPlay: Bool = false,
          at position: CMTime? = nil) {
@@ -52,18 +52,21 @@ final class AKLoadingState: AKPlayerStateControllable {
         self.media = media
         self.autoPlay = autoPlay
         self.position = position
-        manager.delegate?.playerManager(didCurrentMediaChange: media)
+    }
+    
+    deinit {
+        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+    }
+
+    func stateUpdated() {
         resetPlayerForNewMedia()
+        manager.delegate?.playerManager(didCurrentMediaChange: media)
         manager.plugins.forEach({$0.playerPlugin(willStartLoading: media)})
         createPlayerItem(with: media)
         manager.plugins.forEach({$0.playerPlugin(didStartLoading: media)})
         startAudioSessionInterruptionObserving()
         manager.setNowPlayingMetadata()
         manager.setNowPlayingPlaybackInfo()
-    }
-    
-    deinit {
-        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
     
     // MARK: - Commands
@@ -135,13 +138,13 @@ final class AKLoadingState: AKPlayerStateControllable {
         manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double) {
         AKPlayerLogger.shared.log(message: "Wait media to be loaded before playing", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
@@ -168,12 +171,12 @@ final class AKLoadingState: AKPlayerStateControllable {
     }
     
     private func startObservingStatus(for item: AVPlayerItem) {
-        playerItemStatusObservingService = AKPlayerItemStatusObservingService(playerItem: item) { [unowned self] (status) in
+        playerItemStatusObservingService = AKPlayerItemStatusObservingService(playerItem: item ){ [unowned self] (status) in
             switch status {
             case .unknown:
                 assertionFailure()
             case .readyToPlay:
-                self.readyToPlay(item: item)
+                self.readyToPlay()
             case .failed:
                 self.assetFailedToPrepareForPlayback(with: .loadingFailed)
             @unknown default:
@@ -182,24 +185,9 @@ final class AKLoadingState: AKPlayerStateControllable {
         }
     }
     
-    private func readyToPlay(item: AVPlayerItem) {
-        let controller = AKLoadedState(manager: manager)
+    private func readyToPlay() {
+        let controller = AKLoadedState(manager: manager, autoPlay: autoPlay, at: position)
         manager.change(controller)
-        if let position = position {
-            guard let item = manager.currentItem else { assertionFailure("Current item should be available"); return }
-            
-            let seekService = AKPlayerSeekService(with: item, configuration: manager.configuration)
-            let result = seekService.boundedTime(position)
-            
-            if let seekTime = result.time {
-                controller.seek(to: seekTime)
-            } else if let reason = result.reason {
-                AKPlayerLogger.shared.log(message: reason.description, domain: .unavailableCommand)
-            } else {
-                assertionFailure("BoundedPosition should return at least value or reason")
-            }
-        }
-        if autoPlay { controller.play() }
     }
     
     private func cancelLoading() {
@@ -227,10 +215,9 @@ final class AKLoadingState: AKPlayerStateControllable {
     private func startAudioSessionInterruptionObserving() {
         audioSessionInterruptionObservingService = AKAudioSessionInterruptionObservingService()
         
-        audioSessionInterruptionObservingService.onInterruptionBegan = { [weak self] in
-            guard let strongSelf = self else { return }
-            let controller = AKPausedState(manager: strongSelf.manager)
-            strongSelf.manager.change(controller)
+        audioSessionInterruptionObservingService.onInterruptionBegan = { [unowned self] in
+            let controller = AKPausedState(manager: self.manager)
+            self.manager.change(controller)
         }
     }
     

@@ -29,27 +29,32 @@ final class AKStoppedState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     var state: AKPlayer.State = .stopped
     
     private var playerTimeObservingService: AKPlayerTimeObservingServiceable!
+    private let playerItemDidPlayToEndTime: Bool!
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable, playerItemDidPlayToEndTime flag: Bool = false) {
+    init(manager: AKPlayerManagerProtocol, playerItemDidPlayToEndTime flag: Bool = false) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
-        manager.player.pause()
-        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
-        manager.plugins.forEach({$0.playerPlugin(didStopped: media, at: manager.currentTime)})
-        startPlayerTimeObserving()
-        if !flag { seek(to: 0) }
-        manager.setNowPlayingPlaybackInfo()
+        self.playerItemDidPlayToEndTime = flag
     }
     
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+    }
+
+    func stateUpdated() {
+        manager.player.pause()
+        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        manager.plugins.forEach({$0.playerPlugin(didStopped: media, at: manager.currentTime)})
+        startPlayerTimeObserving()
+        if !playerItemDidPlayToEndTime { seek(to: 0) }
+        manager.setNowPlayingPlaybackInfo()
     }
     
     // MARK: - Commands
@@ -121,11 +126,11 @@ final class AKStoppedState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
     }

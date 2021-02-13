@@ -25,7 +25,7 @@
 
 import AVFoundation
 
-open class AKPlayer: AKPlayerExposable {
+open class AKPlayer: AKPlayerEngine {
 
     // MARK: - Properties
     
@@ -145,9 +145,9 @@ open class AKPlayer: AKPlayerExposable {
     }
 }
 
-// MARK: - AKPlayerManageableDelegate
+// MARK: - AKPlayerManagerDelegate
 
-extension AKPlayer: AKPlayerManageableDelegate {
+extension AKPlayer: AKPlayerManagerDelegate {
 
     public func playerManager(didStateChange state: AKPlayer.State) {
         delegate?.akPlayer(self, didStateChange: state)

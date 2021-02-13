@@ -29,13 +29,13 @@ final class AKInitState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     var state: AKPlayer.State = .initialization
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable) {
+    init(manager: AKPlayerManagerProtocol) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         manager.plugins.forEach({$0.playerPlugin(didInit: manager.player)})
@@ -111,13 +111,13 @@ final class AKInitState: AKPlayerStateControllable {
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double) {
         AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)

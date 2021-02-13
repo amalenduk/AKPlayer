@@ -29,7 +29,7 @@ final class AKPausedState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     var state: AKPlayer.State = .paused
     
@@ -39,9 +39,16 @@ final class AKPausedState: AKPlayerStateControllable {
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable) {
+    init(manager: AKPlayerManagerProtocol) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+    }
+    
+    deinit {
+        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+    }
+
+    func stateUpdated() {
         manager.player.pause()
         guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didPaused: media, at: manager.currentTime)})
@@ -49,10 +56,6 @@ final class AKPausedState: AKPlayerStateControllable {
         startPlayerTimeObserving()
         startPlayerTimeControlStatusObserving()
         manager.setNowPlayingPlaybackInfo()
-    }
-    
-    deinit {
-        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
     
     // MARK: - Commands

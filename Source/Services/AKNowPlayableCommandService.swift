@@ -36,11 +36,11 @@ public class AKNowPlayableCommandService {
     }
     
     private let configuration: AKPlayerConfiguration
-    private unowned let manager: AKPlayerManageable
+    private unowned let manager: AKPlayerManagerProtocol
     
     // MARK: - Init
     
-    public init(with player: AVPlayer, configuration: AKPlayerConfiguration, manager: AKPlayerManageable) {
+    public init(with player: AVPlayer, configuration: AKPlayerConfiguration, manager: AKPlayerManagerProtocol) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleService)
         self.configuration = configuration
         self.manager = manager

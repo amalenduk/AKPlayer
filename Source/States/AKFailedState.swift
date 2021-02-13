@@ -29,7 +29,7 @@ final class AKFailedState: AKPlayerStateControllable {
     
     // MARK: - Properties
     
-    unowned var manager: AKPlayerManageable
+    unowned var manager: AKPlayerManagerProtocol
     
     let state: AKPlayer.State = .failed
     
@@ -37,22 +37,25 @@ final class AKFailedState: AKPlayerStateControllable {
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable, error: AKPlayerError) {
+    init(manager: AKPlayerManagerProtocol, error: AKPlayerError) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         self.error = error
+    }
+    
+    deinit {
+        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
+    }
+    
+    func stateUpdated() {
         manager.delegate?.playerManager(didFailedWith: error)
         guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didFailed: media, with: error)})
         manager.setNowPlayingPlaybackInfo()
     }
     
-    deinit {
-        AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
-    }
-
     // MARK: - Commands
-
+    
     func load(media: AKPlayable) {
         let controller = AKLoadingState(manager: manager, media: media)
         manager.change(controller)
@@ -67,7 +70,7 @@ final class AKFailedState: AKPlayerStateControllable {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay, at: position)
         manager.change(controller)
     }
-
+    
     func load(media: AKPlayable, autoPlay: Bool, at position: Double) {
         let controller = AKLoadingState(manager: manager, media: media, autoPlay: autoPlay, at: CMTime(seconds: position, preferredTimescale: manager.configuration.preferredTimescale))
         manager.change(controller)
@@ -122,13 +125,13 @@ final class AKFailedState: AKPlayerStateControllable {
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         AKPlayerLogger.shared.log(message: "Unable to seek, load a media first", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double) {
         AKPlayerLogger.shared.log(message: "Unable to seek, load a media first", domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)

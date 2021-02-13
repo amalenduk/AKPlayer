@@ -29,9 +29,9 @@ import AKPlayer
 
 protocol AKVideoPlayerControlViewDelegate: class {
     func controlView(_ view: AKVideoPlayerControlView, didTapPlaybackButton button: AKPlaybackButton)
-    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didChanged value: Float)
-    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didStartTrackingWith value: Float)
-    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didEndTrackingWith value: Float)
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: AKProgressAndTimeRangesSlider, didChanged value: Float)
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: AKProgressAndTimeRangesSlider, didStartTrackingWith value: Float)
+    func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: AKProgressAndTimeRangesSlider, didEndTrackingWith value: Float)
 }
 
 class AKVideoPlayerControlView: UIView {
@@ -43,18 +43,18 @@ class AKVideoPlayerControlView: UIView {
     @IBOutlet weak var mainMaskView: UIView!
     @IBOutlet weak var maskStackView: UIStackView!
     @IBOutlet weak var middleMaskView: UIView!
+    @IBOutlet weak var menuButton: UIButton!
     @IBOutlet weak var playbackButton: AKPlaybackButton!
     @IBOutlet weak var indicator: UIActivityIndicatorView!
-    @IBOutlet weak var topToolBar: UIToolbar!
-    @IBOutlet weak var minimizeButton: UIBarButtonItem!
     @IBOutlet weak var currentTimeLabel: UILabel!
     @IBOutlet weak var totalDurationLabel: UILabel!
-    @IBOutlet weak var progressSlider: UISlider!
+    @IBOutlet weak var progressSlider: AKProgressAndTimeRangesSlider!
     @IBOutlet weak var fullscreenButton: UIButton!
     
     // MARK: - Properties
     
     weak var delegate: AKVideoPlayerControlViewDelegate?
+    public let buttonsTintColor: UIColor = UIColor.white.withAlphaComponent(0.5)
     
     // MARK: Lifecycle
     
@@ -78,22 +78,15 @@ class AKVideoPlayerControlView: UIView {
     
     /// Override this function to apply the design on views
     open func applyDesigns() {
-        topToolBar.setBackgroundImage(UIImage(),
-                                      forToolbarPosition: .any,
-                                      barMetrics: .default)
-        topToolBar.setShadowImage(UIImage(),
-                                  forToolbarPosition: .any)
-        
-        progressSlider.setThumbImage(UIImage(named: "ic.track.thumb"),
-                                     for: .normal)
+        playbackButton.tintColor = buttonsTintColor
+        menuButton.tintColor = buttonsTintColor
+        fullscreenButton.tintColor = buttonsTintColor
+        progressSlider.thumbTintColor = .red
     }
     
     open func resetControlls() {
         currentTimeLabel.text = "00:00"
         totalDurationLabel.text = "/ 00:00"
-        progressSlider.value = 0
-        progressSlider.minimumValue = 0
-        progressSlider.maximumValue = 1
         progressSlider.isEnabled = false
         progressSlider.layer.zPosition = CGFloat(1)
     }
@@ -108,15 +101,15 @@ class AKVideoPlayerControlView: UIView {
         
     }
     
-    @objc func progressSliderDidStartTracking(_ slider: UISlider) {
+    @objc func progressSliderDidStartTracking(_ slider: AKProgressAndTimeRangesSlider) {
         delegate?.controlView(self, progressSlider: slider, didStartTrackingWith: slider.value)
     }
     
-    @objc func progressSliderDidEndTracking(_ slider: UISlider) {
+    @objc func progressSliderDidEndTracking(_ slider: AKProgressAndTimeRangesSlider) {
         delegate?.controlView(self, progressSlider: slider, didEndTrackingWith: slider.value)
     }
     
-    @objc func progressSliderDidChangedValue(_ slider: UISlider) {
+    @objc func progressSliderDidChangedValue(_ slider: AKProgressAndTimeRangesSlider) {
         delegate?.controlView(self, progressSlider: slider, didChanged: slider.value)
     }
     
@@ -136,7 +129,6 @@ class AKVideoPlayerControlView: UIView {
     
     open func addTargets() {
         playbackButton.addTarget(self, action: #selector(playPauseButtonAction(_ :)), for: .touchUpInside)
-        minimizeButton.action = #selector(minimizeBarButtonAction(_ :))
         progressSlider.addTarget(self, action: #selector(progressSliderDidStartTracking(_ :)), for: [.touchDown])
         progressSlider.addTarget(self, action: #selector(progressSliderDidEndTracking(_ :)), for: [.touchUpInside, .touchCancel, .touchUpOutside])
         progressSlider.addTarget(self, action: #selector(progressSliderDidChangedValue(_ :)), for: [.valueChanged])
@@ -153,7 +145,7 @@ class AKVideoPlayerControlView: UIView {
     }
     
     open func setSliderProgress(_ currentTime: CMTime, itemDuration: CMTime?) {
-        if let itemDuration = itemDuration, itemDuration.isValid && itemDuration.isNumeric, !progressSlider.isTracking {
+        if let itemDuration = itemDuration, itemDuration.isValid && itemDuration.isNumeric, !progressSlider.isTracking, progressSlider.isSeekFinished {
             progressSlider.value = Float(currentTime.seconds / itemDuration.seconds)
         }
     }

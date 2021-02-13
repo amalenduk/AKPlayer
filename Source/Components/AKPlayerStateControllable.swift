@@ -26,6 +26,11 @@
 import AVFoundation
 
 public protocol AKPlayerStateControllable: AKPlayerCommand {
-    var manager: AKPlayerManageable { get }
+    var manager: AKPlayerManagerProtocol { get }
     var state: AKPlayer.State { get }
+    func stateUpdated()
+}
+
+extension AKPlayerStateControllable {
+    func stateUpdated() { }
 }
