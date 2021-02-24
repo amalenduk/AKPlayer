@@ -37,5 +37,5 @@ public protocol AKPlayerConfiguration {
     var audioSessionMode: AVAudioSession.Mode { get }
     var audioSessionCategoryOptions: AVAudioSession.CategoryOptions { get }
 
-    var isRemoteCommandsEnabled: Bool { get }
+    var isNowPlayingEnabled: Bool { get }
 }

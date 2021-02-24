@@ -36,6 +36,12 @@ public class AKMedia: AKPlayable {
     public let options: [String : Any]?
     
     public var staticMetadata: AKPlayableStaticMetadata?
+
+    public var assetMetadata: AKMediaMetadata? {
+        return _assetMetadata
+    }
+
+    private var _assetMetadata: AKMediaMetadata?
     
     // MARK: - Init
     
@@ -51,5 +57,9 @@ public class AKMedia: AKPlayable {
 
     public func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata) {
         self.staticMetadata = staticMetadata
+    }
+
+    public func setAssetMetadata(_ assetMetadata: AKMediaMetadata) {
+        _assetMetadata = assetMetadata
     }
 }

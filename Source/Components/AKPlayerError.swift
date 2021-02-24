@@ -26,7 +26,7 @@
 import Foundation
 
 public enum AKPlayerError: Error {
-    case failedLoadKey(key: String)
+    case failedLoadKey(key: String, error: Error)
     case loadingCancelled
     case contentsUnabailable
     case loadingFailed
@@ -36,8 +36,8 @@ extension AKPlayerError: LocalizedError {
     
     public var localizedDescription: String {
         switch self {
-        case .failedLoadKey(let key):
-            return NSLocalizedString("The media failed to load the key \"\(key)\"", comment: "Item cannot be played")
+        case .failedLoadKey(let key, let error):
+            return NSLocalizedString("The media failed to load the key \"\(key)\" because of error:\n \(error.localizedDescription)", comment: "Item cannot be played")
         case .loadingCancelled:
             return NSLocalizedString("The media loading is cancelled", comment: "Item cannot be played")
         case .contentsUnabailable:
@@ -49,8 +49,8 @@ extension AKPlayerError: LocalizedError {
     
     public var failureReason: String? {
         switch self {
-        case .failedLoadKey(let key):
-            return NSLocalizedString("You can't use this AVAsset because the media failed to load the key \"\(key)\".", comment: "Item cannot be played")
+        case .failedLoadKey(let key, let error):
+            return NSLocalizedString("You can't use this AVAsset because the media failed to load the key \"\(key)\" because of error:\n \(error.localizedDescription)", comment: "Item cannot be played")
         case .loadingCancelled:
             return NSLocalizedString("The media loading is cancelled", comment: "Item cannot be played")
         case .contentsUnabailable:

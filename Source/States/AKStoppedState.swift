@@ -26,7 +26,7 @@
 import AVFoundation
 
 final class AKStoppedState: AKPlayerStateControllable {
-    
+
     // MARK: - Properties
     
     unowned var manager: AKPlayerManageable
@@ -41,11 +41,11 @@ final class AKStoppedState: AKPlayerStateControllable {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         manager.player.pause()
-        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        guard let media = manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didStopped: media, at: manager.currentTime)})
         startPlayerTimeObserving()
         if !flag { seek(to: 0) }
-        manager.setNowPlayingPlaybackInfo()
+        setMetadata()
     }
     
     deinit {
@@ -89,11 +89,13 @@ final class AKStoppedState: AKPlayerStateControllable {
     }
     
     func pause() {
-        AKPlayerLogger.shared.log(message: "Already stopped", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.alreadyStopped.description, domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .alreadyStopped)
     }
     
     func stop() {
-        AKPlayerLogger.shared.log(message: "Already stopped", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.alreadyStopped.description, domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .alreadyStopped)
     }
     
     func seek(to time: CMTime, completionHandler: @escaping (Bool) -> Void) {
@@ -121,13 +123,22 @@ final class AKStoppedState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
+    }
+
+    func step(byCount stepCount: Int) {
+        guard let playerItem = manager.currentItem else { assertionFailure("Player item should available"); return }
+        if stepCount.signum() == 1, playerItem.canStepForward {
+            playerItem.step(byCount: stepCount)
+        }else {
+            if playerItem.canStepBackward { playerItem.step(byCount: stepCount) }
+        }
     }
     
     // MARK: - Additional Helper Functions
@@ -141,8 +152,13 @@ final class AKStoppedState: AKPlayerStateControllable {
         playerTimeObservingService = AKPlayerTimeObservingService(with: manager.player, configuration: manager.configuration)
         
         playerTimeObservingService.onChangePeriodicTime = { [unowned self] time in
-            self.manager.delegate?.playerManager(didCurrentTimeChange: time)
+            setMetadata()
+            manager.delegate?.playerManager(didCurrentTimeChange: time)
         }
+    }
+
+    private func setMetadata() {
+        manager.setNowPlayingPlaybackInfo()
     }
 }
 

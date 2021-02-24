@@ -74,7 +74,7 @@ open class AKPlayerNowPlayingMetadataService: AKPlayerNowPlayingMetadataServicea
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = metadata.duration
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = metadata.position
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = metadata.rate
-        nowPlayingInfo[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
+        nowPlayingInfo[MPNowPlayingInfoPropertyDefaultPlaybackRate] = AKPlaybackRate.normal.rate
         nowPlayingInfo[MPNowPlayingInfoPropertyCurrentLanguageOptions] = metadata.currentLanguageOptions
         nowPlayingInfo[MPNowPlayingInfoPropertyAvailableLanguageOptions] = metadata.availableLanguageOptionGroups
         

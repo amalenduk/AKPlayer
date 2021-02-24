@@ -27,7 +27,7 @@ import UIKit
 import AVFoundation
 import AKPlayer
 
-protocol AKVideoPlayerControlViewDelegate: class {
+protocol AKVideoPlayerControlViewDelegate: AnyObject {
     func controlView(_ view: AKVideoPlayerControlView, didTapPlaybackButton button: AKPlaybackButton)
     func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didChanged value: Float)
     func controlView(_ view: AKVideoPlayerControlView, progressSlider slider: UISlider, didStartTrackingWith value: Float)
@@ -125,7 +125,7 @@ class AKVideoPlayerControlView: UIView {
     /// Called by both `init(frame: CGRect)` and `init?(coder: NSCoder)`,
     open func commonInit() {
         Bundle.main.loadNibNamed("AKVideoPlayerControlView", owner: self, options: nil)
-        contentView.frame = self.bounds
+        contentView.frame = bounds
         contentView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         addSubview(contentView)
         
@@ -143,7 +143,7 @@ class AKVideoPlayerControlView: UIView {
     }
     
     open func progressSlider(_ isAvailable: Bool) {
-        self.progressSlider.isEnabled = isAvailable
+        progressSlider.isEnabled = isAvailable
     }
     
     open func setCurrentTime(_ time: CMTime) {

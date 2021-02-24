@@ -96,7 +96,7 @@ final class AKPlayerItemInitializationService: AKPlayerItemInitializationService
                 // Sucessfully loaded. Continue processing.
                 continue
             case .failed:
-                return assetFailedToPrepareForPlayback(with: .failedLoadKey(key: key))
+                return assetFailedToPrepareForPlayback(with: .failedLoadKey(key: key, error: error!))
             case .unknown:
                 assertionFailure()
             case .loading:

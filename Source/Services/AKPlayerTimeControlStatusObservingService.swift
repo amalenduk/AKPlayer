@@ -75,8 +75,8 @@ final class AKPlayerTimeControlStatusObservingService: AKPlayerTimeControlStatus
          */
         playerTimeControlStatusObserver = player.observe(\AVPlayer.timeControlStatus,
                                                          options: [.new]) {
-                                                            [unowned self] _, _ in
-                                                            self.onChangeTimeControlStatus?(player.timeControlStatus)
+            [unowned self] _, _ in
+            onChangeTimeControlStatus?(player.timeControlStatus)
         }
     }
     

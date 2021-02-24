@@ -36,11 +36,10 @@ public enum AKNowPlayableCommand: CaseIterable {
     case enableLanguageOption, disableLanguageOption
     
     // The underlying `MPRemoteCommandCenter` command for this `NowPlayable` command.
-    
     var remoteCommand: MPRemoteCommand {
-        
+
         let remoteCommandCenter = MPRemoteCommandCenter.shared()
-        
+
         switch self {
         case .pause:
             return remoteCommandCenter.pauseCommand
@@ -133,6 +132,5 @@ public enum AKNowPlayableCommand: CaseIterable {
     public static var enablingLanguageOptionsCommands: [AKNowPlayableCommand] {
         return [.enableLanguageOption, .disableLanguageOption]
     }
-    
 }
 

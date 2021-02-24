@@ -26,7 +26,7 @@
 import Foundation
 import AVFoundation
 
-public protocol AKPlayerManageableDelegate: class {
+public protocol AKPlayerManageableDelegate: AnyObject {
     func playerManager(didStateChange state: AKPlayer.State)
     func playerManager(didPlaybackRateChange playbackRate: AKPlaybackRate)
     func playerManager(didCurrentMediaChange media: AKPlayable)
@@ -46,4 +46,5 @@ public protocol AKPlayerManageable: AKPlayerExposable {
     var plugins: [AKPlayerPlugin] { get }
     
     func change(_ controller: AKPlayerStateControllable)
+    func playCommand()
 }

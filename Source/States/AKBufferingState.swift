@@ -51,7 +51,7 @@ final class AKBufferingState: AKPlayerStateControllable {
         startAudioSessionInterruptionObserving()
         startRouteChangeObserving()
         startPlayerTimeControlStatusObserving()
-        manager.setNowPlayingPlaybackInfo()
+        setMetadata()
     }
     
     deinit {
@@ -81,7 +81,7 @@ final class AKBufferingState: AKPlayerStateControllable {
     }
     
     func play() {
-        AKPlayerLogger.shared.log(message: "Already trying to play", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.alreadyTryingToPlay.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .alreadyTryingToPlay)
     }
     
@@ -132,6 +132,15 @@ final class AKBufferingState: AKPlayerStateControllable {
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
     }
+
+    func step(byCount stepCount: Int) {
+        guard let playerItem = manager.currentItem else { assertionFailure("Player item should available"); return }
+        if stepCount.signum() == 1, playerItem.canStepForward {
+            playerItem.step(byCount: stepCount)
+        }else {
+            if playerItem.canStepBackward { playerItem.step(byCount: stepCount) }
+        }
+    }
     
     // MARK: - Additional Helper Functions
     
@@ -141,32 +150,32 @@ final class AKBufferingState: AKPlayerStateControllable {
         
         playerItemBufferObservingService?.onChangePlaybackBufferEmptyStatus = { [unowned self] flag in
             if flag {
-                let controller = AKWaitingForNetworkState(manager: self.manager)
-                self.change(controller)
+                let controller = AKWaitingForNetworkState(manager: manager)
+                change(controller)
             }
         }
         
         playerItemBufferObservingService?.onChangePlaybackBufferFullStatus = { [unowned self] flag in
             if flag {
-                let controller = AKPlayingState(manager: self.manager)
-                self.change(controller)
+                let controller = AKPlayingState(manager: manager)
+                change(controller)
             }
         }
         
         playerItemBufferObservingService?.onChangePlaybackLikelyToKeepUpStatus = { [unowned self] flag in
             if flag {
-                let controller = AKPlayingState(manager: self.manager)
-                self.change(controller)
+                let controller = AKPlayingState(manager: manager)
+                change(controller)
             }
         }
         
         playerItemBufferObservingService?.onChangePlaybackBufferStatus = { [unowned self] flag in
             if flag {
-                let controller = AKPlayingState(manager: self.manager)
-                self.change(controller)
+                let controller = AKPlayingState(manager: manager)
+                change(controller)
             }else {
-                let controller = AKWaitingForNetworkState(manager: self.manager)
-                self.change(controller)
+                let controller = AKWaitingForNetworkState(manager: manager)
+                change(controller)
             }
         }
     }
@@ -179,14 +188,15 @@ final class AKBufferingState: AKPlayerStateControllable {
     }
     
     func playCommand() {
-        manager.player.play()
+        manager.playCommand()
     }
     
     private func startPlayerTimeObserving() {
         playerTimeObservingService = AKPlayerTimeObservingService(with: manager.player, configuration: manager.configuration)
         
         playerTimeObservingService.onChangePeriodicTime = { [unowned self] time in
-            self.manager.delegate?.playerManager(didCurrentTimeChange: time)
+            setMetadata()
+            manager.delegate?.playerManager(didCurrentTimeChange: time)
         }
     }
     
@@ -194,7 +204,7 @@ final class AKBufferingState: AKPlayerStateControllable {
         audioSessionInterruptionObservingService = AKAudioSessionInterruptionObservingService()
         
         audioSessionInterruptionObservingService.onInterruptionBegan = { [unowned self] in
-            self.pause()
+            pause()
         }
     }
     
@@ -204,7 +214,7 @@ final class AKBufferingState: AKPlayerStateControllable {
         routeChangeObservingService.onChangeRoute = { [unowned self] reason  in
             switch reason {
             case .oldDeviceUnavailable, .unknown:
-                self.pause()
+                pause()
             default:
                 break
             }
@@ -217,10 +227,14 @@ final class AKBufferingState: AKPlayerStateControllable {
         playerTimeControlStatusObservingService?.onChangeTimeControlStatus = { [unowned self] status in
             switch status {
             case .paused:
-                self.pause()
+                pause()
             default:
                 break
             }
         }
+    }
+
+    private func setMetadata() {
+        manager.setNowPlayingPlaybackInfo()
     }
 }

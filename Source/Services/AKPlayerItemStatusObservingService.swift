@@ -48,7 +48,7 @@ final class AKPlayerItemStatusObservingService {
          Observe the player item "status" key to determine when it is ready to play.
          */
         playerItemStatusObserver = playerItem.observe(\.status, options: [.new], changeHandler: { [unowned self] (playerItem, change) in
-            self.itemStatusCallback(playerItem.status)
+            itemStatusCallback(playerItem.status)
         })
     }
     

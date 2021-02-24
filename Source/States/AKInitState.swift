@@ -68,28 +68,28 @@ final class AKInitState: AKPlayerStateControllable {
     }
     
     func play() {
-        AKPlayerLogger.shared.log(message: "Load item before playing", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
     
     func pause() {
-        AKPlayerLogger.shared.log(message: "Load item before pausing", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
     
     func stop() {
-        AKPlayerLogger.shared.log(message: "Load item before stoping", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
     
     func seek(to time: CMTime, completionHandler: @escaping (Bool) -> Void) {
-        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
     
     func seek(to time: CMTime) {
-        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
     }
     
@@ -102,24 +102,29 @@ final class AKInitState: AKPlayerStateControllable {
     }
     
     func seek(offset: Double) {
-        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .waitTillMediaLoaded)
     }
     
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
-        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
-        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
         completionHandler(false)
     }
 
     func seek(toPercentage value: Double) {
-        AKPlayerLogger.shared.log(message: "Load item before seeking", domain: .unavailableCommand)
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
+        manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
+    }
+
+    func step(byCount stepCount: Int) {
+        AKPlayerLogger.shared.log(message: AKPlayerUnavailableActionReason.loadMediaFirst.description, domain: .unavailableCommand)
         manager.delegate?.playerManager(unavailableAction: .loadMediaFirst)
     }
 }

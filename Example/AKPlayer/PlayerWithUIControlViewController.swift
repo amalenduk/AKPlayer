@@ -37,7 +37,7 @@ class PlayerWithUIControlViewController: UIViewController {
     // MARK: - Variables
 
     var url: URL!
-    var metadata: AKMediaStaticMetadata!
+    var metadata: AKNowPlayableStaticMetadata!
     var media: AKMedia!
 
     override func viewDidLoad() {
@@ -46,7 +46,7 @@ class PlayerWithUIControlViewController: UIViewController {
         navigationItem.title = "Controlled Player"
         
         url = URL(string: "https://www.radiantmediaplayer.com/media/big-buck-bunny-360p.mp4")!
-        metadata = AKMediaStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "Amalendu Kar", artwork: nil, albumArtist: "Amalendu Kar", albumTitle: "Amalendu Kar")
+        metadata = AKNowPlayableStaticMetadata(assetURL: url, mediaType: .video, isLiveStream: false, title: "Some title", artist: "Amalendu Kar", artwork: nil, albumArtist: "Amalendu Kar", albumTitle: "Amalendu Kar")
         media = AKMedia(url: url, type: .clip, staticMetadata: metadata)
         view.bringSubviewToFront(videoPlayer)
     }

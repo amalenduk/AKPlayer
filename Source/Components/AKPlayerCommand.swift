@@ -42,4 +42,5 @@ public protocol AKPlayerCommand {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void)
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void)
     func seek(toPercentage value: Double)
+    func step(byCount stepCount: Int)
 }

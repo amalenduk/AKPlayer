@@ -25,7 +25,7 @@
 
 import AVFoundation
 
-public protocol AKPlayerDelegate: class {
+public protocol AKPlayerDelegate: AnyObject {
     func akPlayer(_ player: AKPlayer, didStateChange state: AKPlayer.State)
     func akPlayer(_ player: AKPlayer, didCurrentMediaChange media: AKPlayable)
     func akPlayer(_ player: AKPlayer, didCurrentTimeChange currentTime: CMTime)

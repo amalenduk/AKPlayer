@@ -49,7 +49,7 @@ public protocol AKPlayableStaticMetadata {
 public protocol AKPlayableDynamicMetadata {
     var rate: Float { get set}                             // MPNowPlayingInfoPropertyPlaybackRate
     var position: Float { get set}                         // MPNowPlayingInfoPropertyElapsedPlaybackTime
-    var duration: Float? { get set}                         // MPMediaItemPropertyPlaybackDuration
+    var duration: Float? { get set}                        // MPMediaItemPropertyPlaybackDuration
     
     var currentLanguageOptions: [MPNowPlayingInfoLanguageOption] { get set}     // MPNowPlayingInfoPropertyCurrentLanguageOptions
     var availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup] { get set}     // MPNowPlayingInfoPropertyAvailableLanguageOptions

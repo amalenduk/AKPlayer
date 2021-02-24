@@ -70,13 +70,13 @@ public enum AKPlaybackRate {
     
     public var title: String {
         switch self {
-        case .slowest:   return "Slowest"
-        case .slower:   return "Slower"
-        case .slow:     return "Slow"
-        case .normal:   return "Normal"
-        case .fast:     return "Fast"
-        case .faster:   return "Faster"
-        case .fastest:   return "Fastest"
+        case .slowest: return "Slowest"
+        case .slower: return "Slower"
+        case .slow: return "Slow"
+        case .normal: return "Normal"
+        case .fast: return "Fast"
+        case .faster: return "Faster"
+        case .fastest: return "Fastest"
         case .superfast: return "Super Fast"
         case .custom(let value): return "\(value)x"
         }
@@ -84,15 +84,15 @@ public enum AKPlaybackRate {
     
     public var next: AKPlaybackRate {
         switch self {
-        case .slowest:   return .slower
-        case .slower:   return .slow
-        case .slow:     return .normal
-        case .normal:   return .fast
-        case .fast:     return .faster
-        case .faster:   return .fastest
-        case .fastest:   return .superfast
+        case .slowest: return .slower
+        case .slower: return .slow
+        case .slow: return .normal
+        case .normal: return .fast
+        case .fast: return .faster
+        case .faster: return .fastest
+        case .fastest: return .superfast
         case .superfast: return .slowest
-        case .custom:   return .normal
+        case .custom: return .normal
         }
     }
 }

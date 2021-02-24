@@ -38,20 +38,20 @@ public struct AKPlayerDefaultConfiguration: AKPlayerConfiguration {
     public let audioSessionCategory: AVAudioSession.Category
     public let audioSessionMode: AVAudioSession.Mode
     public let audioSessionCategoryOptions: AVAudioSession.CategoryOptions
-    public let isRemoteCommandsEnabled: Bool
+    public let isNowPlayingEnabled: Bool
     
     // MARK: - Init
     
     public init(periodicPlayingTimeInSecond: Double = 0.5,
                 preferredTimescale: CMTimeScale = CMTimeScale(NSEC_PER_SEC),
-                itemLoadedAssetKeys: [String] = ["playable", "duration", "availableMetadataFormats", "lyrics"],
+                itemLoadedAssetKeys: [String] = ["playable", "duration", "commonMetadata", "metadata", "availableMetadataFormats", "lyrics"],
                 boundaryTimeObserverMultiplier: Double = 0.20,
                 bufferObservingTimeout: TimeInterval = 10,
                 bufferObservingTimeInterval: TimeInterval = 0.3,
                 audioSessionCategory: AVAudioSession.Category = .playback,
                 audioSessionMode: AVAudioSession.Mode = .moviePlayback,
                 audioSessionCategoryOptions: AVAudioSession.CategoryOptions = [],
-                isRemoteCommandsEnabled: Bool = true) {
+                isNowPlayingEnabled: Bool = true) {
         self.periodicPlayingTimeInSecond = periodicPlayingTimeInSecond
         self.preferredTimescale = preferredTimescale
         self.itemLoadedAssetKeys = itemLoadedAssetKeys
@@ -61,6 +61,6 @@ public struct AKPlayerDefaultConfiguration: AKPlayerConfiguration {
         self.audioSessionCategory = audioSessionCategory
         self.audioSessionMode = audioSessionMode
         self.audioSessionCategoryOptions = audioSessionCategoryOptions
-        self.isRemoteCommandsEnabled = isRemoteCommandsEnabled
+        self.isNowPlayingEnabled = isNowPlayingEnabled
     }
 }

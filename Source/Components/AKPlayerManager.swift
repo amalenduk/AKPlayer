@@ -25,9 +25,10 @@
 
 import AVFoundation
 import Foundation
+import MediaPlayer
 
 open class AKPlayerManager: AKPlayerManageable {
-
+    
     // MARK: - Properties
     
     open private(set) var currentMedia: AKPlayable? {
@@ -56,11 +57,8 @@ open class AKPlayerManager: AKPlayerManageable {
     }
     
     open var playbackRate: AKPlaybackRate {
-        get { return AKPlaybackRate(rate: player.rate) }
-        set { lastPlaybackRate = newValue
-            delegate?.playerManager(didPlaybackRateChange: newValue)
-            setPlaybackRate(controller: controller)
-        }
+        get { return _playbackRate }
+        set { changePlaybackRate(with: newValue) }
     }
     
     open private(set) var plugins: [AKPlayerPlugin]
@@ -81,9 +79,9 @@ open class AKPlayerManager: AKPlayerManageable {
     
     public private(set) var remoteCommandsService: AKNowPlayableCommandService?
     
-    private var playerRateObservingService: AKPlayerRateObservingServiceable?
+    private var playerRateObservingService: AKPlayerRateObservingServiceable!
     
-    private var lastPlaybackRate: AKPlaybackRate = .normal
+    internal private(set) var _playbackRate: AKPlaybackRate = .normal
     
     // MARK: - Init
     
@@ -99,9 +97,9 @@ open class AKPlayerManager: AKPlayerManageable {
         setAudioSessionCategory()
         startPlaybackRateObserving()
         
-        if configuration.isRemoteCommandsEnabled {
+        if configuration.isNowPlayingEnabled {
             playerNowPlayingMetadataService = AKPlayerNowPlayingMetadataService()
-            remoteCommandsService = AKNowPlayableCommandService(with: player, configuration: configuration, manager: self)
+            remoteCommandsService = AKNowPlayableCommandService(with: self, configuration: configuration)
             remoteCommandsService?.enable()
         }
         
@@ -115,8 +113,14 @@ open class AKPlayerManager: AKPlayerManageable {
     }
     
     open func change(_ controller: AKPlayerStateControllable) {
-        setPlaybackRate(controller: controller)
         self.controller = controller
+    }
+    
+    public func playCommand() {
+        guard let playerItem = currentItem else { assertionFailure("Player item should available"); return }
+        AKPlayerPlaybackRateService(with: playerItem, rate: playbackRate) { [unowned self] canChange in
+            canChange ? (player.rate = playbackRate.rate) : (playbackRate = .normal)
+        }
     }
     
     // MARK: - Commands
@@ -171,10 +175,10 @@ open class AKPlayerManager: AKPlayerManageable {
     
     open func seek(to time: CMTime) {
         guard let item = currentItem else { unaivalableCommand(reason: .loadMediaFirst); return }
-
+        
         let seekService = AKPlayerSeekService(with: item, configuration: configuration)
         let result = seekService.boundedTime(time)
-
+        
         if let seekTime = result.time {
             controller.seek(to: seekTime)
         } else if let reason = result.reason {
@@ -201,29 +205,49 @@ open class AKPlayerManager: AKPlayerManageable {
         let position = currentTime.seconds + offset
         seek(to: position, completionHandler: completionHandler)
     }
-
+    
     open func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: (itemDuration?.seconds ?? 0) * value, completionHandler: completionHandler)
     }
-
+    
     open func seek(toPercentage value: Double) {
         seek(to: (itemDuration?.seconds ?? 0) * value)
+    }
+    
+    open func step(byCount stepCount: Int) {
+        controller.step(byCount: stepCount)
     }
     
     // MARK: - Additional Helper Functions
     
     private func startPlaybackRateObserving() {
         playerRateObservingService = AKPlayerRateObservingService(with: player)
-        playerRateObservingService?.onChangePlaybackRate = { playbackRate in
+        playerRateObservingService?.onChangePlaybackRate = { [unowned self] playbackRate in
             AKPlayerLogger.shared.log(message: "Rate changed \(playbackRate.rate)", domain: .service)
+            setNowPlayingPlaybackInfo()
         }
     }
     
-    private func setPlaybackRate(controller: AKPlayerStateControllable) {
-        if controller.state == .buffering
-            || controller.state == .waitingForNetwork
-            || controller.state == .playing {
-            player.rate = lastPlaybackRate.rate
+    private func changePlaybackRate(with rate: AKPlaybackRate) {
+        if rate == _playbackRate { return }
+        defer {
+            delegate?.playerManager(didPlaybackRateChange: playbackRate)
+        }
+        if rate.rate == 0.0 {
+            pause()
+            _playbackRate = .normal
+        }else {
+            guard let item = currentItem else { _playbackRate = rate; return }
+            AKPlayerPlaybackRateService(with: item, rate: rate) { [unowned self] canChange in
+                if canChange {
+                    _playbackRate = rate
+                    if controller.state == .buffering
+                        || controller.state == .playing
+                        || controller.state == .waitingForNetwork {
+                        player.rate = rate.rate
+                    }
+                }
+            }
         }
     }
     
@@ -237,15 +261,29 @@ open class AKPlayerManager: AKPlayerManageable {
     }
     
     public func setNowPlayingMetadata() {
-        guard configuration.isRemoteCommandsEnabled else { return }
-        guard let media = currentMedia else { assertionFailure("Media should exist here"); return }
-        guard let staticMetadata = media.staticMetadata, let playerNowPlayingMetadataService = playerNowPlayingMetadataService else { return }
-        playerNowPlayingMetadataService.setNowPlayingMetadata(staticMetadata)
+        guard configuration.isNowPlayingEnabled, let playerNowPlayingMetadataService = playerNowPlayingMetadataService else { return }
+        guard let media = currentMedia else { return }
+        if let staticMetadata = media.staticMetadata  {
+            playerNowPlayingMetadataService.setNowPlayingMetadata(staticMetadata)
+        }else {
+            let assetMetadata = media.assetMetadata
+            let metadata = AKNowPlayableStaticMetadata(assetURL: media.url,
+                                                       mediaType: .video,
+                                                       isLiveStream: media.isLive(),
+                                                       title: assetMetadata?.title ?? "Unknown",
+                                                       artist: assetMetadata?.artist,
+                                                       artwork: MPMediaItemArtwork(boundsSize: CGSize(width: 50, height: 50), requestHandler: { size in
+                                                        return (UIImage(data: assetMetadata?.artwork ?? Data()) ?? UIImage())
+                                                       }),
+                                                       albumArtist: assetMetadata?.artist,
+                                                       albumTitle: assetMetadata?.albumName)
+            playerNowPlayingMetadataService.setNowPlayingMetadata(metadata)
+        }
     }
     
     public func setNowPlayingPlaybackInfo() {
-        guard configuration.isRemoteCommandsEnabled else { return }
-        guard let playerNowPlayingMetadataService = playerNowPlayingMetadataService else { return }
-        playerNowPlayingMetadataService.setNowPlayingPlaybackInfo(AKMediaDynamicMetadata(rate: player.rate, position: Float(currentTime.seconds), duration: Float(player.currentItem?.duration.seconds ?? 0), currentLanguageOptions: [], availableLanguageOptionGroups: []))
+        guard configuration.isNowPlayingEnabled, let playerNowPlayingMetadataService = playerNowPlayingMetadataService else { return }
+        let metadata = AKNowPlayableDynamicMetadata(rate: player.rate, position: Float(currentTime.seconds), duration: Float(player.currentItem?.duration.seconds ?? 0), currentLanguageOptions: [], availableLanguageOptionGroups: [])
+        playerNowPlayingMetadataService.setNowPlayingPlaybackInfo(metadata)
     }
 }
