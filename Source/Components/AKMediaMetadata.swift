@@ -23,88 +23,66 @@
 //  SOFTWARE.
 //
 
-import Foundation
-import MediaPlayer
+// https://developer.apple.com/documentation/avfoundation/avmetadataidentifier
+import AVFoundation
 
-public struct AKMediaMetadata: AKPlayableMetadata {
-    
-    // MARK: - Properties
-    
-    public var staticMetadata: AKPlayableStaticMetadata?
-    public var dynamicMetadata: AKPlayableDynamicMetadata?
-    
-    // MARK: - Init
-    
-    public init(staticMetadata: AKPlayableStaticMetadata?,
-                dynamicMetadata: AKPlayableDynamicMetadata?
-    ) {
-        self.staticMetadata = staticMetadata
-        self.dynamicMetadata = dynamicMetadata
-    }
-}
+public struct AKMediaMetadata {
 
-/* `AKMediaStaticMetadata` contains static properties of a playable item that don't depend on the state of the player for their value. */
-public struct AKMediaStaticMetadata: AKPlayableStaticMetadata {
-    
     // MARK: - Properties
-    
-    public var assetURL: URL                            // MPNowPlayingInfoPropertyAssetURL
-    public var mediaType: MPNowPlayingInfoMediaType     // MPNowPlayingInfoPropertyMediaType
-    public var isLiveStream: Bool                       // MPNowPlayingInfoPropertyIsLiveStream
-    
-    public var title: String                            // MPMediaItemPropertyTitle
-    public var artist: String?                          // MPMediaItemPropertyArtist
-    public var artwork: MPMediaItemArtwork?             // MPMediaItemPropertyArtwork
-    
-    public var albumArtist: String?                     // MPMediaItemPropertyAlbumArtist
-    public var albumTitle: String?                      // MPMediaItemPropertyAlbumTitle
-    
-    // MARK: - Init
-    
-    public init(assetURL: URL,
-                mediaType: MPNowPlayingInfoMediaType,
-                isLiveStream: Bool,
-                title: String,
-                artist: String?,
-                artwork: MPMediaItemArtwork?,
-                albumArtist: String?,
-                albumTitle: String?
-    ) {
-        self.assetURL = assetURL
-        self.mediaType = mediaType
-        self.isLiveStream = isLiveStream
-        self.title = title
-        self.artist = artist
-        self.artwork = artwork
-        self.albumArtist = albumArtist
-        self.albumTitle = albumTitle
-    }
-}
 
-/* `AKMediaDynamicMetadata` contains dynamic properties of a playable item that depend on the state of the player for their value. */
-public struct AKMediaDynamicMetadata: AKPlayableDynamicMetadata {
-    
-    // MARK: - Properties
-    
-    public var rate: Float                             // MPNowPlayingInfoPropertyPlaybackRate
-    public var position: Float                         // MPNowPlayingInfoPropertyElapsedPlaybackTime
-    public var duration: Float?                        // MPMediaItemPropertyPlaybackDuration
-    
-    public var currentLanguageOptions: [MPNowPlayingInfoLanguageOption]     // MPNowPlayingInfoPropertyCurrentLanguageOptions
-    public var availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]     // MPNowPlayingInfoPropertyAvailableLanguageOptions
-    
+    public private(set) var accessibilityDescription: String?
+    public private(set) var albumName: String?
+    public private(set) var artist: String?
+    public private(set) var artwork: Data?
+    public private(set) var author: String?
+    public private(set) var contributor: String?
+    public private(set) var copyrights: String?
+    public private(set) var creationDate: String?
+    public private(set) var creator: String?
+    public private(set) var description: String?
+    public private(set) var format: String?
+    public private(set) var language: String?
+    public private(set) var lastModifiedDate: String?
+    public private(set) var location: String?
+    public private(set) var make: String?
+    public private(set) var model: String?
+    public private(set) var publisher: String?
+    public private(set) var relation: String?
+    public private(set) var software: String?
+    public private(set) var source: String?
+    public private(set) var subject: String?
+    public private(set) var title: String?
+    public private(set) var type: String?
+
+    public private(set) var commonMetadata: [AVMetadataItem]?
+
     // MARK: - Init
-    
-    public init(rate: Float,
-                position: Float,
-                duration: Float?,
-                currentLanguageOptions: [MPNowPlayingInfoLanguageOption],
-                availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]
-    ) {
-        self.rate = rate
-        self.position = position
-        self.duration = duration
-        self.currentLanguageOptions = currentLanguageOptions
-        self.availableLanguageOptionGroups = availableLanguageOptionGroups
+
+    init(with commonMetadata: [AVMetadataItem]) {
+        if #available(iOS 14.0, *) {
+            accessibilityDescription = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierAccessibilityDescription).first?.value as? String
+        }
+        albumName = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierAlbumName).first?.value as? String
+        artist = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierArtist).first?.value as? String
+        artwork = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierArtwork).first?.value as? Data
+        author = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierAuthor).first?.value as? String
+        contributor = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierContributor).first?.value as? String
+        copyrights = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierCopyrights).first?.value as? String
+        creationDate = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierCreationDate).first?.value as? String
+        creator = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierCreator).first?.value as? String
+        description = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierDescription).first?.value as? String
+        format = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierFormat).first?.value as? String
+        language = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierLanguage).first?.value as? String
+        lastModifiedDate = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierLastModifiedDate).first?.value as? String
+        location = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierLocation).first?.value as? String
+        make = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierMake).first?.value as? String
+        model = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierModel).first?.value as? String
+        publisher = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierPublisher).first?.value as? String
+        relation = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierRelation).first?.value as? String
+        software = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierSoftware).first?.value as? String
+        source = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierSource).first?.value as? String
+        subject = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierSubject).first?.value as? String
+        title = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierTitle).first?.value as? String
+        type = AVMetadataItem.metadataItems(from: commonMetadata, filteredByIdentifier: .commonIdentifierType).first?.value as? String
     }
 }

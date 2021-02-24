@@ -25,7 +25,7 @@
 
 import AVFoundation
 
-public protocol AKPlayerExposable: class, AKPlayerCommand {
+public protocol AKPlayerExposable: AnyObject, AKPlayerCommand {
     var currentMedia: AKPlayable? { get }
     var currentItem: AVPlayerItem? { get }
     var currentTime: CMTime { get }

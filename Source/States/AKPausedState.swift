@@ -43,12 +43,12 @@ final class AKPausedState: AKPlayerStateControllable {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
         manager.player.pause()
-        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        guard let media = manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didPaused: media, at: manager.currentTime)})
         startAudioSessionInterruptionObserving()
         startPlayerTimeObserving()
         startPlayerTimeControlStatusObserving()
-        manager.setNowPlayingPlaybackInfo()
+        setMetadata()
     }
     
     deinit {
@@ -133,6 +133,15 @@ final class AKPausedState: AKPlayerStateControllable {
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
     }
+
+    func step(byCount stepCount: Int) {
+        guard let playerItem = manager.currentItem else { assertionFailure("Player item should available"); return }
+        if stepCount.signum() == 1, playerItem.canStepForward {
+            playerItem.step(byCount: stepCount)
+        }else {
+            if playerItem.canStepBackward { playerItem.step(byCount: stepCount) }
+        }
+    }
     
     // MARK: - Additional Helper Functions
     
@@ -160,7 +169,8 @@ final class AKPausedState: AKPlayerStateControllable {
         playerTimeObservingService = AKPlayerTimeObservingService(with: manager.player, configuration: manager.configuration)
         
         playerTimeObservingService.onChangePeriodicTime = { [unowned self] time in
-            self.manager.delegate?.playerManager(didCurrentTimeChange: time)
+            setMetadata()
+            manager.delegate?.playerManager(didCurrentTimeChange: time)
         }
     }
     
@@ -169,8 +179,12 @@ final class AKPausedState: AKPlayerStateControllable {
         
         playerTimeControlStatusObservingService?.onChangeTimeControlStatus = { [unowned self] status in
             guard status == .playing else { return }
-            let controller = AKPlayingState(manager: self.manager)
-            self.change(controller)
+            let controller = AKPlayingState(manager: manager)
+            change(controller)
         }
+    }
+
+    private func setMetadata() {
+        manager.setNowPlayingPlaybackInfo()
     }
 }

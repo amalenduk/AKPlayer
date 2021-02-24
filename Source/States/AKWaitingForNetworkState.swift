@@ -41,11 +41,11 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
     init(manager: AKPlayerManageable) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
-        guard let media = self.manager.currentMedia else { assertionFailure("Media should available"); return }
+        guard let media = manager.currentMedia else { assertionFailure("Media should available"); return }
         manager.plugins.forEach({$0.playerPlugin(didStartWaitingForNetwork: media)})
         startPlayerTimeControlStatusObserving()
         startPlayerTimeObserving()
-        manager.setNowPlayingPlaybackInfo()
+        setMetadata()
     }
     
     deinit {
@@ -101,7 +101,7 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
          for the network state. */
         playerTimeControlStatusObservingService?.stop(clearCallBacks: true)
         let controller = AKPausedState(manager: manager)
-        self.manager.change(controller)
+        manager.change(controller)
     }
     
     func stop() {
@@ -134,13 +134,22 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
+    }
+    
+    func step(byCount stepCount: Int) {
+        guard let playerItem = manager.currentItem else { assertionFailure("Player item should available"); return }
+        if stepCount.signum() == 1, playerItem.canStepForward {
+            playerItem.step(byCount: stepCount)
+        }else {
+            if playerItem.canStepBackward { playerItem.step(byCount: stepCount) }
+        }
     }
     
     // MARK: - Additional Helper Functions
@@ -151,12 +160,12 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
         playerTimeControlStatusObservingService?.onChangeTimeControlStatus = { [unowned self] status in
             switch status {
             case .paused:
-                self.pause()
+                pause()
             case .waitingToPlayAtSpecifiedRate:
                 AKPlayerLogger.shared.log(message: "TimeControlStaus is WaitingToPlayAtSpecifiedRate now", domain: .state)
             case .playing:
-                let controller = AKPlayingState(manager: self.manager)
-                self.change(controller)
+                let controller = AKPlayingState(manager: manager)
+                change(controller)
             @unknown default:
                 assertionFailure("Sould be not here \(status.rawValue)")
             }
@@ -172,8 +181,13 @@ final class AKWaitingForNetworkState: AKPlayerStateControllable {
         playerTimeObservingService = AKPlayerTimeObservingService(with: manager.player, configuration: manager.configuration)
         
         playerTimeObservingService.onChangePeriodicTime = { [unowned self] time in
-            self.manager.delegate?.playerManager(didCurrentTimeChange: time)
+            setMetadata()
+            manager.delegate?.playerManager(didCurrentTimeChange: time)
         }
+    }
+
+    private func setMetadata() {
+        manager.setNowPlayingPlaybackInfo()
     }
 }
 

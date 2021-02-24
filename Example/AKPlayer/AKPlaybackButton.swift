@@ -29,6 +29,7 @@ import UIKit
 
     // MARK: - Poperties
 
+    @available(iOS 13.0, *)
     static let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 30)
 
     enum AKPlaybackState: UInt  {
@@ -56,11 +57,11 @@ import UIKit
 
     override var state: UIControl.State {
         return UIControl.State(rawValue: super.state.rawValue
-            | UIButton.State(rawValue: playbackState.rawValue).rawValue)
+                                | UIButton.State(rawValue: playbackState.rawValue).rawValue)
     }
 
     open func changePlayback(_ state: AKPlaybackState) {
-        self.playbackState = state
+        playbackState = state
         layoutSubviews()
     }
 
@@ -74,17 +75,21 @@ import UIKit
 
     func commonInit() {
         adjustsImageWhenHighlighted = false
-        setImage(UIImage(systemName: "pause.fill", withConfiguration: AKPlaybackButton.symbolConfiguration),
-                 for: [UIButton.State.init(rawValue: AKPlaybackState.playing.rawValue)])
-        setImage(UIImage(systemName: "play.fill", withConfiguration: AKPlaybackButton.symbolConfiguration),
-                 for: [UIButton.State.init(rawValue: AKPlaybackState.paused.rawValue)])
-        setImage(UIImage(systemName: "goforward", withConfiguration: AKPlaybackButton.symbolConfiguration),
-                 for: [UIButton.State.init(rawValue: AKPlaybackState.failed.rawValue)])
-        setImage(UIImage(systemName: "memories", withConfiguration: AKPlaybackButton.symbolConfiguration),
-                 for: [UIButton.State.init(rawValue: AKPlaybackState.stopped.rawValue)])
+        if #available(iOS 13.0, *) {
+            setImage(UIImage(systemName: "pause.fill", withConfiguration: AKPlaybackButton.symbolConfiguration),
+                     for: [UIButton.State.init(rawValue: AKPlaybackState.playing.rawValue)])
+            setImage(UIImage(systemName: "play.fill", withConfiguration: AKPlaybackButton.symbolConfiguration),
+                     for: [UIButton.State.init(rawValue: AKPlaybackState.paused.rawValue)])
+            setImage(UIImage(systemName: "goforward", withConfiguration: AKPlaybackButton.symbolConfiguration),
+                     for: [UIButton.State.init(rawValue: AKPlaybackState.failed.rawValue)])
+            setImage(UIImage(systemName: "memories", withConfiguration: AKPlaybackButton.symbolConfiguration),
+                     for: [UIButton.State.init(rawValue: AKPlaybackState.stopped.rawValue)])
+        } else {
+            // Fallback on earlier versions
+        }
         changePlayback(.paused)
     }
-
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.3, initialSpringVelocity: 0.3, options: .allowUserInteraction, animations: {
             self.transform = CGAffineTransform(scaleX: 0.7, y: 0.7)

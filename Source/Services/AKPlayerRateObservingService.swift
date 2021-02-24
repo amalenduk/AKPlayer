@@ -60,8 +60,8 @@ final class AKPlayerRateObservingService: AKPlayerRateObservingServiceable {
     private func addPlayerRateObserver(player: AVPlayer) {
         playbackRateObserver = player.observe(\AVPlayer.rate,
                                               options: [.new]) {
-                                                [unowned self] _, _ in
-                                                self.onChangePlaybackRate?(AKPlaybackRate(rate: player.rate))
+            [unowned self] _, _ in
+            onChangePlaybackRate?(AKPlaybackRate(rate: player.rate))
         }
     }
 }

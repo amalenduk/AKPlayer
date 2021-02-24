@@ -81,7 +81,7 @@ open class AKVideoPlayer: UIView {
     /// Called by both `init(frame: CGRect)` and `init?(coder: NSCoder)`,
     open func commonInit() {
         Bundle.main.loadNibNamed("AKVideoPlayer", owner: self, options: nil)
-        contentView.frame = self.bounds
+        contentView.frame = bounds
         contentView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         addSubview(contentView)
         controlView.delegate = self
@@ -178,6 +178,10 @@ extension AKVideoPlayer: AKPlayerCommand {
     
     public func seek(toPercentage value: Double) {
         player.seek(toPercentage: value)
+    }
+
+    public func step(byCount stepCount: Int) {
+        player.step(byCount: stepCount)
     }
 }
 

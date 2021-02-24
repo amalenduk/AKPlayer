@@ -30,9 +30,11 @@ public protocol AKPlayable {
     var type: AKMediaType { get }
     var options: [String: Any]? { get }
     var staticMetadata: AKPlayableStaticMetadata? { get }
+    var assetMetadata: AKMediaMetadata? { get }
 
     func isLive() -> Bool
     func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata)
+    func setAssetMetadata(_ assetMetadata: AKMediaMetadata)
 }
 
 public extension AKPlayable {
@@ -44,7 +46,7 @@ public extension AKPlayable {
 public extension AKPlayable {
     func isLive() -> Bool {
         guard case let AKMediaType.stream(isLive) = type, isLive
-            else { return false }
+        else { return false }
         return true
     }
 }

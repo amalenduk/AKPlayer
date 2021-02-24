@@ -40,7 +40,7 @@ public class AKNowPlayableCommandService {
     
     // MARK: - Init
     
-    public init(with player: AVPlayer, configuration: AKPlayerConfiguration, manager: AKPlayerManageable) {
+    public init(with manager: AKPlayerManageable, configuration: AKPlayerConfiguration) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleService)
         self.configuration = configuration
         self.manager = manager
@@ -76,15 +76,15 @@ public class AKNowPlayableCommandService {
             switch manager.controller.state {
             case .playing, .buffering, .loading, .waitingForNetwork:
                 manager.controller.pause()
-            case .initialization, .failed:
-                return .noSuchContent
-            case .loaded, .paused, .stopped:
+            case .initialization:
+                return .noActionableNowPlayingItem
+            case .loaded, .paused, .stopped, .failed:
                 manager.controller.play()
             }
         case .nextTrack:
-            return .noSuchContent
+            return .commandFailed
         case .previousTrack:
-            return .noSuchContent
+            return .commandFailed
         case .changePlaybackRate:
             guard let event = event as? MPChangePlaybackRateCommandEvent else { return .commandFailed }
             manager.playbackRate = AKPlaybackRate(rate: event.playbackRate)
@@ -112,7 +112,6 @@ public class AKNowPlayableCommandService {
         default:
             break
         }
-        
         return .success
     }
 }

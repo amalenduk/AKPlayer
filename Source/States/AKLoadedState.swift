@@ -33,24 +33,40 @@ final class AKLoadedState: AKPlayerStateControllable {
     
     var state: AKPlayer.State = .loaded
     
+    private let autoPlay: Bool
+    private let position: CMTime?
+    
     private var playerTimeObservingService: AKPlayerTimeObservingServiceable!
     
     // MARK: - Init
     
-    init(manager: AKPlayerManageable) {
+    init(manager: AKPlayerManageable,
+         autoPlay: Bool = false,
+         at position: CMTime? = nil) {
         AKPlayerLogger.shared.log(message: "Init", domain: .lifecycleState)
         self.manager = manager
+        self.autoPlay = autoPlay
+        self.position = position
         guard let media = manager.currentMedia, let currentItem = manager.currentItem else { assertionFailure("Media and Current item should available"); return }
+        manager.currentMedia?.setAssetMetadata(AKMediaMetadata(with: currentItem.asset.commonMetadata))
         manager.delegate?.playerManager(didItemDurationChange: currentItem.duration)
         manager.plugins.forEach({$0.playerPlugin(didLoad: media, with: currentItem.duration)})
         startPlayerTimeObserving()
+        if let position = position {
+            seek(to: position)
+        }else {
+            manager.delegate?.playerManager(didCurrentTimeChange: currentItem.currentTime())
+        }
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5) {
+            if self.autoPlay { self.play() }
+        }
         setMetadata()
     }
     
     deinit {
         AKPlayerLogger.shared.log(message: "DeInit", domain: .lifecycleState)
     }
-
+    
     // MARK: - Commands
     
     func load(media: AKPlayable) {
@@ -114,13 +130,22 @@ final class AKLoadedState: AKPlayerStateControllable {
     func seek(offset: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: manager.currentTime.seconds + offset, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double, completionHandler: @escaping (Bool) -> Void) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value, completionHandler: completionHandler)
     }
-
+    
     func seek(toPercentage value: Double) {
         seek(to: (manager.itemDuration?.seconds ?? 0) / value)
+    }
+    
+    func step(byCount stepCount: Int) {
+        guard let playerItem = manager.currentItem else { assertionFailure("Player item should available"); return }
+        if stepCount.signum() == 1, playerItem.canStepForward {
+            playerItem.step(byCount: stepCount)
+        }else {
+            if playerItem.canStepBackward { playerItem.step(byCount: stepCount) }
+        }
     }
     
     // MARK: - Additional Helper Functions
@@ -129,13 +154,12 @@ final class AKLoadedState: AKPlayerStateControllable {
         playerTimeObservingService = AKPlayerTimeObservingService(with: manager.player, configuration: manager.configuration)
         
         playerTimeObservingService.onChangePeriodicTime = { [unowned self] time in
-            self.manager.delegate?.playerManager(didCurrentTimeChange: time)
+            manager.setNowPlayingPlaybackInfo()
+            manager.delegate?.playerManager(didCurrentTimeChange: time)
         }
     }
     
     private func setMetadata() {
         manager.setNowPlayingMetadata()
-        manager.setNowPlayingPlaybackInfo()
     }
 }
-

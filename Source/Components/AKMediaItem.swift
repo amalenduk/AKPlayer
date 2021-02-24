@@ -38,7 +38,13 @@ public class AKMediaItem: AKMediaItemPlayable {
     public let options: [String : Any]?
     
     public var staticMetadata: AKPlayableStaticMetadata?
-    
+
+    public var assetMetadata: AKMediaMetadata? {
+        return _assetMetadata
+    }
+
+    private var _assetMetadata: AKMediaMetadata?
+
     // MARK: - Init
     
     public init?(item: AVPlayerItem,
@@ -56,5 +62,9 @@ public class AKMediaItem: AKMediaItemPlayable {
 
     public func updateMetadata(_ staticMetadata: AKPlayableStaticMetadata) {
         self.staticMetadata = staticMetadata
+    }
+
+    public func setAssetMetadata(_ assetMetadata: AKMediaMetadata) {
+        _assetMetadata = assetMetadata
     }
 }

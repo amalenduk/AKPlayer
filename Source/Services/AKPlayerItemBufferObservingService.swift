@@ -104,19 +104,19 @@ final class AKPlayerItemBufferObservingService: AKPlayerItemBufferObservingServi
     private func startObservation(playerItem: AVPlayerItem) {
         playerItemIsPlaybackLikelyToKeepUpObserver = playerItem.observe(\AVPlayerItem.isPlaybackLikelyToKeepUp, options: [.new]) { [unowned self] (item, _) in
             DispatchQueue.main.async {
-                self.onChangePlaybackLikelyToKeepUpStatus?(item.isPlaybackLikelyToKeepUp)
+                onChangePlaybackLikelyToKeepUpStatus?(item.isPlaybackLikelyToKeepUp)
             }
         }
         
         playerItemIsPlaybackBufferFullObserver = playerItem.observe(\AVPlayerItem.isPlaybackBufferFull, options: [.new]) { [unowned self] (item, _) in
             DispatchQueue.main.async {
-                self.onChangePlaybackBufferFullStatus?(item.isPlaybackBufferFull)
+                onChangePlaybackBufferFullStatus?(item.isPlaybackBufferFull)
             }
         }
         
         playerItemIsPlaybackBufferEmptyObserver = playerItem.observe(\AVPlayerItem.isPlaybackBufferEmpty, options: [.new]) { [unowned self] (item, _) in
             DispatchQueue.main.async {
-                self.onChangePlaybackBufferEmptyStatus?(item.isPlaybackBufferEmpty)
+                onChangePlaybackBufferEmptyStatus?(item.isPlaybackBufferEmpty)
             }
         }
     }
@@ -126,14 +126,14 @@ final class AKPlayerItemBufferObservingService: AKPlayerItemBufferObservingServi
         var remainingTime: TimeInterval = configuration.bufferObservingTimeout
         
         timer = Timer.scheduledTimer(withTimeInterval: configuration.bufferObservingTimeInterval, repeats: true, block: { [unowned self] (_) in
-            remainingTime -= self.configuration.bufferObservingTimeInterval
+            remainingTime -= configuration.bufferObservingTimeInterval
             
             if playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp {
-                self.timer?.invalidate()
-                self.onChangePlaybackBufferStatus?(true)
+                timer?.invalidate()
+                onChangePlaybackBufferStatus?(true)
             } else if remainingTime <= 0 {
-                self.timer?.invalidate()
-                self.onChangePlaybackBufferStatus?(false)
+                timer?.invalidate()
+                onChangePlaybackBufferStatus?(false)
             }else {
                 AKPlayerLogger.shared.log(message: "Remaining time: \(remainingTime)", domain: .service)
             }
