@@ -164,10 +164,15 @@ public extension AKPlayable {
     ///
     /// Available once `createPlayerItemFromAsset()` initializes the
     /// `playerItem`.
-    var playerItemNotifications: AKPlayerItemNotificationsObserver? {
+    var playerItemNotifications: any AKPlayerItemNotificationsObserverProtocol {
         manager.playerItemNotificationsObserver
     }
+    
+    var metadataProvider: AKMediaMetadataProviderProtocol {
+        manager.metadataProvider
+    }
 }
+
 
 // MARK: - Comparable Helpers
 

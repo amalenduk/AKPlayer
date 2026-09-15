@@ -9,8 +9,6 @@
 @preconcurrency import AVFoundation
 import Foundation
 import MediaAccessibility
-
-import Foundation
 import MediaPlayer
 
 @MainActor
@@ -35,6 +33,11 @@ public protocol AKTrackSelectionServiceProtocol: AnyObject {
     /// - Returns: An array of `AKMediaTrackOption` objects.
     func availableTracks(for type: AKTrackType) async throws -> [AKMediaTrackOption]
     
+    /// Retrieves all available track options for a specific track type.
+    /// - Parameter type: The target `AKTrackType`.
+    /// - Returns: An array of `AKMediaTrackOption` objects.
+    func availableTracks(for types: [AKTrackType]) async throws -> [AKMediaTrackOption]
+    
     /// Fetches the currently selected track option for a given track type.
     /// - Parameter type: The target `AKTrackType`.
     /// - Returns: The active `AKMediaTrackOption`, or `nil` if no track is selected.
@@ -54,6 +57,7 @@ public protocol AKTrackSelectionServiceProtocol: AnyObject {
     /// Retrieves available language option groups formatted for `MPNowPlayingInfoCenter`.
     /// - Parameter types: The target track types to query.
     func availableLanguageOptionGroups(for types: [AKTrackType]) async throws -> [MPNowPlayingInfoLanguageOptionGroup]
+    
     
     // MARK: - 3. Select Methods
     
@@ -140,8 +144,8 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol {
         let selected = try await selectedTrack(for: type)
         let defaultTrackOption = trackOptions.first(where: { $0.isDefault })
         
-        let allowsEmpty = group.allowsEmptySelection
-        if type == .subtitle || type == .closedCaption, allowsEmpty {
+        let allowsEmpty = allowsEmptySelection(type) && group.allowsEmptySelection
+        if allowsEmpty {
             trackOptions.insert(.off, at: 0)
         }
         
@@ -150,7 +154,7 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol {
             options: trackOptions,
             selectedOption: selected,
             defaultOption: defaultTrackOption,
-            allowsEmptySelection: group.allowsEmptySelection && allowsEmptySelection(type)
+            allowsEmptySelection: allowsEmpty
         )
     }
     
@@ -175,6 +179,16 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol {
         }
         
         return group.options
+    }
+    
+    public func availableTracks(for types: [AKTrackType]) async throws -> [AKMediaTrackOption] {
+        var groups: [AKMediaTrackGroup] = []
+        for type in types {
+            if let group = try await trackGroup(for: type) {
+                groups.append(group)
+            }
+        }
+        return groups.flatMap({ $0.options })
     }
     
     /// Fetches the currently selected track option for a given track type.

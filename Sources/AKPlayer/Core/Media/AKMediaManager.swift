@@ -65,25 +65,30 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         Never
     >(.idle)
     
-    private var playerItemInitService: any AKPlayerItemInitServiceProtocol
-    
-    /// Private backing storage initialized post-super.init
-    private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
-    private var _trackSelectionService: (any AKTrackSelectionServiceProtocol)!
-    
     /// Service responsible for managing seek feasibility checks and execution.
     public var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol { _seekingThroughMediaService}
     
     /// Service responsible for subtitle and audio track selection management.
     public var trackSelectionService: any AKTrackSelectionServiceProtocol { _trackSelectionService }
     
+    public var metadataProvider: any AKMediaMetadataProviderProtocol { _metadataProvider }
+    
     /// Notification observer for player item playback lifecycle events.
     ///
     /// Available once `createPlayerItemFromAsset()` initializes the
     /// `playerItem`.
-    public private(set) var playerItemNotificationsObserver: AKPlayerItemNotificationsObserver?
+    public var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol { _playerItemNotificationsObserver }
     
     private var subscriptions = Set<AnyCancellable>()
+    
+    private var playerItemInitService: any AKPlayerItemInitServiceProtocol
+    
+    /// Private backing storage initialized post-super.init
+    private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
+    private var _trackSelectionService: (any AKTrackSelectionServiceProtocol)!
+    private var _metadataProvider: (any AKMediaMetadataProviderProtocol)!
+    private var _playerItemNotificationsObserver: (any AKPlayerItemNotificationsObserverProtocol)!
+    
     
     // MARK: - Init & Deinit
     
@@ -96,11 +101,10 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         super.init()
         
         // Direct initialization of child services
-        _seekingThroughMediaService =
-        AKSeekingThroughMediaService(mediaManager: self)
+        _seekingThroughMediaService = AKSeekingThroughMediaService(mediaManager: self)
         _trackSelectionService = AKTrackSelectionService(mediaManager: self)
-        
-        playerItemNotificationsObserver = nil
+        _metadataProvider = AKMediaMetadataProvider(mediaManager: self)
+        _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
     }
     
     deinit {}
@@ -139,15 +143,11 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         
         // Stop any existing notifications observer instance
         subscriptions.removeAll()
-        playerItemNotificationsObserver?.stopObserving()
-        playerItemNotificationsObserver = nil
         
         let newItem = playerItemInitService.createPlayerItemFromAsset()
         
         // Instantiate notification observer targeting the newly created player
         // item
-        playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(playerItem: newItem)
-        playerItemNotificationsObserver?.startObserving()
         Task {
             await trackSelectionService.resetSession()
         }
@@ -161,8 +161,6 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
     /// tasks.
     public func abortAssetInitialization() {
         subscriptions.removeAll()
-        playerItemNotificationsObserver?.stopObserving()
-        playerItemNotificationsObserver = nil
         playerItemInitService.abortAssetInitialization()
     }
     

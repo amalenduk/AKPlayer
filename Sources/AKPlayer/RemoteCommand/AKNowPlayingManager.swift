@@ -74,6 +74,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     private var cachedCurrentLanguageOptions: [MPNowPlayingInfoLanguageOption]?
     private var cachedAvailableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]?
     
+    private var cachedTrackGroups: [AKMediaTrackGroup]?
+    
     // MARK: - Initialization & Lifecycle
     
     public init(
@@ -98,10 +100,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             }
             Task { [weak session] in
                 await session?.becomeActiveIfPossible()
+                await setupDefaultRemoteCommands()
             }
         }
         
-        setupDefaultRemoteCommands()
         observePlayerEvents()
     }
     
@@ -262,7 +264,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             chapterCount: nil,
             chapterNumber: nil,
             creditsStartTime: nil,
-            currentPlaybackDate: nil,
+            currentPlaybackDate: playerManager.currentItem?.currentDate(),
             playbackProgress: playbackProgress,
             playbackQueueCount: queueProvider?.queueCount,
             playbackQueueIndex: queueProvider?.currentQueueIndex,
@@ -294,141 +296,236 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     
     // MARK: - Default Remote Commands Setup
     
-    private func setupDefaultRemoteCommands() {
-        Task { [weak self] in
-            guard let self else { return }
+    private func setupDefaultRemoteCommands() async {
+        
+        let defaultConfig = AKNowPlayingCommandConfiguration()
+            .add(.play).enable(.play)
+            .add(.pause).enable(.pause)
+            .add(.stop).enable(.stop)
+            .add(.togglePlayPause).enable(.togglePlayPause)
+            .add(.changePlaybackPosition).enable(.changePlaybackPosition)
+            .add(.skipForward(preferredIntervals: [15])).enable(.skipForward(preferredIntervals: [15]))
+            .add(.skipBackward(preferredIntervals: [15])).enable(.skipBackward(preferredIntervals: [15]))
+        
+        await session.applyConfiguration(defaultConfig)
+        
+        await session.setHandler(for: .play) { @MainActor [weak playerManager] _ in
+            guard let playerManager = playerManager else { return .commandFailed }
+            playerManager.play()
+            return playerManager.state.isPlaying || playerManager.autoPlay ? .success : .commandFailed
+        }
+        
+        await session.setHandler(for: .pause) { @MainActor [weak playerManager] _ in
+            guard let playerManager = playerManager else { return .commandFailed }
+            playerManager.pause()
+            return playerManager.state.isPaused ? .success : .commandFailed
+        }
+        
+        await session.setHandler(for: .stop) { @MainActor [weak playerManager] _ in
+            guard let playerManager = playerManager else { return .commandFailed }
+            playerManager.stop()
+            return playerManager.state.isStopped ? .success : .commandFailed
+        }
+        
+        await session.setHandler(for: .togglePlayPause) { @MainActor [weak playerManager] _ in
+            guard let playerManager = playerManager else { return .commandFailed }
+            playerManager.togglePlayPause()
+            return .success
+        }
+        
+        await session.setHandler(for: .changePlaybackPosition) { @MainActor [weak playerManager] event in
+            guard let playerManager = playerManager,
+                  let positionEvent = event as? MPChangePlaybackPositionCommandEvent
+            else { return .commandFailed }
             
-            let defaultConfig = AKNowPlayingCommandConfiguration()
-                .add(.play).enable(.play)
-                .add(.pause).enable(.pause)
-                .add(.stop).enable(.stop)
-                .add(.togglePlayPause).enable(.togglePlayPause)
-                .add(.changePlaybackPosition).enable(.changePlaybackPosition)
-                .add(.skipForward(preferredIntervals: [15])).enable(.skipForward(preferredIntervals: [15]))
-                .add(.skipBackward(preferredIntervals: [15])).enable(.skipBackward(preferredIntervals: [15]))
-            
-            await session.applyConfiguration(defaultConfig)
-            
-            await session.setHandler(for: .play) { @MainActor [weak playerManager] _ in
-                guard let playerManager = playerManager else { return .commandFailed }
-                playerManager.play()
-                return playerManager.state.isPlaying || playerManager.autoPlay ? .success : .commandFailed
+            let targetTime = CMTime(seconds: positionEvent.positionTime, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            Task { @MainActor in
+                await playerManager.seek(to: .time(targetTime))
+            }
+            return .success
+        }
+        
+        await session.setHandler(
+            for: .changePlaybackRate(
+                supportedPlaybackRates: AKPlaybackRate
+                    .allCases.map(\.rate)
+            )
+        ) { @MainActor [weak playerManager] event in
+            guard let playerManager = playerManager,
+                  let currentMedia = playerManager.currentMedia,
+                  let rateEvent = event as? MPChangePlaybackRateCommandEvent,
+                  currentMedia
+                .canPlay(at: AKPlaybackRate(rate: rateEvent.playbackRate))
+            else {
+                return .commandFailed
             }
             
-            await session.setHandler(for: .pause) { @MainActor [weak playerManager] _ in
-                guard let playerManager = playerManager else { return .commandFailed }
-                playerManager.pause()
-                return playerManager.state.isPaused ? .success : .commandFailed
-            }
-            
-            await session.setHandler(for: .stop) { @MainActor [weak playerManager] _ in
-                guard let playerManager = playerManager else { return .commandFailed }
-                playerManager.stop()
-                return playerManager.state.isStopped ? .success : .commandFailed
-            }
-            
-            await session.setHandler(for: .togglePlayPause) { @MainActor [weak playerManager] _ in
-                guard let playerManager = playerManager else { return .commandFailed }
-                playerManager.togglePlayPause()
-                return .success
-            }
-            
-            await session.setHandler(for: .changePlaybackPosition) { @MainActor [weak playerManager] event in
-                guard let playerManager = playerManager,
-                      let positionEvent = event as? MPChangePlaybackPositionCommandEvent
-                else { return .commandFailed }
-                
-                let targetTime = CMTime(seconds: positionEvent.positionTime, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-                Task { @MainActor in
-                    await playerManager.seek(to: .time(targetTime))
-                }
-                return .success
-            }
-            
-            await session.setHandler(
-                for: .changePlaybackRate(
-                    supportedPlaybackRates: AKPlaybackRate
-                        .allCases.map(\.rate)
-                )
-            ) { @MainActor [weak playerManager] event in
+            playerManager.play(at: AKPlaybackRate(rate: rateEvent.playbackRate))
+            return .success
+        }
+        
+        await session
+            .setHandler(for: .seekForward) { @MainActor [weak playerManager] event in
                 guard let playerManager = playerManager,
                       let currentMedia = playerManager.currentMedia,
-                      let rateEvent = event as? MPChangePlaybackRateCommandEvent,
-                      currentMedia
-                    .canPlay(at: AKPlaybackRate(rate: rateEvent.playbackRate))
+                      let seekEvent = event as? MPSeekCommandEvent,
+                      currentMedia.canPlay(at: AKPlaybackRate.fastest)
                 else {
                     return .commandFailed
                 }
                 
-                playerManager.play(at: AKPlaybackRate(rate: rateEvent.playbackRate))
-                return .success
-            }
-            
-            await session
-                .setHandler(for: .seekForward) { @MainActor [weak playerManager] event in
-                    guard let playerManager = playerManager,
-                          let currentMedia = playerManager.currentMedia,
-                          let seekEvent = event as? MPSeekCommandEvent,
-                          currentMedia.canPlay(at: AKPlaybackRate.fastest)
-                    else {
-                        return .commandFailed
-                    }
-                    
-                    switch seekEvent.type {
-                    case .beginSeeking:
-                        playerManager.fastForward(at: .fastest)
-                    case .endSeeking:
-                        playerManager.play(at: .normal)
-                    @unknown default:
-                        return .commandFailed
-                    }
-                    return .success
-                }
-            
-            await session
-                .setHandler(for: .seekBackward) { @MainActor [weak playerManager] event in
-                    guard let playerManager = playerManager,
-                          let currentMedia = playerManager.currentMedia,
-                          let seekEvent = event as? MPSeekCommandEvent,
-                          currentMedia.canPlay(at: AKPlaybackRate.slowest)
-                    else {
-                        return .commandFailed
-                    }
-                    
-                    switch seekEvent.type {
-                    case .beginSeeking:
-                        playerManager.rewind(at: .slowest)
-                    case .endSeeking:
-                        playerManager.play(at: .normal)
-                    @unknown default:
-                        return .commandFailed
-                    }
-                    return .success
-                }
-            
-            await session.setHandler(for: .skipForward(preferredIntervals: [15])) { @MainActor [weak playerManager] event in
-                guard let playerManager = playerManager,
-                      let skipEvent = event as? MPSkipIntervalCommandEvent
-                else { return .commandFailed }
-                
-                let targetSeconds = playerManager.currentTime.seconds + skipEvent.interval
-                Task { @MainActor in
-                    await playerManager.seek(to: .seconds(targetSeconds))
+                switch seekEvent.type {
+                case .beginSeeking:
+                    playerManager.fastForward(at: .fastest)
+                case .endSeeking:
+                    playerManager.play(at: .normal)
+                @unknown default:
+                    return .commandFailed
                 }
                 return .success
             }
-            
-            await session.setHandler(for: .skipBackward(preferredIntervals: [15])) { @MainActor [weak playerManager] event in
+        
+        await session
+            .setHandler(for: .seekBackward) { @MainActor [weak playerManager] event in
                 guard let playerManager = playerManager,
-                      let skipEvent = event as? MPSkipIntervalCommandEvent
-                else { return .commandFailed }
+                      let currentMedia = playerManager.currentMedia,
+                      let seekEvent = event as? MPSeekCommandEvent,
+                      currentMedia.canPlay(at: AKPlaybackRate.slowest)
+                else {
+                    return .commandFailed
+                }
                 
-                let targetSeconds = max(0, playerManager.currentTime.seconds - skipEvent.interval)
-                Task { @MainActor in
-                    await playerManager.seek(to: .seconds(targetSeconds))
+                switch seekEvent.type {
+                case .beginSeeking:
+                    playerManager.rewind(at: .slowest)
+                case .endSeeking:
+                    playerManager.play(at: .normal)
+                @unknown default:
+                    return .commandFailed
                 }
                 return .success
+            }
+        
+        await session.setHandler(for: .skipForward(preferredIntervals: [15])) { @MainActor [weak playerManager] event in
+            guard let playerManager = playerManager,
+                  let skipEvent = event as? MPSkipIntervalCommandEvent
+            else { return .commandFailed }
+            
+            let targetSeconds = playerManager.currentTime.seconds + skipEvent.interval
+            Task { @MainActor in
+                await playerManager.seek(to: .seconds(targetSeconds))
+            }
+            return .success
+        }
+        
+        await session.setHandler(for: .skipBackward(preferredIntervals: [15])) { @MainActor [weak playerManager] event in
+            guard let playerManager = playerManager,
+                  let skipEvent = event as? MPSkipIntervalCommandEvent
+            else { return .commandFailed }
+            
+            let targetSeconds = max(0, playerManager.currentTime.seconds - skipEvent.interval)
+            Task { @MainActor in
+                await playerManager.seek(to: .seconds(targetSeconds))
+            }
+            return .success
+        }
+        
+        await session.setHandler(for: .enableLanguageOption) { @MainActor [weak self] event in
+            guard let self,
+                  let playerManager = playerManager,
+                  let media = playerManager.currentMedia,
+                  let languageEvent = event as? MPChangeLanguageOptionCommandEvent
+            else { return .commandFailed }
+            
+            return enable(languageOption: languageEvent.languageOption, on: media)
+        }
+        
+        await session.setHandler(for: .disableLanguageOption) { @MainActor [weak self] event in
+            guard let self,
+                  let playerManager = playerManager,
+                  let media = playerManager.currentMedia,
+                  let languageEvent = event as? MPChangeLanguageOptionCommandEvent
+            else { return .commandFailed }
+            
+            return disable(languageOption: languageEvent.languageOption, on: media)
+        }
+    }
+    
+    private func enable(
+        languageOption: MPNowPlayingInfoLanguageOption,
+        on media: any AKPlayable
+    ) -> MPRemoteCommandHandlerStatus {
+        
+        let types: [AKTrackType] = languageOption.languageOptionType == .legible
+        ? [.subtitle, .closedCaption]
+        : [.audio, .audioDescription]
+        
+        guard let cachedTrackGroups else {
+            return .noSuchContent
+        }
+        
+        for type in types {
+            
+            guard let group = cachedTrackGroups.first(where: { $0.type == type }) else { continue }
+            
+            if let match = group.options.first(where: { trackOption in
+                guard let avOption = trackOption.option else { return false }
+                
+                return avOption.extendedLanguageTag == languageOption.languageTag ||
+                avOption.displayName == languageOption.displayName
+            }) {
+                do {
+                    Task {
+                        try await media.trackSelection.select(match, for: type)
+                    }
+                    return .success
+                } catch {
+                    continue
+                }
             }
         }
+        
+        return .noSuchContent
+    }
+    
+    private func disable(
+        languageOption: MPNowPlayingInfoLanguageOption,
+        on media: any AKPlayable
+    ) -> MPRemoteCommandHandlerStatus {
+        
+        let types: [AKTrackType] = languageOption.languageOptionType == .legible
+        ? [.subtitle, .closedCaption]
+        : [.audio]   // audio tracks usually cannot be fully disabled
+        
+        guard let cachedTrackGroups else {
+            return .noSuchContent
+        }
+        
+        for type in types {
+            guard let group = cachedTrackGroups.first(where: { $0.type == type }) else { continue }
+            
+            guard group.allowsEmptySelection && (type == .subtitle || type == .closedCaption) else { continue }
+            
+            guard let selected = group.selectedOption,
+                  let avOption = selected.option else {
+                continue
+            }
+            
+            let matches = avOption.extendedLanguageTag == languageOption.languageTag ||
+            avOption.displayName == languageOption.displayName
+            
+            if matches {
+                do {
+                    Task {
+                        try await media.trackSelection.select(nil, for: type)
+                    }
+                    return .success
+                } catch {
+                    continue
+                }
+            }
+        }
+        
+        return .noSuchContent
     }
 }

@@ -41,17 +41,15 @@ public protocol AKMediaManagerProtocol: AnyObject, NSObjectProtocol {
     var delegate: AKMediaDelegate? { get set }
 
     /// Service responsible for managing seek feasibility checks and execution.
-    var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol {
-        get
-    }
+    var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol { get }
 
     /// Service responsible for subtitle and audio track selection management.
     var trackSelectionService: any AKTrackSelectionServiceProtocol { get }
-
+    
+    var metadataProvider: any AKMediaMetadataProviderProtocol { get }
+    
     /// Notification observer for player item playback lifecycle events.
-    var playerItemNotificationsObserver: AKPlayerItemNotificationsObserver? {
-        get
-    }
+    var playerItemNotificationsObserver: AKPlayerItemNotificationsObserverProtocol { get }
 
     // MARK: - Lifecycle Hooks & Asset Operations
 

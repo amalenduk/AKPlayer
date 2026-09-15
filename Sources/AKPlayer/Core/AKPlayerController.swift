@@ -528,7 +528,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         playerItemNotificationObservationTask?.cancel()
         
         playerItemNotificationObservationTask = Task { @MainActor [weak self] in
-            guard let events = self?.currentMedia?.playerItemNotifications?.events else {
+            guard let events = self?.currentMedia?.playerItemNotifications.events else {
                 return
             }
             

@@ -8,6 +8,7 @@
 
 import AVFoundation
 import Foundation
+import Combine
 
 // MARK: - Event Model
 
@@ -27,15 +28,6 @@ public enum AKPlayerItemNotificationEvent: Sendable {
 public protocol AKPlayerItemNotificationsObserverProtocol: AnyObject {
     /// A multi-subscriber stream emitting AVPlayerItem lifecycle events.
     var events: AsyncStream<AKPlayerItemNotificationEvent> { get }
-    
-    /// Indicates whether notification observers are currently active.
-    var isObserving: Bool { get }
-    
-    /// Starts observing AVPlayerItem system notifications.
-    func startObserving()
-    
-    /// Stops observing AVPlayerItem system notifications and removes tokens.
-    func stopObserving()
 }
 
 // MARK: - Implementation
@@ -47,11 +39,14 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
     
     // MARK: - Properties
     
-    /// The AVPlayerItem being observed.
-    private let playerItem: AVPlayerItem
+    /// A weak reference to the parent media manager providing actor-safe access
+    /// to the active `AVPlayerItem`.
+    private weak var mediaManager: (any AKMediaManagerProtocol)?
     
-    /// Indicates whether notification observers are currently registered.
-    public private(set) var isObserving = false
+    /// The AVPlayerItem being observed.
+    private var playerItem: AVPlayerItem? {
+        mediaManager?.playerItem
+    }
     
     /// NotificationCenter observer tokens.
     /// Marked `nonisolated(unsafe)` so deinit can safely remove them off-actor.
@@ -65,11 +60,22 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
         broadcaster.makeStream()
     }
     
+    private var subscriptions: Set<AnyCancellable> = Set<AnyCancellable>()
+    
     // MARK: - Init & Deinit
     
     /// Initializes an observer for a specific AVPlayerItem.
-    public init(playerItem: AVPlayerItem) {
-        self.playerItem = playerItem
+    public init(mediaManager: any AKMediaManagerProtocol) {
+        self.mediaManager = mediaManager
+        
+        mediaManager.statePublisher
+            .sink { [weak self] status in
+                guard let self = self,
+                      status == .playerItemLoaded,
+                      let playerItem = mediaManager.playerItem else { return }
+                
+                startObserving(playerItem: playerItem)
+            }
     }
     
     deinit {
@@ -83,10 +89,8 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
     
     // MARK: - Observation Controls
     
-    public func startObserving() {
-        guard !isObserving else { return }
+    func startObserving(playerItem: AVPlayerItem) {
         stopObservingObservers()
-        isObserving = true
         
         // 1. Did Play To End Time
         observeNotification(.AVPlayerItemDidPlayToEndTime, object: playerItem) { [weak self] in
@@ -120,13 +124,6 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
             guard let self else { return }
             broadcaster.send(.recommendedTimeOffsetFromLiveDidChange(playerItem.recommendedTimeOffsetFromLive))
         }
-    }
-    
-    public func stopObserving() {
-        guard isObserving else { return }
-        stopObservingObservers()
-        broadcaster.finish()
-        isObserving = false
     }
     
     // MARK: - Private Notification Helpers

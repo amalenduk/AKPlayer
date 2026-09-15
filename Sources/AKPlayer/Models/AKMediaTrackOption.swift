@@ -17,6 +17,21 @@ public enum AKTrackType: String, Sendable, Hashable, CaseIterable, Codable {
     case closedCaption
     case videoAlternative
     case audioDescription
+    
+    var mediaCharacteristic: AVMediaCharacteristic {
+        switch self {
+        case .audio:
+            return .audible
+        case .subtitle:
+            return .legible
+        case .closedCaption:
+            return .legible
+        case .videoAlternative:
+            return .visual
+        case .audioDescription:
+            return .audible
+        }
+    }
 }
 
 // MARK: - AKMediaOptionBox
