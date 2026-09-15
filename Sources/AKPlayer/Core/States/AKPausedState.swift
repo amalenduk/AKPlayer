@@ -154,15 +154,18 @@ public class AKPausedState: AKBaseState {
     }
     
     public override func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        switch status {
+        switch playerController.player.timeControlStatus {
         case .playing:
             guard isActiveState else { return }
-            play()
+            print("From pause state play")
+            let controller = AKPlayingState(playerController: playerController)
+            change(controller)
         case .waitingToPlayAtSpecifiedRate:
             guard isActiveState else { return }
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .interstitialEvent, .toMinimizeStalls, .waitingForCoordinatedPlayback:
+                print("From pause state play")
                 play()
             case .noItemToPlay:
                 stop()

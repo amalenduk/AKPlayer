@@ -23,6 +23,8 @@ public class AKPlayingState: AKBaseState {
     /// Container holding reactive Combine event subscriptions.
     private var subscriptions = Set<AnyCancellable>()
     
+    private var playingStarted: Bool = false
+    
     // MARK: - Initialization & Deinitialization
     
     /// Initializes a playing state instance associated with the specified
@@ -106,14 +108,18 @@ public class AKPlayingState: AKBaseState {
     }
     
     public override func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        switch status {
+        switch playerController.player.timeControlStatus {
+        case .playing:
+            playingStarted = true
+            print("From palying state play")
         case .waitingToPlayAtSpecifiedRate:
-            guard isActiveState else { return }
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay,
                   let currentItem = playerController.currentItem else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 guard let currentItem = playerController.currentItem else { return }
+                print("From palying state play")
+                playingStarted = true
                 guard currentItem.isPlaybackBufferFull && currentItem.isPlaybackLikelyToKeepUp else {
                     
                     let controller = AKBufferingState(
@@ -132,7 +138,8 @@ public class AKPlayingState: AKBaseState {
                 break
             }
         case .paused:
-            guard isActiveState else { return }
+            guard playingStarted else { return }
+            print("From palying state pause")
             pause()
         default:
             break

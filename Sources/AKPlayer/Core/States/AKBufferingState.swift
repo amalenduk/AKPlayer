@@ -96,7 +96,7 @@ public class AKBufferingState: AKBaseState {
         super.processStateChange()
         
         if !playerController.player.timeControlStatus.isPaused {
-            print("Pause called")
+            print("From buffering state pause")
             playerController.performPause()
         }
         

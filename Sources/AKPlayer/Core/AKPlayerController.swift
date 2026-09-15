@@ -218,6 +218,13 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     ) {
         if !state.isAny(of: [.idle, .stopped, .failed]) {
             stop()
+            
+            Task {
+                currentMedia = media
+                controller.load(media: media, autoPlay: autoPlay, at: position)
+            }
+            
+            return
         }
         
         currentMedia = media
@@ -378,7 +385,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         networkStatusMonitor.startObserving()
         startPlayerObservers()
     }
-
+    
     /// Transitions the current state controller to a new state controller
     /// instance.
     /// - Parameter controller: The target state controller conforming to
@@ -387,22 +394,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     
     public func change(_ controller: AKPlayerStateControllerProtocol) {
         
-        // 2. Drop the old state completely
-        let old = _controller
-        _controller = nil                    // ← critical: make the controller hold nothing
-        
-        // At this moment the old state has no strong reference from the controller.
-        // If beforeStateChange cancelled all subscriptions, the old state can now die.
-        
-        // 3. Install the new state
-        _controller = controller
-        
-        // 4. Now the controller holds only the new state
-        eventBroadcaster.send(.stateDidChange(controller.state))
-        
-        // 5. Enter the new state (old state is already gone)
-        controller.processStateChange()
-        processStateChange()
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            _controller = controller
+            
+            eventBroadcaster.send(.stateDidChange(controller.state))
+            
+            controller.processStateChange()
+            processStateChange()
+        }
     }
     
     
@@ -485,14 +485,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             .dropFirst()
             .sink { @MainActor [weak self] status in
                 guard let self else { return }
+                
                 self.controller.handlePlayerStatusChange(status)
             }
             .store(in: &subscriptions)
         
         player.publisher(for: \.timeControlStatus)
-            .dropFirst()
-            .sink { @MainActor [weak self] status in
+            .sink { [weak self] status in
                 guard let self else { return }
+                print("State ", self.state , " ", status.isPlaying || status.isWaitingToPlayAtSpecifiedRate)
                 self.controller.handleTimeControlStatusChange(status)
             }
             .store(in: &subscriptions)

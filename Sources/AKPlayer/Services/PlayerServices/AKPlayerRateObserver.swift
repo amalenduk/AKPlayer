@@ -99,7 +99,7 @@ public class AKPlayerRateObserver: AKPlayerRateObserverProtocol {
             for: AVPlayer.rateDidChangeNotification,
             object: player
         )
-        .sink { @MainActor [weak self] notification in
+        .sink { [weak self] notification in
             guard let self else { return }
 
             guard
