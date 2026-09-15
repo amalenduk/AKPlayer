@@ -90,10 +90,17 @@ public class AKBufferingState: AKBaseState {
     /// monitoring.
     override public func processStateChange() {
         guard let currentMedia = playerController.currentMedia else {
-            stop()
-            return
+            return stop()
         }
         super.processStateChange()
+        
+        if canPlay() && targetSeek == nil {
+            let controller = AKPlayingState(
+                playerController: playerController,
+                rate: rate
+            )
+            return change(controller)
+        }
         
         if !playerController.player.timeControlStatus.isPaused {
             print("From buffering state pause")
@@ -476,7 +483,7 @@ public class AKBufferingState: AKBaseState {
             playerController: playerController,
             rate: rate
         )
-        change(controller)
+        return change(controller)
     }
     
     /// Listens for network reachability changes to drop into network waiting

@@ -139,7 +139,7 @@ public class AKPlayingState: AKBaseState {
             }
         case .paused:
             guard playingStarted else { return }
-            print("From palying state pause")
+            print("From palying state pause ", playerController.player.rate)
             pause()
         default:
             break

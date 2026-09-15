@@ -219,7 +219,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         if !state.isAny(of: [.idle, .stopped, .failed]) {
             stop()
             
-            Task {
+            Task { 
                 currentMedia = media
                 controller.load(media: media, autoPlay: autoPlay, at: position)
             }
@@ -392,16 +392,41 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// `AKPlayerStateControllerProtocol`.
     // AKPlayerController
     
-    public func change(_ controller: AKPlayerStateControllerProtocol) {
+    // AKPlayerController.swift
+    
+    private var isTransitioning = false
+    private var pendingController: AKPlayerStateControllerProtocol?
+    
+    public func change(_ newController: AKPlayerStateControllerProtocol) {
+        if isTransitioning {
+            pendingController = newController
+            return
+        }
         
-        Task { @MainActor [weak self] in
+        isTransitioning = true
+        
+        let old = _controller
+        _controller = nil                     // drop the reference now
+        
+        // 2. Install the new state on the next run-loop tick.
+        //    This is the smallest possible hop that lets ARC deallocate
+        //    the old state and lets AVPlayer finish its internal work.
+        DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            _controller = controller
             
-            eventBroadcaster.send(.stateDidChange(controller.state))
+            self._controller = newController
+            self.eventBroadcaster.send(.stateDidChange(newController.state))
             
-            controller.processStateChange()
-            processStateChange()
+            self.processStateChange()
+            
+            newController.processStateChange()
+            self.isTransitioning = false
+            
+            // Handle any transition that was requested while we were switching
+            if let pending = self.pendingController {
+                self.pendingController = nil
+                self.change(pending)
+            }
         }
     }
     

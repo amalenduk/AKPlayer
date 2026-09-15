@@ -158,14 +158,13 @@ public class AKPausedState: AKBaseState {
         case .playing:
             guard isActiveState else { return }
             print("From pause state play")
-            let controller = AKPlayingState(playerController: playerController)
-            change(controller)
+            play()
         case .waitingToPlayAtSpecifiedRate:
             guard isActiveState else { return }
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .interstitialEvent, .toMinimizeStalls, .waitingForCoordinatedPlayback:
-                print("From pause state play")
+                print("From pause state play, ", reasonForWaitingToPlay)
                 play()
             case .noItemToPlay:
                 stop()
