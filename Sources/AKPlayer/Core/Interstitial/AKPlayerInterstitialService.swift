@@ -9,6 +9,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         eventBroadcaster.makeStream()
     }
     
+    public private(set) var playbackState: AKInterstitialPlaybackState = .idle
+    
     public var currentEvent: AVPlayerInterstitialEvent? {
         monitor?.currentEvent
     }
@@ -59,6 +61,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private var progressObserverToken: Any?
     private var cancellables = Set<AnyCancellable>()
     private var timelineCancellables = Set<AnyCancellable>()
+    private var interstitialStatusObservations = Set<AnyCancellable>()
     
     private var lastStartedEvent: AVPlayerInterstitialEvent?
     
@@ -81,6 +84,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         stopObservingTimeline()
         removeProgressObserver()
         cancellables.removeAll()
+        interstitialStatusObservations.removeAll()
     }
     
     private func stopObservingTimeline() {
@@ -185,13 +189,18 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                 emit(.willStart(newEvent))
                 emit(.didStart(newEvent))
                 startProgressObserver()
+                startObservingInterstitialPlaybackState()
+                updatePlaybackState()
             }
         } else {
             if let finished = lastStartedEvent {
                 emit(.didFinish(finished, reason: .completed))
                 lastStartedEvent = nil
             }
+            
+            stopObservingInterstitialPlaybackState()
             removeProgressObserver()
+            setPlaybackState(.idle)
         }
     }
     
@@ -310,9 +319,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         guard let event = currentEvent else { return }
         
         controller?.cancelCurrentEvent(withResumptionOffset: resumptionOffset)
-        emit(.didFinish(event, reason: .cancelled(resumptionOffset: resumptionOffset)))
         lastStartedEvent = nil
+        
+        setPlaybackState(.finished)
+        stopObservingInterstitialPlaybackState()
         removeProgressObserver()
+        emit(.didFinish(event, reason: .cancelled(resumptionOffset: resumptionOffset)))
     }
     
     private func syncSnapshot(_ snapshot: AVPlayerItemIntegratedTimelineSnapshot) {
@@ -413,5 +425,95 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     
     private func emit(_ event: AKInterstitialEvent) {
         eventBroadcaster.send(event)
+    }
+    
+    private func startObservingInterstitialPlaybackState() {
+        stopObservingInterstitialPlaybackState()
+        
+        guard let player = monitor?.interstitialPlayer else { return }
+        
+        // timeControlStatus
+        player.publisher(for: \.timeControlStatus)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updatePlaybackState()
+            }
+            .store(in: &interstitialStatusObservations)
+        
+        // current item buffer flags
+        player.publisher(for: \.currentItem)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] item in
+                self?.observeItemBufferFlags(item)
+                self?.updatePlaybackState()
+            }
+            .store(in: &interstitialStatusObservations)
+    }
+    
+    private func observeItemBufferFlags(_ item: AVPlayerItem?) {
+        // Clear previous item observers by recreating the set is already handled
+        // when we call startObserving… again. Just observe the new item.
+        guard let item else { return }
+        
+        item.publisher(for: \.isPlaybackLikelyToKeepUp)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updatePlaybackState() }
+            .store(in: &interstitialStatusObservations)
+        
+        item.publisher(for: \.isPlaybackBufferEmpty)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updatePlaybackState() }
+            .store(in: &interstitialStatusObservations)
+        
+        item.publisher(for: \.status)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updatePlaybackState() }
+            .store(in: &interstitialStatusObservations)
+    }
+    
+    private func stopObservingInterstitialPlaybackState() {
+        interstitialStatusObservations.removeAll()
+    }
+    
+    private func updatePlaybackState() {
+        guard isPlayingInterstitial,
+              let player = monitor?.interstitialPlayer else {
+            setPlaybackState(.idle)
+            return
+        }
+        
+        let item = player.currentItem
+        
+        // Loading
+        if item == nil || item?.status != .readyToPlay {
+            setPlaybackState(.loading)
+            return
+        }
+        
+        // Buffering
+        if player.timeControlStatus == .waitingToPlayAtSpecifiedRate ||
+            item?.isPlaybackBufferEmpty == true ||
+            item?.isPlaybackLikelyToKeepUp == false {
+            setPlaybackState(.buffering)
+            return
+        }
+        
+        // Playing / Paused
+        switch player.timeControlStatus {
+        case .playing:
+            setPlaybackState(.playing)
+        case .paused:
+            setPlaybackState(.paused)
+        case .waitingToPlayAtSpecifiedRate:
+            setPlaybackState(.buffering)
+        @unknown default:
+            setPlaybackState(.paused)
+        }
+    }
+    
+    private func setPlaybackState(_ newState: AKInterstitialPlaybackState) {
+        guard playbackState != newState else { return }
+        playbackState = newState
+        emit(.playbackStateDidChange(newState))   // add this case to AKInterstitialEvent
     }
 }

@@ -17,6 +17,7 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
     
     var events: AsyncStream<AKInterstitialEvent> { get }
     
+    var playbackState: AKInterstitialPlaybackState { get }
     var currentEvent: AVPlayerInterstitialEvent? { get }
     var isPlayingInterstitial: Bool { get }
     var scheduledEvents: [AVPlayerInterstitialEvent] { get }

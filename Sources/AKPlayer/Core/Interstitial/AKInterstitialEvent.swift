@@ -18,6 +18,8 @@ public enum AKInterstitialEvent: @unchecked Sendable {
     /// The full schedule of interstitial events changed (server-side or client-side).
     case scheduleDidChange([AVPlayerInterstitialEvent])
     
+    case playbackStateDidChange(AKInterstitialPlaybackState)
+    
     /// An interstitial is about to begin (currentEvent became non-nil).
     case willStart(AVPlayerInterstitialEvent)
     
