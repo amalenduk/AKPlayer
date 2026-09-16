@@ -53,8 +53,8 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
     
     func cancelCurrent(resumptionOffset: CMTime)
     
-    func seekOnIntegratedTimeline(to time: TimeInterval, completion: @escaping (Bool) -> Void)
-    func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @escaping (Bool) -> Void)
+    func seekOnIntegratedTimeline(to time: TimeInterval, completion: @Sendable @escaping (Bool) -> Void)
+    func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @Sendable @escaping (Bool) -> Void)
     
     func stopObserving()
 }

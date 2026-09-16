@@ -99,7 +99,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                 throw AKPlayerError.nowPlayingSessionFailure
             }
             Task { [weak session] in
-                await session?.becomeActiveIfPossible()
+                let active = await session?.becomeActiveIfPossible()
+                guard active ?? false else {
+                    throw AKPlayerError.nowPlayingSessionFailure
+                }
                 await setupDefaultRemoteCommands()
             }
         }
@@ -274,7 +277,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     
     // MARK: - Language Options Caching
     
-    private func cacheLanguageOptions(from media: AKPlayable) {
+    private func cacheLanguageOptions(from media: any AKPlayable) {
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
@@ -474,14 +477,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                 return avOption.extendedLanguageTag == languageOption.languageTag ||
                 avOption.displayName == languageOption.displayName
             }) {
-                do {
-                    Task {
-                        try await media.trackSelection.select(match, for: type)
-                    }
-                    return .success
-                } catch {
-                    continue
+                Task {
+                    try await media.trackSelection.select(match, for: type)
                 }
+                return .success
             }
         }
         
@@ -515,14 +514,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             avOption.displayName == languageOption.displayName
             
             if matches {
-                do {
-                    Task {
-                        try await media.trackSelection.select(nil, for: type)
-                    }
-                    return .success
-                } catch {
-                    continue
+                Task {
+                    try await media.trackSelection.select(nil, for: type)
                 }
+                return .success
             }
         }
         

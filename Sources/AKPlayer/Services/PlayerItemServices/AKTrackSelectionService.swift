@@ -317,7 +317,7 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol {
         
         let preferredLocale = Locale.preferredLanguages.first.map(Locale.init(identifier:)) ?? Locale.current
         let matches = AVMediaSelectionGroup.mediaSelectionOptions(
-            from: group.options.flatMap({ $0.option }),
+            from: group.options.compactMap({ $0.option }),
             with: preferredLocale
         )
         

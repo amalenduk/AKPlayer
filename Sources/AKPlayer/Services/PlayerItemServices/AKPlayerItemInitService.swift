@@ -72,7 +72,7 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     // MARK: - Properties
 
     /// The target playable media item backing this initialization pipeline.
-    private unowned let media: AKPlayable
+    private unowned let media: any AKPlayable
 
     /// The loaded URL asset backing the current initialization process.
     public private(set) var asset: AVURLAsset?

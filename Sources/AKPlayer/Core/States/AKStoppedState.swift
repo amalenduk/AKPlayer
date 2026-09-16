@@ -31,12 +31,10 @@ public class AKStoppedState: AKBaseState {
     }
     
     deinit {
-        defer {
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
-        }
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - Lifecycle Hooks

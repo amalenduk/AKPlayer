@@ -43,12 +43,11 @@ public class AKPausedState: AKBaseState {
     }
     
     deinit {
-        defer {
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
-        }
+        
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - Lifecycle Hooks
@@ -63,9 +62,7 @@ public class AKPausedState: AKBaseState {
             playerController.performPause()
         }
         
-        if playerItemDidPlayToEndTime,
-           let currentMedia = playerController.currentMedia
-        {
+        if playerItemDidPlayToEndTime {
             playerController
                 .emit(.didReachEnd(at: playerController.currentTime))
         }

@@ -75,7 +75,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                       let playerItem = mediaManager.playerItem else { return }
                 
                 startObserving(playerItem: playerItem)
-            }
+            }.store(in: &subscriptions)
     }
     
     deinit {

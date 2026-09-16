@@ -75,12 +75,12 @@ public class AKBufferingState: AKBaseState {
     }
     
     deinit {
-        defer {
+        
             AKLogger.logDeinit(
                 String(describing: Self.self),
                 pointer: Unmanaged.passUnretained(self)
             )
-        }
+        
     }
     
     // MARK: - Lifecycle Hooks

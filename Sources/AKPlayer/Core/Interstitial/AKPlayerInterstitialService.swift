@@ -382,7 +382,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         )))
     }
     
-    public func seekOnIntegratedTimeline(to time: TimeInterval, completion: @escaping (Bool) -> Void) {
+    public func seekOnIntegratedTimeline(to time: TimeInterval, completion: @Sendable @escaping (Bool) -> Void) {
         guard let timeline = currentItem?.integratedTimeline else {
             completion(false)
             return
@@ -411,7 +411,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
     }
     
-    public func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @escaping (Bool) -> Void) {
+    public func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @Sendable @escaping (Bool) -> Void) {
         seekOnIntegratedTimeline(to: integratedTimelineCurrentTime + delta, completion: completion)
     }
     

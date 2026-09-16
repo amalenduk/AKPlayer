@@ -54,12 +54,11 @@ public class AKLoadedState: AKBaseState {
     }
     
     deinit {
-        defer {
+       
             AKLogger.logDeinit(
                 String(describing: Self.self),
                 pointer: Unmanaged.passUnretained(self)
             )
-        }
     }
     
     // MARK: - Lifecycle Hooks
@@ -69,9 +68,7 @@ public class AKLoadedState: AKBaseState {
     override public func processStateChange() {
         super.processStateChange()
         
-        if let currentMedia = playerController.currentMedia {
-            playerController.emit(.timeDidChange(playerController.currentTime))
-        }
+        playerController.emit(.timeDidChange(playerController.currentTime))
         
         if autoPlay {
             play()

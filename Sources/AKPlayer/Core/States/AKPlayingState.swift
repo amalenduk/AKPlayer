@@ -45,12 +45,12 @@ public class AKPlayingState: AKBaseState {
     }
     
     deinit {
-        defer {
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
-        }
+        
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
+        
     }
     
     // MARK: - Lifecycle Hooks
@@ -113,8 +113,7 @@ public class AKPlayingState: AKBaseState {
             playingStarted = true
             print("From palying state play")
         case .waitingToPlayAtSpecifiedRate:
-            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay,
-                  let currentItem = playerController.currentItem else { return }
+            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 guard let currentItem = playerController.currentItem else { return }

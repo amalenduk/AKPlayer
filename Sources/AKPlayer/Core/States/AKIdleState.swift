@@ -25,12 +25,12 @@ public class AKIdleState: AKBaseState {
     }
 
     deinit {
-        defer {
+       
             AKLogger.logDeinit(
                 String(describing: Self.self),
                 pointer: Unmanaged.passUnretained(self)
             )
-        }
+        
     }
 
     // MARK: - Preflight Checks

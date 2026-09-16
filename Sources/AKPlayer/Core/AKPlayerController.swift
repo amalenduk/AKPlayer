@@ -414,9 +414,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// on active state.
     public func processStateChange() {
         switch state {
-        case .idle, .loading, .loaded, .buffering, .paused, .playing, .stopped,
-                .waitingForNetwork,
-                .failed:
+        case .idle, .loading, .buffering, .paused, .playing,
+                .waitingForNetwork:
             break
             
         case .loaded:
