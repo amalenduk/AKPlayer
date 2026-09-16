@@ -492,8 +492,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         
         // Buffering
         if player.timeControlStatus == .waitingToPlayAtSpecifiedRate ||
-            item?.isPlaybackBufferEmpty == true ||
-            item?.isPlaybackLikelyToKeepUp == false {
+            item?.isPlaybackBufferEmpty == true {
             setPlaybackState(.buffering)
             return
         }

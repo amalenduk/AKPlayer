@@ -108,13 +108,16 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 case .integratedTimeline(let timelineevent):
                     switch timelineevent {
                     case .segmentsUpdated(pointSegments: let pointSegments, fillSegments: let fillSegments):
-                        print(pointSegments)
+//                        print(pointSegments)
+                        break
                     case .timeUpdated(currentTime: let currentTime, startTime: let startTime, duration: let duration):
                         break
                     case .snapshotOutOfSync:
                         break
                     }
                     
+                case .playbackStateDidChange(let state):
+                    print("Add sate : \(state)")
                 }
             }
         }
