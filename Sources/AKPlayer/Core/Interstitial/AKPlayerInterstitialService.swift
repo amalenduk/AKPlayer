@@ -151,7 +151,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         stopObservingTimeline()
         self.currentItem = newItem
         
-        // Observe status safely before referencing timeline
         newItem.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { [weak self, weak newItem] status in
@@ -183,7 +182,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             }
             .store(in: &timelineCancellables)
         
-        // 2. Safe Main-Thread Timer to observe current time changes without CoreMedia thread breaks
+        // 2. Safe Main-Thread Timer to observe current time changes
         Timer.publish(every: 0.25, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self, weak item] _ in
@@ -278,10 +277,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
     
     public func appendEvents(_ events: [AVPlayerInterstitialEvent]) {
-        guard let controller else { return }
-        var currentEvents = controller.events
+        guard let controller = controller else { return }
         controller.events.append(contentsOf: events)
-        controller.events = currentEvents
     }
     
     public func schedule(
@@ -314,6 +311,25 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         appendEvents([event])
     }
     
+    public func scheduleBatch(_ configurations: [(time: CMTime, templateItems: [AVPlayerItem])]) {
+        guard let primaryItem = primaryPlayer?.currentItem else { return }
+        
+        let events = configurations.map { config in
+            AVPlayerInterstitialEvent(
+                primaryItem: primaryItem,
+                identifier: UUID().uuidString,
+                time: config.time,
+                templateItems: config.templateItems,
+                restrictions: [],
+                resumptionOffset: .zero,
+                playoutLimit: .invalid
+            )
+        }
+        
+        // Set all events in one single call
+        setEvents(events)
+    }
+    
     // MARK: - Control API
     
     public func cancelCurrent(resumptionOffset: CMTime = .zero) {
@@ -336,10 +352,22 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         var fillSegments: [AVPlayerItemSegment] = []
         
         for segment in segments where segment.segmentType == .interstitial {
-            if segment.interstitialEvent?.timelineOccupancy == .singlePoint {
-                pointSegments.append(segment)
-            } else if segment.interstitialEvent?.timelineOccupancy == .fill {
-                fillSegments.append(segment)
+            // 1. Check client occupancy if available
+            if let occupancy = segment.interstitialEvent?.timelineOccupancy {
+                if occupancy == .singlePoint {
+                    pointSegments.append(segment)
+                } else if occupancy == .fill {
+                    fillSegments.append(segment)
+                }
+            }
+            // 2. Fallback for Manifest/Embedded Ads where interstitialEvent is nil
+            else {
+                let targetDuration = segment.timeMapping.target.duration
+                if targetDuration == .zero {
+                    pointSegments.append(segment)
+                } else {
+                    fillSegments.append(segment)
+                }
             }
         }
         

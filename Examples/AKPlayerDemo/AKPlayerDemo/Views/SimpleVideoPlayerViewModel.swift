@@ -108,17 +108,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 case .integratedTimeline(let timelineevent):
                     switch timelineevent {
                     case .segmentsUpdated(pointSegments: let pointSegments, fillSegments: let fillSegments):
-                        for (index, segment) in pointSegments.enumerated() {
-                            print("--- Interstitial Segment \(index + 1) ---")
-                            print("Start Time (Primary): \(segment.timeMapping.source.start.seconds)")
-                            print("Duration: \(segment.timeMapping.source.duration.seconds)")
-                            
-                            if let event = segment.interstitialEvent {
-                                print("Event Identifier: \(event.identifier)")
-                                print("Template Items Count: \(event.templateItems.count)")
-                                print("Timeline Occupancy: \(event.timelineOccupancy == .singlePoint ? "singlePoint" : "fill")")
-                            }
-                        }
+                        print(pointSegments)
                     case .timeUpdated(currentTime: let currentTime, startTime: let startTime, duration: let duration):
                         break
                     case .snapshotOutOfSync:
@@ -316,23 +306,17 @@ extension SimpleVideoPlayerViewModel: AKMediaDelegate {
         case .assetLoaded:
             break
         case .playerItemLoaded:
-            break
+            let url = URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!
+
+            interstitialService.schedule(at: CMTime(seconds: 0, preferredTimescale: 600), templateItems: [AVPlayerItem(url: url)])
+            
+            interstitialService.schedule(at: CMTime(seconds: 8, preferredTimescale: 600), templateItems: [AVPlayerItem(url: url)])
+            
+            interstitialService.schedule(at: CMTime(seconds: 14, preferredTimescale: 600), templateItems: [AVPlayerItem(url: url)])
         case .readyToPlay:
-            interstitialService.schedule(
-                at: CMTime(seconds: 0, preferredTimescale: 600),
-                templateItems: [AVPlayerItem(url: URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!)]
-            )
             
-            interstitialService.schedule(
-                at: CMTime(seconds: 8, preferredTimescale: 600),
-                templateItems: [AVPlayerItem(url: URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!)]
-            )
-            
-            interstitialService.schedule(
-                at: CMTime(seconds: 15, preferredTimescale: 600),
-                templateItems: [AVPlayerItem(url: URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!)]
-            )
-            break
+           
+break
         case .failed:
             break
         }

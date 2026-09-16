@@ -81,6 +81,8 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
         contentMayVary: Bool
     )
     
+    func scheduleBatch(_ configurations: [(time: CMTime, templateItems: [AVPlayerItem])])
+    
     // MARK: - Playback Control
     
     /// Cancels the active interstitial event and resumes primary content at the offset.
