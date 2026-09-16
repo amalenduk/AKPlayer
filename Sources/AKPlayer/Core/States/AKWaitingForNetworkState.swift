@@ -213,7 +213,7 @@ public class AKWaitingForNetworkState: AKBaseState {
             guard isActiveState else { return }
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
-            case .evaluatingBufferingRate, .interstitialEvent, .toMinimizeStalls, .waitingForCoordinatedPlayback:
+            case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 let controller = AKBufferingState(
                     playerController: playerController,
                     autoPlay: autoPlay,

@@ -118,7 +118,6 @@ public class AKPlayingState: AKBaseState {
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 guard let currentItem = playerController.currentItem else { return }
-                print("From palying state play")
                 playingStarted = true
                 guard currentItem.isPlaybackBufferFull && currentItem.isPlaybackLikelyToKeepUp else {
                     
@@ -129,9 +128,6 @@ public class AKPlayingState: AKBaseState {
                     )
                     return change(controller)
                 }
-            case .interstitialEvent:
-                // MARK: - Playing ADD, Will think letter what to do here
-                break
             case .noItemToPlay:
                 stop()
             default:
@@ -139,7 +135,6 @@ public class AKPlayingState: AKBaseState {
             }
         case .paused:
             guard playingStarted else { return }
-            print("From palying state pause ", playerController.player.rate)
             pause()
         default:
             break
