@@ -54,7 +54,7 @@ public protocol AKMediaManagerProtocol: AnyObject, NSObjectProtocol {
     // MARK: - Lifecycle Hooks & Asset Operations
 
     /// Instantiates the underlying `AVURLAsset` for the media item.
-    func createAsset()
+    func createAsset() async
 
     /// Constructs the `AVPlayerItem` from the initialized `AVURLAsset`.
     func createPlayerItemFromAsset()

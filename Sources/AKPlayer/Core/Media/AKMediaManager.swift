@@ -113,13 +113,13 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
     // MARK: - Asset Lifecycle Operations
     
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
-    public func createAsset() {
+    public func createAsset() async {
         assert(
             state.isIdle || state.isFailed,
             "This function can only be called if the media is idle or has encountered an error."
         )
         error = nil
-        playerItemInitService.createAsset()
+        await playerItemInitService.createAsset()
         state = .assetLoaded
     }
     

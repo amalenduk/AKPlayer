@@ -125,7 +125,13 @@ public class AKLoadingState: AKBaseState {
     private func hanldeChangeInMedia(_ state: AKPlayableState) {
         switch state {
         case .idle:
-            createAsset()
+            task = Task { [weak self] in
+                guard let self else { return }
+                if isCancelled {
+                    return
+                }
+                await createAsset()
+            }
         case .assetLoaded:
             task = Task { [weak self] in
                 guard let self else { return }
@@ -133,7 +139,6 @@ public class AKLoadingState: AKBaseState {
                 if isCancelled {
                     return
                 }
-                guard !Task.isCancelled else { return }
                 createPlayerItemFromAsset()
             }
         case .playerItemLoaded:
@@ -151,8 +156,8 @@ public class AKLoadingState: AKBaseState {
     }
     
     /// Requests underlying media instance to construct its underlying AVAsset.
-    private func createAsset() {
-        media.createAsset()
+    private func createAsset() async {
+        await media.createAsset()
     }
     
     /// Validates asset integrity and playability metrics asynchronously.

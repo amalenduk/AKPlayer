@@ -21,35 +21,33 @@ import AVFoundation
 /// AVPlayerItem construction routines.
 @MainActor
 public protocol AKPlayerItemInitServiceProtocol: AnyObject {
-
+    
     /// The loaded URL asset backing the current initialization process.
     var asset: AVURLAsset? { get }
-
+    
     /// The instantiated player item created from the validated asset.
     var playerItem: AVPlayerItem? { get }
-
-    var cacheManager: (any AKMediaCacheProtocol)? { get set }
-
+    
     // MARK: - Fine-Grained Setup Steps
-
+    
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
     /// - Returns: The newly initialized `AVURLAsset`.
     @discardableResult
-    func createAsset() -> AVURLAsset
-
+    func createAsset() async -> AVURLAsset
+    
     /// Asynchronously validates key asset properties (`isPlayable`,
     /// `hasProtectedContent`).
     /// - Throws: `AKPlayerError` if validation fails, or `CancellationError` if
     /// cancelled.
     func validateAssetPlayability() async throws
-
+    
     /// Constructs an `AVPlayerItem` from the initialized `AVURLAsset`.
     /// - Returns: The configured `AVPlayerItem`.
     @discardableResult
     func createPlayerItemFromAsset() -> AVPlayerItem
-
+    
     // MARK: - Unified Conveniences
-
+    
     /// Executes the full initialization pipeline: creates asset, validates
     /// playability, and constructs player item.
     /// - Returns: A fully prepared `AVPlayerItem`.
@@ -57,7 +55,7 @@ public protocol AKPlayerItemInitServiceProtocol: AnyObject {
     /// stage fails.
     @discardableResult
     func preparePlayerItem() async throws -> AVPlayerItem
-
+    
     /// Aborts active asset property loading and cancels pending asynchronous
     /// tasks.
     func abortAssetInitialization()
@@ -70,29 +68,25 @@ public protocol AKPlayerItemInitServiceProtocol: AnyObject {
 @MainActor
 public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     // MARK: - Properties
-
+    
     /// The target playable media item backing this initialization pipeline.
     private unowned let media: any AKPlayable
-
+    
     /// The loaded URL asset backing the current initialization process.
     public private(set) var asset: AVURLAsset?
-
+    
     /// The instantiated player item created from the validated asset.
     public private(set) var playerItem: AVPlayerItem?
-
-    public var cacheManager: (any AKMediaCacheProtocol)?
-
+    
     // MARK: - Initialization & Deinitialization
-
+    
     /// Initializes an asset initialization service instance for a specific
     /// media item.
     /// - Parameter media: The target playable media context.
-    public init(with media: any AKPlayable,
-    cacheManager: (any AKMediaCacheProtocol)? = nil) {
+    public init(with media: any AKPlayable) {
         self.media = media
-        self.cacheManager = cacheManager
     }
-
+    
     deinit {
         // Since asset might be a reference type, cancel loading safely.
         // In Swift 6+, accessing stored properties from deinit requires care,
@@ -100,24 +94,30 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
         // supported.
         asset?.cancelLoading()
     }
-
+    
     // MARK: - Public Pipeline Methods
-
+    
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
     /// - Returns: The newly initialized `AVURLAsset`.
     @discardableResult
-    public func createAsset() -> AVURLAsset {
+    public func createAsset() async -> AVURLAsset {
         if let custom = media.asset {
             asset = custom
         } else {
-            asset = AVURLAsset(
-                url: media.url,
-                options: media.assetInitializationOptions
-            )
+            if media.cachePolicy == .useCacheIfAvailable,
+               let cache = media.cacheManager,
+               let asset = await cache.asset(for: media) {
+                self.asset = asset
+            } else {
+                asset = AVURLAsset(
+                    url: media.url,
+                    options: media.assetInitializationOptions
+                )
+            }
         }
         return asset!
     }
-
+    
     /// Asynchronously validates key asset properties (`isPlayable`,
     /// `hasProtectedContent`).
     /// - Throws: `AKPlayerError` if validation fails, or `CancellationError` if
@@ -132,25 +132,25 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
                 ]
             )
             throw
-                AKPlayerError
+            AKPlayerError
                 .assetLoadingFailed(
                     reason: .propertyKeyLoadingFailed(error: error)
                 )
         }
-
+        
         do {
             let (isPlayable, hasProtectedContent) = try await asset.load(
                 .isPlayable, .hasProtectedContent
             )
-
+            
             try Task.checkCancellation()
-
+            
             guard isPlayable else {
                 throw AKPlayerError.assetLoadingFailed(reason: .notPlayable)
             }
             guard !hasProtectedContent else {
                 throw
-                    AKPlayerError
+                AKPlayerError
                     .assetLoadingFailed(reason: .protectedContent)
             }
         } catch is CancellationError {
@@ -158,10 +158,10 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
         } catch let error as URLError
-            where error.code == .notConnectedToInternet
+                    where error.code == .notConnectedToInternet
         {
             throw
-                AKPlayerError
+            AKPlayerError
                 .assetLoadingFailed(
                     reason: .notConnectedToInternet(error: error)
                 )
@@ -172,13 +172,13 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
                 throw CancellationError()
             }
             throw
-                AKPlayerError
+            AKPlayerError
                 .assetLoadingFailed(
                     reason: .propertyKeyLoadingFailed(error: error)
                 )
         }
     }
-
+    
     /// Constructs an `AVPlayerItem` from the initialized `AVURLAsset`.
     /// - Returns: The configured `AVPlayerItem`.
     @discardableResult
@@ -188,24 +188,24 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
                 "Asset must be created before calling createPlayerItemFromAsset()."
             )
         }
-
+        
         let item: AVPlayerItem =
-            if let customItem = media.playerItem {
-                customItem
+        if let customItem = media.playerItem {
+            customItem
+        } else {
+            if let keys = media.automaticallyLoadedAssetKeys {
+                AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: keys)
             } else {
-                if let keys = media.automaticallyLoadedAssetKeys {
-                    AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: keys)
-                } else {
-                    AVPlayerItem(asset: asset)
-                }
+                AVPlayerItem(asset: asset)
             }
-
+        }
+        
         playerItem = item
         return item
     }
-
+    
     // MARK: - Unified Convenience API
-
+    
     /// Executes the full initialization pipeline: creates asset, validates
     /// playability, and constructs player item.
     /// - Returns: A fully prepared `AVPlayerItem`.
@@ -213,11 +213,11 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     /// stage fails.
     @discardableResult
     public func preparePlayerItem() async throws -> AVPlayerItem {
-        createAsset()
+        await createAsset()
         try await validateAssetPlayability()
         return createPlayerItemFromAsset()
     }
-
+    
     /// Aborts active asset property loading and cancels pending asynchronous
     /// tasks.
     public func abortAssetInitialization() {

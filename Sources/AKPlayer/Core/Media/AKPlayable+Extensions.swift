@@ -93,8 +93,8 @@ public extension AKPlayable {
 @MainActor
 public extension AKPlayable {
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
-    func createAsset() {
-        manager.createAsset()
+    func createAsset() async {
+        await manager.createAsset()
     }
     
     /// Asynchronously validates key asset properties.
