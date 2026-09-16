@@ -78,7 +78,34 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     override public init() {
         super.init()
         try? player.prepare()
-        interstitialService.delegate = self
+        
+        Task {
+            for await event in interstitialService.events {
+                switch event {
+                case .scheduleDidChange(let events):
+                    print("Schedule updated: \(events.count) events")
+                    
+                case .willStart(let event):
+                    print("Ad about to start: \(event.identifier)")
+                    
+                case .didStart(let event):
+                    // Show “Skip Ad” button, hide primary controls, etc.
+              print("Printing add \(event)")
+                    
+                case .progress(let progress):
+                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
+                    
+                case .didFinish(_, let reason):
+                    print("Finish Reason : \(reason)")
+                    switch reason {
+                    case .completed: break
+                    case .skipped:   break
+                    case .cancelled: break
+                    case .error(let err): print(err)
+                    }
+                }
+            }
+        }
     }
     
     deinit {

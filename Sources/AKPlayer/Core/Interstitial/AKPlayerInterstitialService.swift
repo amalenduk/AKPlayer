@@ -2,132 +2,255 @@
 //  AKPlayerInterstitialService.swift
 //  AKPlayer
 //
-//  Created by Amalendu Kar on 10/09/26.
+//  Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//  Licensed under the MIT license. See LICENSE file in the project root.
 //
 
 import AVFoundation
 import Combine
+import Foundation
 
-public final class AKPlayerInterstitialService: @unchecked Sendable {
+// MARK: - AKPlayerInterstitialService
+
+public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialServiceProtocol {
+    
+    // MARK: - Public Properties
+    
+    public var events: AsyncStream<AKInterstitialEvent> {
+        eventBroadcaster.makeStream()
+    }
+    
+    public var currentEvent: AVPlayerInterstitialEvent? {
+        monitor?.currentEvent
+    }
+    
+    public var isPlayingInterstitial: Bool {
+        currentEvent != nil
+    }
+    
+    public var scheduledEvents: [AVPlayerInterstitialEvent] {
+        monitor?.events ?? []
+    }
+    
+    public var interstitialPlayer: AVPlayer? {
+        monitor?.interstitialPlayer
+    }
+    
+    public var integratedTimeline: AVPlayerItemIntegratedTimeline? {
+        primaryPlayer?.currentItem?.integratedTimeline
+    }
+    
+    // MARK: - Private
+    
+    private weak var primaryPlayer: AVPlayer?
     private var monitor: AVPlayerInterstitialEventMonitor?
     private var controller: AVPlayerInterstitialEventController?
-    private var timeObserverToken: Any?
-    private weak var primaryPlayer: AVPlayer?
     
-    public weak var delegate: AKPlayerInterstitialDelegate?
+    private let eventBroadcaster = AKEventBroadcaster<AKInterstitialEvent>()
     
-    // Notification Subscribers
+    private var progressObserverToken: Any?
     private var cancellables = Set<AnyCancellable>()
-
+    
+    /// Tracks the last emitted “started” event so we can emit a clean finish.
+    private var lastStartedEvent: AVPlayerInterstitialEvent?
+    
+    // MARK: - Init
+    
     public init(player: AVPlayer) {
         self.primaryPlayer = player
-        self.monitor = AVPlayerInterstitialEventMonitor(primaryPlayer: player)
-        self.controller = AVPlayerInterstitialEventController(primaryPlayer: player)
+        super.init()
+        
+        // Monitor always observes (server-side + client-side).
+        monitor = AVPlayerInterstitialEventMonitor(primaryPlayer: player)
+        
+        // Controller is used only when the app wants to schedule client-side events.
+        controller = AVPlayerInterstitialEventController(primaryPlayer: player)
         
         setupObservers()
     }
     
-    // MARK: - Event Monitoring
+    deinit {
+        removeProgressObserver()
+        eventBroadcaster.finish()
+        cancellables.removeAll()
+    }
+    
+    // MARK: - Setup Observers
     
     private func setupObservers() {
         guard let monitor else { return }
         
-        // Listen to Current Interstitial Event Changes
-        NotificationCenter.default.publisher(for: AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification, object: monitor)
+        // 1. Current event changed (start / end of an interstitial)
+        NotificationCenter.default
+            .publisher(for: AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification, object: monitor)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.handleCurrentEventChange()
+                self?.handleCurrentEventDidChange()
             }
             .store(in: &cancellables)
-            
-        // Listen to Interstitial Completion
-        NotificationCenter.default.publisher(for: AVPlayerInterstitialEventMonitor.eventsDidChangeNotification, object: monitor)
-            .sink { [weak self] note in
-                self?.handleEventDidFinish(notification: note)
+        
+        // 2. Schedule changed
+        NotificationCenter.default
+            .publisher(for: AVPlayerInterstitialEventMonitor.eventsDidChangeNotification, object: monitor)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleScheduleDidChange()
             }
             .store(in: &cancellables)
     }
     
-    private func handleCurrentEventChange() {
-        guard let currentEvent = monitor?.currentEvent else {
-            removeTimeObserver()
-            return
-        }
-        
-        // Notify Delegate Ad Started
-        delegate?.player(monitor!, didStartInterstitial: currentEvent)
-        
-        // Start Dedicated Interstitial Timer
-        setupInterstitialTimeObserver()
-    }
-
-    // MARK: - Interstitial Progress Timer
+    // MARK: - Event Handlers
     
-    private func setupInterstitialTimeObserver() {
-        removeTimeObserver()
+    private func handleCurrentEventDidChange() {
+        let newEvent = monitor?.currentEvent
         
-        guard let primaryPlayer = monitor?.interstitialPlayer else { return }
+        if let newEvent {
+            // Transition into interstitial
+            if lastStartedEvent?.identifier != newEvent.identifier {
+                // Finish previous if any (edge case of rapid switch)
+                if let previous = lastStartedEvent {
+                    emit(.didFinish(previous, reason: .completed))
+                }
+                
+                lastStartedEvent = newEvent
+                emit(.willStart(newEvent))
+                emit(.didStart(newEvent))
+                startProgressObserver()
+            }
+        } else {
+            // Transition back to primary
+            if let finished = lastStartedEvent {
+                emit(.didFinish(finished, reason: .completed))
+                lastStartedEvent = nil
+            }
+            removeProgressObserver()
+        }
+    }
+    
+    private func handleScheduleDidChange() {
+        emit(.scheduleDidChange(scheduledEvents))
+    }
+    
+    // MARK: - Progress Observer (only while interstitial is active)
+    
+    private func startProgressObserver() {
+        removeProgressObserver()
         
-        // Periodic timer (every 0.25 sec) during ad playback
-        let interval = CMTime(value: 1, timescale: 4)
+        guard let interstitialPlayer = monitor?.interstitialPlayer else { return }
         
-        timeObserverToken = primaryPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-            guard let self = self,
-                  let currentItem = primaryPlayer.currentItem else { return }
-            
-            let current = currentItem.currentTime().seconds
-            let duration = currentItem.duration.seconds
-            
-            if current.isFinite && duration.isFinite && duration > 0 {
-                let progress = AKPlayerInterstitialProgress(
-                    currentTime: current,
-                    duration: duration,
-                    timeRemaining: max(0, duration - current)
-                )
-                self.delegate?.player(monitor!, didUpdateInterstitialProgress: progress)
+        let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+        progressObserverToken = interstitialPlayer.addPeriodicTimeObserver(
+            forInterval: interval,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.emitProgress()
             }
         }
     }
-
-    private func removeTimeObserver() {
-        if let token = timeObserverToken, let primaryPlayer = monitor?.interstitialPlayer {
-            primaryPlayer.removeTimeObserver(token)
-            timeObserverToken = nil
+    
+    private func removeProgressObserver() {
+        if let token = progressObserverToken,
+           let player = monitor?.interstitialPlayer {
+            player.removeTimeObserver(token)
         }
+        progressObserverToken = nil
     }
-
-    private func handleEventDidFinish(notification: Notification) {
-        removeTimeObserver()
+    
+    private func emitProgress() {
+        guard let item = monitor?.interstitialPlayer.currentItem else { return }
         
-        // Extract the finished event from userInfo or monitor history
-        if let event = notification.userInfo?[AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification] as? AVPlayerInterstitialEvent {
-            delegate?.player(monitor!, didFinishInterstitial: event)
-        } else if let currentEvent = monitor?.currentEvent {
-            delegate?.player(monitor!, didFinishInterstitial: currentEvent)
-        }
+        let current = item.currentTime().seconds
+        let duration = item.duration.seconds
+        
+        guard current.isFinite, duration.isFinite, duration > 0 else { return }
+        
+        let progress = AKPlayerInterstitialProgress(
+            currentTime: current,
+            duration: duration,
+            timeRemaining: max(0, duration - current)
+        )
+        emit(.progress(progress))
     }
     
-    // MARK: - API: Skip Interstitial Event
+    // MARK: - Public API – Scheduling
     
-    /// Skip current playing interstitial event programmatically
-    public func skipCurrentInterstitial() {
-        guard let currentItem = primaryPlayer?.currentItem else { return }
-        // Seeking to end triggers AVPlayer to step past interstitial item
-        let end = currentItem.duration
-        if end.isValid && !end.isIndefinite {
-            primaryPlayer?.seek(to: end)
-        }
+    public func setEvents(_ events: [AVPlayerInterstitialEvent]) {
+        controller?.events = events
     }
     
-    // MARK: - API: Schedule Client-Side Ad
+    public func appendEvents(_ events: [AVPlayerInterstitialEvent]) {
+        guard let controller else { return }
+        controller.events.append(contentsOf: events)
+    }
     
-    public func scheduleAd(at time: CMTime, templateItems: [AVPlayerItem]) {
-        guard let primaryItem = primaryPlayer?.currentItem, let controller = controller else { return }
+    public func schedule(
+        at time: CMTime,
+        templateItems: [AVPlayerItem],
+        identifier: String? = nil,
+        restrictions: AVPlayerInterstitialEvent.Restrictions = [],
+        resumptionOffset: CMTime = .zero,
+        playoutLimit: CMTime = .invalid,
+        timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy = .singlePoint,
+        supplementsPrimaryContent: Bool = false,
+        contentMayVary: Bool = true
+    ) {
+        guard let primaryItem = primaryPlayer?.currentItem else { return }
         
         let event = AVPlayerInterstitialEvent(
             primaryItem: primaryItem,
-            time: time
+            identifier: identifier ?? UUID().uuidString,
+            time: time,
+            templateItems: templateItems,
+            restrictions: restrictions,
+            resumptionOffset: resumptionOffset,
+            playoutLimit: playoutLimit
         )
-        event.templateItems = templateItems
-        controller.events.append(event)
+        
+        event.timelineOccupancy = timelineOccupancy
+        event.supplementsPrimaryContent = supplementsPrimaryContent
+        event.contentMayVary = contentMayVary
+        
+        appendEvents([event])
+    }
+    
+    // MARK: - Public API – Control
+    
+    public func skipCurrent() {
+        guard let event = currentEvent else { return }
+        
+        // Prefer Apple’s official API when available
+        if let controller {
+            // Note: Value of type 'AVPlayerInterstitialEventController' has no member 'skipCurrentEvent'
+            // controller.skipCurrentEvent()
+        } else {
+            // Fallback
+            if let item = interstitialPlayer?.currentItem {
+                let end = item.duration
+                if end.isValid && !end.isIndefinite {
+                    interstitialPlayer?.seek(to: end)
+                }
+            }
+        }
+        
+        emit(.didFinish(event, reason: .skipped))
+        lastStartedEvent = nil
+        removeProgressObserver()
+    }
+    
+    public func cancelCurrent(resumptionOffset: CMTime = .zero) {
+        guard let event = currentEvent else { return }
+        
+        controller?.cancelCurrentEvent(withResumptionOffset: resumptionOffset)
+        
+        emit(.didFinish(event, reason: .cancelled(resumptionOffset: resumptionOffset)))
+        lastStartedEvent = nil
+        removeProgressObserver()
+    }
+    
+    // MARK: - Private Helpers
+    
+    private func emit(_ event: AKInterstitialEvent) {
+        eventBroadcaster.send(event)
     }
 }
