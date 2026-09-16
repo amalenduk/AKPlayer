@@ -1,277 +1,208 @@
-//
-//   AKNowPlayingSession.swift
-//   AKPlayer
-//
-//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
-//   Licensed under the MIT license. See LICENSE file in the project root.
-//
-
 import AVFoundation
 import Foundation
 import MediaPlayer
 
-// MARK: - AKNowPlayingSessionProtocol
-
-/// High-level manager for Now Playing session management with command
-/// configuration.
-/// Provides production-ready session management with easy enable/disable
-/// capabilities.
 @MainActor
-public protocol AKNowPlayingSessionProtocol: AKNowPlayingSessionControllerProtocol {
-    /// The command registry associated with this session.
-    var commandRegistry: AKNowPlayingCommandRegistry { get }
-    
-    /// Applies a command configuration to this session asynchronously.
-    func applyConfiguration(_ config: AKNowPlayingCommandConfiguration) async
-    
-    /// Configures now playing metadata across session updates.
-    func setNowPlayingInfo(_ metadata: AKNowPlayableMetadata?)
-    
-    /// Checks if the session is currently active.
+public protocol AKNowPlayingSessionProtocol: AnyObject {
     var isActive: Bool { get }
+    var remoteCommandCenter: MPRemoteCommandCenter { get }
+    var nowPlayingInfoCenter: MPNowPlayingInfoCenter { get }
+    
+    func applyConfiguration(_ config: AKNowPlayingCommandConfiguration) async
+    func setHandler(for command: AKRemoteCommand, handler: @escaping AKRemoteCommandHandler) async
+    func removeHandler(for command: AKRemoteCommand) async
+    func enable(commands: [AKRemoteCommand]) async
+    func disable(commands: [AKRemoteCommand]) async
+    func isCommandEnabled(_ command: AKRemoteCommand) -> Bool
+    
+    func setNowPlayingInfo(_ metadata: AKNowPlayableMetadata?)
+    func clearNowPlayingPlaybackInfo()
+    func unregisterAll()
+    
+    func canBecomeActive() -> Bool
+    func becomeActiveIfPossible() async -> Bool
+    func addPlayer(_ player: AVPlayer)
+    func removePlayer(_ player: AVPlayer)
 }
 
-// MARK: - AKNowPlayingSession
-
-/// Production-ready implementation of `AKNowPlayingSessionProtocol`.
-/// Wrapper class around `AKNowPlayingSessionController` to provide state
-/// tracking via `AKNowPlayingCommandRegistry`.
 @MainActor
 public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     
-    // MARK: - Stored & Computed Properties
+    // MARK: - System
     
-    /// The event emitter forwarding command invocation notifications.
-    public var eventEmitter: AKRemoteCommandEventEmitter {
-        controller.eventEmitter
-    }
+    private var nowPlayingSession: MPNowPlayingSession?
+    private let fallbackRemoteCommandCenter: MPRemoteCommandCenter
+    private let fallbackNowPlayingInfoCenter: MPNowPlayingInfoCenter
     
-    /// The command registry tracking command state across the session.
-    public let commandRegistry: AKNowPlayingCommandRegistry
-    
-    /// Underlying session controller handling low-level `MPRemoteCommandCenter`
-    /// interactions.
-    private let controller: AKNowPlayingSessionController
-    
-    /// Underlying system `MPRemoteCommandCenter` target.
     public var remoteCommandCenter: MPRemoteCommandCenter {
-        controller.remoteCommandCenter
+        nowPlayingSession?.remoteCommandCenter ?? fallbackRemoteCommandCenter
     }
     
-    /// Underlying system `MPNowPlayingInfoCenter` target.
     public var nowPlayingInfoCenter: MPNowPlayingInfoCenter {
-        controller.nowPlayingInfoCenter
+        nowPlayingSession?.nowPlayingInfoCenter ?? fallbackNowPlayingInfoCenter
     }
     
-    /// Indicates whether the underlying session is currently active.
     public var isActive: Bool {
-        controller.isActive
+        nowPlayingSession?.isActive ?? false
     }
     
-    // MARK: - Initialization & Deinitialization
+    // MARK: - Local command state (replaces public Registry)
     
-    /// Initializes a new Now Playing session bound to dynamic audio players
-    /// (`AVPlayer` instances).
-    /// - Parameters:
-    ///   - players: Array of `AVPlayer` instances to monitor.
-    ///   - registry: An optional custom command registry. Defaults to a new
-    /// instance if nil.
-    public init(
-        players: [AVPlayer],
-        registry: AKNowPlayingCommandRegistry? = nil
-    ) {
-        defer {
-            AKLogger.logInit(self)
-        }
-        controller = AKNowPlayingSessionController(players: players)
-        commandRegistry = registry ?? AKNowPlayingCommandRegistry()
+    private struct CommandEntry {
+        var handler: AKRemoteCommandHandler?
+        var isEnabled: Bool
+        var target: Any?
     }
     
-    /// Initializes a standalone Now Playing session using standard or custom
-    /// command centers.
-    /// - Parameters:
-    ///   - remoteCommandCenter: Custom or shared `MPRemoteCommandCenter`.
-    ///   - nowPlayingInfoCenter: Custom or default `MPNowPlayingInfoCenter`.
-    ///   - registry: An optional custom command registry. Defaults to a new
-    /// instance if nil.
+    private var commands: [String: CommandEntry] = [:]
+    
+    // MARK: - Init
+    
+    public init(players: [AVPlayer]) {
+        let session = MPNowPlayingSession(players: players)
+        nowPlayingSession = session
+        fallbackRemoteCommandCenter = session.remoteCommandCenter
+        fallbackNowPlayingInfoCenter = session.nowPlayingInfoCenter
+    }
+    
     public init(
         remoteCommandCenter: MPRemoteCommandCenter = .shared(),
-        nowPlayingInfoCenter: MPNowPlayingInfoCenter = .default(),
-        registry: AKNowPlayingCommandRegistry? = nil
+        nowPlayingInfoCenter: MPNowPlayingInfoCenter = .default()
     ) {
-        defer {
-            AKLogger.logInit(self)
-        }
-        controller = AKNowPlayingSessionController(
-            remoteCommandCenter: remoteCommandCenter,
-            nowPlayingInfoCenter: nowPlayingInfoCenter
-        )
-        commandRegistry = registry ?? AKNowPlayingCommandRegistry()
+        nowPlayingSession = nil
+        fallbackRemoteCommandCenter = remoteCommandCenter
+        fallbackNowPlayingInfoCenter = nowPlayingInfoCenter
     }
     
     deinit {
-        // Actors deallocate safely on their own; synchronous clear omitted to
-        // avoid isolation errors in deinit.
-        defer {
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
-        }
+        // targets cleaned when centers go away; avoid main-actor calls here
     }
     
     // MARK: - Configuration
     
-    /// Applies a command configuration to this session.
-    /// Registers commands, attaches custom handlers, and configures active
-    /// status on `MPRemoteCommandCenter`.
-    /// - Parameter config: The `AKNowPlayingCommandConfiguration` to apply.
-    public func applyConfiguration(
-        _ config: AKNowPlayingCommandConfiguration
-    ) async {
-        let commands = config.allCommands
+    public func applyConfiguration(_ config: AKNowPlayingCommandConfiguration) async {
+        let list = config.allCommands
         
-        // Register all commands in internal registry
-        for command in commands {
-            await commandRegistry.register(
-                command,
-                isEnabled: config.isEnabled(command)
-            )
-        }
-        
-        // Attach handlers to registry and controller
-        for command in commands {
+        for command in list {
+            registerIfNeeded(command)
             if let handler = config.handler(for: command) {
-                await commandRegistry.setCustomHandler(
-                    command,
-                    handler: handler
-                )
-                controller.setHandler(for: command, handler: handler)
+                commands[command.id]?.handler = handler
             }
-        }
-        
-        // Register target handlers on MPRemoteCommandCenter
-        controller.register(commands: commands)
-        
-        // Enable or disable command targets based on configuration state
-        for command in commands {
-            if config.isEnabled(command) {
-                controller.enable(commands: [command])
-            } else {
-                controller.disable(commands: [command])
-            }
+            setEnabled(config.isEnabled(command), for: command)
         }
     }
     
-    // MARK: - Command Management
-    
-    /// Registers commands in the internal registry and low-level controller.
-    public func register(commands: [AKRemoteCommand]) async {
-        for command in commands {
-            await commandRegistry.register(command)
-        }
-        controller.register(commands: commands)
+    public func setHandler(for command: AKRemoteCommand, handler: @escaping AKRemoteCommandHandler) async {
+        registerIfNeeded(command)
+        commands[command.id]?.handler = handler
     }
     
-    /// Unregisters commands from the internal registry and low-level
-    /// controller.
-    public func unregister(commands: [AKRemoteCommand]) async {
-        for command in commands {
-            await commandRegistry.unregister(command)
-        }
-        controller.unregister(commands: commands)
-    }
-    
-    /// Enables specified commands in both registry and target remote command
-    /// center.
-    public func enable(commands: [AKRemoteCommand]) async {
-        var enabledCommands: [AKRemoteCommand] = []
-        for command in commands {
-            if await commandRegistry.enable(command) {
-                enabledCommands.append(command)
-            }
-        }
-        controller.enable(commands: enabledCommands)
-    }
-    
-    /// Disables specified commands in both registry and target remote command
-    /// center.
-    public func disable(commands: [AKRemoteCommand]) async {
-        var disabledCommands: [AKRemoteCommand] = []
-        for command in commands {
-            if await commandRegistry.disable(command) {
-                disabledCommands.append(command)
-            }
-        }
-        controller.disable(commands: disabledCommands)
-    }
-    
-    /// Queries whether a given command is currently marked enabled in the
-    /// command registry.
-    public func isCommandEnabled(_ command: AKRemoteCommand) async -> Bool {
-        await commandRegistry.isEnabled(command)
-    }
-    
-    /// Sets a custom event handler closure for a specific remote command.
-    public func setHandler(
-        for command: AKRemoteCommand,
-        handler: @escaping AKRemoteCommandHandler
-    )
-    async
-    {
-        await commandRegistry.setCustomHandler(command, handler: handler)
-        controller.setHandler(for: command, handler: handler)
-    }
-    
-    /// Removes a custom event handler closure for a specific remote command.
     public func removeHandler(for command: AKRemoteCommand) async {
-        await commandRegistry.removeCustomHandler(command)
-        controller.removeHandler(for: command)
+        commands[command.id]?.handler = nil
     }
     
-    // MARK: - Metadata & Player Management
+    public func enable(commands list: [AKRemoteCommand]) async {
+        for command in list {
+            registerIfNeeded(command)
+            setEnabled(true, for: command)
+        }
+    }
     
-    /// Sets now playing playback metadata on the active info center.
+    public func disable(commands list: [AKRemoteCommand]) async {
+        for command in list {
+            setEnabled(false, for: command)
+        }
+    }
+    
+    public func isCommandEnabled(_ command: AKRemoteCommand) -> Bool {
+        commands[command.id]?.isEnabled ?? false
+    }
+    
+    // MARK: - Metadata
+    
     public func setNowPlayingInfo(_ metadata: AKNowPlayableMetadata?) {
-        controller.setNowPlayingInfo(metadata)
+        guard let metadata, let info = metadata.getNowPlayingInfo() else {
+            clearNowPlayingPlaybackInfo()
+            return
+        }
+        nowPlayingInfoCenter.nowPlayingInfo = info
     }
     
-    /// Clears now playing playback info from the active info center.
     public func clearNowPlayingPlaybackInfo() {
-        controller.clearNowPlayingPlaybackInfo()
+        nowPlayingInfoCenter.nowPlayingInfo = nil
     }
     
     public func unregisterAll() {
-        controller.unregisterAll()
+        for (id, entry) in commands {
+            if let target = entry.target,
+               let command = AKRemoteCommand.all().first(where: { $0.id == id }) {
+                let remote = command.metadata.getCommand(remoteCommandCenter)
+                remote.removeTarget(target)
+            }
+        }
+        commands.removeAll()
     }
     
-    /// Determines whether the now playing session can transition to an active
-    /// state.
+    // MARK: - Session activation
+    
     public func canBecomeActive() -> Bool {
-        controller.canBecomeActive()
+        nowPlayingSession?.canBecomeActive ?? true
     }
     
-    /// Adds an `AVPlayer` instance to the underlying session.
-    public func addPlayer(_ player: AVPlayer) {
-        controller.addPlayer(player)
-    }
-    
-    /// Removes an `AVPlayer` instance from the underlying session.
-    public func removePlayer(_ player: AVPlayer) {
-        controller.removePlayer(player)
-    }
-    
-    /// Requests activation of the underlying session if possible.
     public func becomeActiveIfPossible() async -> Bool {
-        await controller.becomeActiveIfPossible()
+        guard let systemSession = nowPlayingSession else { return true }
+        
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            systemSession.becomeActiveIfPossible { success in
+                continuation.resume(returning: success)
+            }
+        }
     }
-}
-
-// MARK: - Convenience Extensions
-
-public extension AKNowPlayingSession {
-    /// Configures session with a preset configuration asynchronously.
-    func configureWithPreset(_ preset: AKNowPlayingCommandConfiguration) async {
-        await applyConfiguration(preset)
+    
+    public func addPlayer(_ player: AVPlayer) {
+        nowPlayingSession?.addPlayer(player)
+    }
+    
+    public func removePlayer(_ player: AVPlayer) {
+        nowPlayingSession?.removePlayer(player)
+    }
+    
+    // MARK: - Private registration
+    
+    private func registerIfNeeded(_ command: AKRemoteCommand) {
+        let id = command.id
+        guard commands[id] == nil else { return }
+        
+        let remote = command.metadata.getCommand(remoteCommandCenter)
+        
+        switch command {
+        case let .skipBackward(intervals):
+            remoteCommandCenter.skipBackwardCommand.preferredIntervals = intervals.map { NSNumber(value: $0) }
+        case let .skipForward(intervals):
+            remoteCommandCenter.skipForwardCommand.preferredIntervals = intervals.map { NSNumber(value: $0) }
+        case let .changePlaybackRate(rates):
+            remoteCommandCenter.changePlaybackRateCommand.supportedPlaybackRates = rates.map { NSNumber(value: $0) }
+        default:
+            break
+        }
+        
+        let target = remote.addTarget { [weak self] event in
+            self?.handle(command, event: event) ?? .commandFailed
+        }
+        
+        commands[id] = CommandEntry(handler: nil, isEnabled: false, target: target)
+    }
+    
+    private func setEnabled(_ enabled: Bool, for command: AKRemoteCommand) {
+        registerIfNeeded(command)
+        commands[command.id]?.isEnabled = enabled
+        command.metadata.getCommand(remoteCommandCenter).isEnabled = enabled
+    }
+    
+    private func handle(_ command: AKRemoteCommand, event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
+        if let handler = commands[command.id]?.handler {
+            return handler(event)
+        }
+        return .success
     }
 }

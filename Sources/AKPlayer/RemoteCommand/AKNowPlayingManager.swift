@@ -275,18 +275,18 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     // MARK: - Language Options Caching
     
     private func cacheLanguageOptions(from media: AKPlayable) {
-        guard let playerItem = media.playerItem else { return }
-        
-        var groups: [MPNowPlayingInfoLanguageOptionGroup]?
-        var currentOptions: [MPNowPlayingInfoLanguageOption]?
-        
-        Task {
-            groups = await try? media.trackSelection.availableLanguageOptionGroups()
-            currentOptions = await try? media.trackSelection.currentLanguageOptions()
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let groups = try await media.trackSelection.availableLanguageOptionGroups()
+                let current = try await media.trackSelection.currentLanguageOptions()
+                cachedAvailableLanguageOptionGroups = groups
+                cachedCurrentLanguageOptions = current
+                updateNowPlayingInfo()
+            } catch {
+                // keep previous cache
+            }
         }
-        
-        cachedAvailableLanguageOptionGroups = groups
-        cachedCurrentLanguageOptions = currentOptions
     }
     
     private func clearCachedLanguageOptions() {

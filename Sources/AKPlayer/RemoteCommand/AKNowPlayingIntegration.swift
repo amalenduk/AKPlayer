@@ -46,7 +46,7 @@ public enum AKNowPlayingCommandPresets {
     
     /// Preset: Podcast with 15-second skip back, 30-second skip forward
     public static func podcast() -> AKNowPlayingCommandConfiguration {
-        var config = AKNowPlayingCommandConfiguration.audio()
+        let config = AKNowPlayingCommandConfiguration.audio()
         _ = config.add(.skipBackward(preferredIntervals: [15.0]))
         _ = config.add(.skipForward(preferredIntervals: [30.0]))
         _ = config.disable(.changeShuffleMode)
@@ -55,7 +55,7 @@ public enum AKNowPlayingCommandPresets {
     
     /// Preset: Audiobook with bookmarking
     public static func audiobook() -> AKNowPlayingCommandConfiguration {
-        var config = AKNowPlayingCommandConfiguration.audio()
+        let config = AKNowPlayingCommandConfiguration.audio()
         _ = config.add(.bookmark)
         _ = config.disable(.changeShuffleMode)
         return config
@@ -68,7 +68,7 @@ public enum AKNowPlayingCommandPresets {
     
     /// Preset: Live stream (no seeking)
     public static func livestream() -> AKNowPlayingCommandConfiguration {
-        var config = AKNowPlayingCommandConfiguration.audio()
+        let config = AKNowPlayingCommandConfiguration.audio()
         _ = config.disable(.seekBackward)
         _ = config.disable(.seekForward)
         _ = config.disable(.changePlaybackPosition)

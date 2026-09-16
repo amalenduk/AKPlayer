@@ -305,3 +305,10 @@ public extension AKRemoteCommand {
         ]
     }
 }
+
+extension AKRemoteCommand {
+    /// String identifier derived from the command representation.
+    var hashKey: String {
+        String(describing: self)
+    }
+}

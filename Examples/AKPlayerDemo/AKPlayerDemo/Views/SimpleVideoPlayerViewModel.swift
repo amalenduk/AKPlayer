@@ -78,49 +78,49 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         super.init()
         try? player.prepare()
         
-        Task { [weak self] in
-            guard let self else { return }
-            for await event in interstitialService.events {
-                switch event {
-                case .scheduleDidChange(let events):
-                    //print("Schedule updated: \(events.count) events")
-                    break
-                case .willStart(let event):
-                    //print("Ad about to start: \(event.identifier)")
-                    break
-                case .didStart(let event):
-                    // Show “Skip Ad” button, hide primary controls, etc.
-                    //print("Printing add \(event)")
-                    break
-                case .progress(let progress):
-                    //                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
-                    //                    print(interstitialService.integratedTimeline?.currentTime)
-                    
-                    break
-                    
-                case .didFinish(_, let reason):
-                    //print("Finish Reason : \(reason)")
-                    switch reason {
-                    case .completed: break
-                    case .cancelled: break
-                    case .error(let err): print(err)
-                    }
-                case .integratedTimeline(let timelineevent):
-                    switch timelineevent {
-                    case .segmentsUpdated(pointSegments: let pointSegments, fillSegments: let fillSegments):
-//                        print(pointSegments)
-                        break
-                    case .timeUpdated(currentTime: let currentTime, startTime: let startTime, duration: let duration):
-                        break
-                    case .snapshotOutOfSync:
-                        break
-                    }
-                    
-                case .playbackStateDidChange(let state):
-                    print("Add sate : \(state)")
-                }
-            }
-        }
+//        Task { [weak self] in
+//            guard let self else { return }
+//            for await event in interstitialService.events {
+//                switch event {
+//                case .scheduleDidChange(let events):
+//                    //print("Schedule updated: \(events.count) events")
+//                    break
+//                case .willStart(let event):
+//                    //print("Ad about to start: \(event.identifier)")
+//                    break
+//                case .didStart(let event):
+//                    // Show “Skip Ad” button, hide primary controls, etc.
+//                    //print("Printing add \(event)")
+//                    break
+//                case .progress(let progress):
+//                    //                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
+//                    //                    print(interstitialService.integratedTimeline?.currentTime)
+//                    
+//                    break
+//                    
+//                case .didFinish(_, let reason):
+//                    //print("Finish Reason : \(reason)")
+//                    switch reason {
+//                    case .completed: break
+//                    case .cancelled: break
+//                    case .error(let err): print(err)
+//                    }
+//                case .integratedTimeline(let timelineevent):
+//                    switch timelineevent {
+//                    case .segmentsUpdated(pointSegments: let pointSegments, fillSegments: let fillSegments):
+////                        print(pointSegments)
+//                        break
+//                    case .timeUpdated(currentTime: let currentTime, startTime: let startTime, duration: let duration):
+//                        break
+//                    case .snapshotOutOfSync:
+//                        break
+//                    }
+//                    
+//                case .playbackStateDidChange(let state):
+//                    print("Add sate : \(state)")
+//                }
+//            }
+//        }
         
         // Later – schedule a mid-roll
         

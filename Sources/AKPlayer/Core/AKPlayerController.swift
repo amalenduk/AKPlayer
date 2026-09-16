@@ -399,35 +399,13 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     private var pendingController: AKPlayerStateControllerProtocol?
     
     public func change(_ newController: AKPlayerStateControllerProtocol) {
-        if isTransitioning {
-            pendingController = newController
-            return
-        }
-        
-        isTransitioning = true
-        
-        let old = _controller
-        _controller = nil                     // drop the reference now
-        
-        // 2. Install the new state on the next run-loop tick.
-        //    This is the smallest possible hop that lets ARC deallocate
-        //    the old state and lets AVPlayer finish its internal work.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             
-            self._controller = newController
-            self.eventBroadcaster.send(.stateDidChange(newController.state))
-            
-            self.processStateChange()
-            
-            newController.processStateChange()
-            self.isTransitioning = false
-            
-            // Handle any transition that was requested while we were switching
-            if let pending = self.pendingController {
-                self.pendingController = nil
-                self.change(pending)
-            }
+            controller = newController
+            eventBroadcaster.send(.stateDidChange(newController.state))
+            processStateChange()
+            controller.processStateChange()
         }
     }
     
