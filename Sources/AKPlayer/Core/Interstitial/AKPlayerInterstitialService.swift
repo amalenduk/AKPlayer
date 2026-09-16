@@ -62,7 +62,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     
     private var lastStartedEvent: AVPlayerInterstitialEvent?
     
-    public init(player: AVPlayer) {
+    public init(with player: AVPlayer) {
         self.primaryPlayer = player
         super.init()
         
@@ -73,6 +73,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
     
     deinit {
+        // removeProgressObserver()
         eventBroadcaster.finish()
     }
     

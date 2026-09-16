@@ -24,11 +24,10 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         return p
     }()
     
-    public lazy var interstitialService: AKPlayerInterstitialService = {
-        var service = AKPlayerInterstitialService(player: aVplayer)
-        return service
+    public lazy var interstitialService: AKPlayerInterstitialServiceProtocol = {
+        return player.interstitialService
     }()
-
+    
     static let session = AVAudioSession.sharedInstance()
     let audioSession = AKAudioSessionService(audioSession: session)
     
@@ -79,7 +78,8 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         super.init()
         try? player.prepare()
         
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             for await event in interstitialService.events {
                 switch event {
                 case .scheduleDidChange(let events):
@@ -90,11 +90,11 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                     break
                 case .didStart(let event):
                     // Show “Skip Ad” button, hide primary controls, etc.
-              //print("Printing add \(event)")
+                    //print("Printing add \(event)")
                     break
                 case .progress(let progress):
-//                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
-//                    print(interstitialService.integratedTimeline?.currentTime)
+                    //                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
+                    //                    print(interstitialService.integratedTimeline?.currentTime)
                     
                     break
                     
@@ -307,16 +307,16 @@ extension SimpleVideoPlayerViewModel: AKMediaDelegate {
             break
         case .playerItemLoaded:
             let url = URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!
-
-            interstitialService.schedule(at: CMTime(seconds: 0, preferredTimescale: 600), templateItems: [AVPlayerItem(url: url)])
+            let avplayerItem = AVPlayerItem(url: url)
             
-            interstitialService.schedule(at: CMTime(seconds: 8, preferredTimescale: 600), templateItems: [AVPlayerItem(url: url)])
-            
-            interstitialService.schedule(at: CMTime(seconds: 14, preferredTimescale: 600), templateItems: [AVPlayerItem(url: url)])
+            interstitialService.schedule([
+                AKInterstitialScheduleConfig(time: CMTime(seconds: 10, preferredTimescale: 600), templateItems: [avplayerItem]),
+                AKInterstitialScheduleConfig(time: CMTime(seconds: 60, preferredTimescale: 600), templateItems: [avplayerItem, avplayerItem], restrictions: [.constrainsSeekingForwardInPrimaryContent]),
+            ], replaceExisting: true)
         case .readyToPlay:
             
-           
-break
+            
+            break
         case .failed:
             break
         }

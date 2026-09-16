@@ -128,16 +128,18 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     
     /// Service managing seek operation queuing and execution against
     /// `AVPlayer`.
-    public var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol
+    public let playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol
+    
+    public let interstitialService: any AKPlayerInterstitialServiceProtocol
     
     /// Service monitoring network availability and reachability changes.
-    public var networkStatusMonitor: AKNetworkStatusMonitorProtocol
+    public let networkStatusMonitor: AKNetworkStatusMonitorProtocol
     
     /// Observer service tracking periodic and boundary time playback events.
-    private var playerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol
+    private let playerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol
     
     /// Observer service tracking player rate change updates.
-    private var playerRateObserver: AKPlayerRateObserverProtocol
+    private let playerRateObserver: AKPlayerRateObserverProtocol
     
     /// Combine cancellable storage for active KVO and notification
     /// subscriptions.
@@ -169,9 +171,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         
         playerRateObserver = AKPlayerRateObserver(with: player)
         playerPlaybackTimeObserver = AKPlayerPlaybackTimeObserver(with: player)
-        playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(
-            with: player
-        )
+        playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(with: player)
+        interstitialService = AKPlayerInterstitialService(with: player)
         networkStatusMonitor = AKNetworkStatusMonitor()
     }
     

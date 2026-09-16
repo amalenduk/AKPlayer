@@ -498,7 +498,7 @@ public struct SimpleVideoPlayerView: View {
     @ViewBuilder
     private func test2Button() -> some View {
         Button("Test") {
-            viewModel.interstitialService.cancelCurrent()
+            viewModel.interstitialService.cancelCurrent(resumptionOffset: .zero)
         }
     }
     

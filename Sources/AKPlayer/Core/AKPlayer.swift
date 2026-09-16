@@ -118,6 +118,14 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.nowPlayingManager
     }
     
+    public var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
+        manager.playerSeekingThroughMediaService
+    }
+    
+    public var interstitialService: AKPlayerInterstitialServiceProtocol {
+        manager.interstitialService
+    }
+    
     /// The delegate object receiving high-level player state transitions,
     /// playback events, and error notifications.
     public weak var delegate: AKPlayerDelegate?
