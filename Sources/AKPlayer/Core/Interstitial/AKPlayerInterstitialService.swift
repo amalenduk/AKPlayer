@@ -1,21 +1,9 @@
-//
-//  AKPlayerInterstitialService.swift
-//  AKPlayer
-//
-//  Copyright (c) 2020 Amalendu Kar. All rights reserved.
-//  Licensed under the MIT license. See LICENSE file in the project root.
-//
-
 import AVFoundation
 import Combine
 import Foundation
 
-// MARK: - AKPlayerInterstitialService
-
 @MainActor
 public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialServiceProtocol {
-    
-    // MARK: - Public Properties
     
     public var events: AsyncStream<AKInterstitialEvent> {
         eventBroadcaster.makeStream()
@@ -41,15 +29,11 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         primaryPlayer?.currentItem?.integratedTimeline
     }
     
-    // MARK: - Integrated Timeline UI Properties
-    
     public private(set) var integratedTimelinePointSegments: [AVPlayerItemSegment] = []
     public private(set) var integratedTimelineFillSegments: [AVPlayerItemSegment] = []
     public private(set) var integratedTimelineCurrentTime: Double = 0.0
     public private(set) var integratedTimelineStartTime: Double = 0.0
     public private(set) var integratedTimelineDuration: Double = 0.0
-    
-    // MARK: - Ad Restrictions Capabilities
     
     public var currentRestrictions: AVPlayerInterstitialEvent.Restrictions {
         currentEvent?.restrictions ?? []
@@ -63,8 +47,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         !currentRestrictions.contains(.constrainsSeekingForwardInPrimaryContent) &&
         !currentRestrictions.contains(.requiresPlaybackAtPreferredRateForAdvancement)
     }
-    
-    // MARK: - Private Properties
     
     private weak var primaryPlayer: AVPlayer?
     private weak var currentItem: AVPlayerItem?
@@ -80,14 +62,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     
     private var lastStartedEvent: AVPlayerInterstitialEvent?
     
-    // MARK: - Initialization
-    
     public init(player: AVPlayer) {
         self.primaryPlayer = player
         super.init()
         
-        self.monitor = AVPlayerInterstitialEventMonitor(primaryPlayer: player)
-        self.controller = AVPlayerInterstitialEventController(primaryPlayer: player)
+        monitor = AVPlayerInterstitialEventMonitor(primaryPlayer: player)
+        controller = AVPlayerInterstitialEventController(primaryPlayer: player)
         
         setupObservers()
     }
@@ -95,8 +75,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     deinit {
         eventBroadcaster.finish()
     }
-    
-    // MARK: - Timeline & Event Observation Lifecycle
     
     public func stopObserving() {
         stopObservingTimeline()
@@ -109,8 +87,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         currentItem = nil
         resetTimelineMetrics()
     }
-    
-    // MARK: - System Interstitial Event Observers
     
     private func setupObservers() {
         guard let monitor else { return }
@@ -132,8 +108,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             .publisher(for: AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification, object: monitor)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else { return }
-                self.handleCurrentEventDidChange()
+                self?.handleCurrentEventDidChange()
             }
             .store(in: &cancellables)
         
@@ -141,20 +116,19 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             .publisher(for: AVPlayerInterstitialEventMonitor.eventsDidChangeNotification, object: monitor)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else { return }
-                self.handleScheduleDidChange()
+                self?.handleScheduleDidChange()
             }
             .store(in: &cancellables)
     }
     
     private func handleItemChanged(_ newItem: AVPlayerItem) {
         stopObservingTimeline()
-        self.currentItem = newItem
+        currentItem = newItem
         
         newItem.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { [weak self, weak newItem] status in
-                guard let self = self, let newItem = newItem, self.currentItem === newItem else { return }
+                guard let self, let newItem, self.currentItem === newItem else { return }
                 
                 if status == .readyToPlay {
                     self.setupIntegratedTimelineObservation(for: newItem)
@@ -168,30 +142,26 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private func setupIntegratedTimelineObservation(for item: AVPlayerItem) {
         let timeline = item.integratedTimeline
         
-        // Initial Snapshot Sync
         syncSnapshot(timeline.currentSnapshot)
         
-        // 1. Observe Snapshot Out-Of-Sync Notification safely on Main
         NotificationCenter.default
             .publisher(for: AVPlayerItemIntegratedTimeline.snapshotsOutOfSyncNotification, object: timeline)
             .receive(on: DispatchQueue.main)
             .sink { [weak self, weak item] _ in
-                guard let self = self, let activeItem = item, self.currentItem === activeItem else { return }
+                guard let self, let activeItem = item, self.currentItem === activeItem else { return }
                 self.syncSnapshot(activeItem.integratedTimeline.currentSnapshot)
                 self.emit(.integratedTimeline(.snapshotOutOfSync))
             }
             .store(in: &timelineCancellables)
         
-        // 2. Safe Main-Thread Timer to observe current time changes
         Timer.publish(every: 0.25, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self, weak item] _ in
-                guard let self = self, let activeItem = item, self.currentItem === activeItem else { return }
+                guard let self, let activeItem = item, self.currentItem === activeItem else { return }
                 let time = activeItem.integratedTimeline.currentTime.seconds
-                
                 guard !time.isNaN, !time.isInfinite else { return }
-                self.integratedTimelineCurrentTime = time
                 
+                self.integratedTimelineCurrentTime = time
                 self.emit(.integratedTimeline(.timeUpdated(
                     currentTime: self.integratedTimelineCurrentTime,
                     startTime: self.integratedTimelineStartTime,
@@ -227,8 +197,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private func handleScheduleDidChange() {
         emit(.scheduleDidChange(scheduledEvents))
     }
-    
-    // MARK: - Ad Progress Observer
     
     private func startProgressObserver() {
         removeProgressObserver()
@@ -270,15 +238,46 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         emit(.progress(progress))
     }
     
-    // MARK: - Scheduling API
+    // MARK: - Scheduling (batch-first)
     
     public func setEvents(_ events: [AVPlayerInterstitialEvent]) {
         controller?.events = events
     }
     
     public func appendEvents(_ events: [AVPlayerInterstitialEvent]) {
-        guard let controller = controller else { return }
-        controller.events.append(contentsOf: events)
+        guard let controller else { return }
+        var current = controller.events ?? []
+        current.append(contentsOf: events)
+        controller.events = current
+    }
+    
+    public func schedule(_ configs: [AKInterstitialScheduleConfig], replaceExisting: Bool = false) {
+        guard let primaryItem = primaryPlayer?.currentItem, let controller else { return }
+        guard !configs.isEmpty else { return }
+        
+        let newEvents = configs.map { config -> AVPlayerInterstitialEvent in
+            let event = AVPlayerInterstitialEvent(
+                primaryItem: primaryItem,
+                identifier: config.identifier ?? UUID().uuidString,
+                time: config.time,
+                templateItems: config.templateItems,
+                restrictions: config.restrictions,
+                resumptionOffset: config.resumptionOffset,
+                playoutLimit: config.playoutLimit
+            )
+            event.timelineOccupancy = config.timelineOccupancy
+            event.supplementsPrimaryContent = config.supplementsPrimaryContent
+            event.contentMayVary = config.contentMayVary
+            return event
+        }
+        
+        if replaceExisting {
+            controller.events = newEvents
+        } else {
+            var existing = controller.events ?? []
+            existing.append(contentsOf: newEvents)
+            controller.events = existing
+        }
     }
     
     public func schedule(
@@ -292,45 +291,19 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         supplementsPrimaryContent: Bool = false,
         contentMayVary: Bool = true
     ) {
-        guard let primaryItem = primaryPlayer?.currentItem else { return }
-        
-        let event = AVPlayerInterstitialEvent(
-            primaryItem: primaryItem,
-            identifier: identifier ?? UUID().uuidString,
+        let config = AKInterstitialScheduleConfig(
             time: time,
             templateItems: templateItems,
+            identifier: identifier,
             restrictions: restrictions,
             resumptionOffset: resumptionOffset,
-            playoutLimit: playoutLimit
+            playoutLimit: playoutLimit,
+            timelineOccupancy: timelineOccupancy,
+            supplementsPrimaryContent: supplementsPrimaryContent,
+            contentMayVary: contentMayVary
         )
-        
-        event.timelineOccupancy = timelineOccupancy
-        event.supplementsPrimaryContent = supplementsPrimaryContent
-        event.contentMayVary = contentMayVary
-        
-        appendEvents([event])
+        schedule([config], replaceExisting: false)
     }
-    
-    public func scheduleBatch(_ configurations: [(time: CMTime, templateItems: [AVPlayerItem])]) {
-        guard let primaryItem = primaryPlayer?.currentItem else { return }
-        
-        let events = configurations.map { config in
-            AVPlayerInterstitialEvent(
-                primaryItem: primaryItem,
-                identifier: UUID().uuidString,
-                time: config.time,
-                templateItems: config.templateItems,
-                restrictions: [],
-                resumptionOffset: .zero,
-                playoutLimit: .invalid
-            )
-        }
-        
-        // Set all events in one single call
-        setEvents(events)
-    }
-    
-    // MARK: - Control API
     
     public func cancelCurrent(resumptionOffset: CMTime = .zero) {
         guard let event = currentEvent else { return }
@@ -341,8 +314,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         removeProgressObserver()
     }
     
-    // MARK: - Private Helpers
-    
     private func syncSnapshot(_ snapshot: AVPlayerItemIntegratedTimelineSnapshot) {
         guard let timeline = currentItem?.integratedTimeline else { return }
         
@@ -352,16 +323,13 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         var fillSegments: [AVPlayerItemSegment] = []
         
         for segment in segments where segment.segmentType == .interstitial {
-            // 1. Check client occupancy if available
             if let occupancy = segment.interstitialEvent?.timelineOccupancy {
                 if occupancy == .singlePoint {
                     pointSegments.append(segment)
                 } else if occupancy == .fill {
                     fillSegments.append(segment)
                 }
-            }
-            // 2. Fallback for Manifest/Embedded Ads where interstitialEvent is nil
-            else {
+            } else {
                 let targetDuration = segment.timeMapping.target.duration
                 if targetDuration == .zero {
                     pointSegments.append(segment)
@@ -371,33 +339,33 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             }
         }
         
-        self.integratedTimelinePointSegments = pointSegments
-        self.integratedTimelineFillSegments = fillSegments
+        integratedTimelinePointSegments = pointSegments
+        integratedTimelineFillSegments = fillSegments
         
         if let firstSegment = segments.first {
             let startSec = CMTimeGetSeconds(firstSegment.timeMapping.target.start)
-            self.integratedTimelineStartTime = (startSec.isNaN || startSec.isInfinite) ? 0.0 : startSec
+            integratedTimelineStartTime = (startSec.isNaN || startSec.isInfinite) ? 0.0 : startSec
         } else {
-            self.integratedTimelineStartTime = 0.0
+            integratedTimelineStartTime = 0.0
         }
         
         let snapshotDuration = CMTimeGetSeconds(snapshot.duration)
-        self.integratedTimelineDuration = (snapshotDuration.isNaN || snapshotDuration.isInfinite) ? 0.0 : snapshotDuration
+        integratedTimelineDuration = (snapshotDuration.isNaN || snapshotDuration.isInfinite) ? 0.0 : snapshotDuration
         
         let currentSec = CMTimeGetSeconds(timeline.currentTime)
         if !currentSec.isNaN, !currentSec.isInfinite {
-            self.integratedTimelineCurrentTime = currentSec
+            integratedTimelineCurrentTime = currentSec
         }
         
         emit(.integratedTimeline(.segmentsUpdated(
-            pointSegments: self.integratedTimelinePointSegments,
-            fillSegments: self.integratedTimelineFillSegments
+            pointSegments: integratedTimelinePointSegments,
+            fillSegments: integratedTimelineFillSegments
         )))
         
         emit(.integratedTimeline(.timeUpdated(
-            currentTime: self.integratedTimelineCurrentTime,
-            startTime: self.integratedTimelineStartTime,
-            duration: self.integratedTimelineDuration
+            currentTime: integratedTimelineCurrentTime,
+            startTime: integratedTimelineStartTime,
+            duration: integratedTimelineDuration
         )))
     }
     
@@ -409,9 +377,9 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         
         var targetTime = CMTime(seconds: time, preferredTimescale: 600)
         
-        let integratedTimelineEndTime = integratedTimelineStartTime + integratedTimelineDuration
+        let end = integratedTimelineStartTime + integratedTimelineDuration
         let minTime = CMTime(seconds: integratedTimelineStartTime, preferredTimescale: 600)
-        let maxTime = CMTime(seconds: integratedTimelineEndTime, preferredTimescale: 600)
+        let maxTime = CMTime(seconds: end, preferredTimescale: 600)
         
         targetTime = CMTimeMinimum(CMTimeMaximum(minTime, targetTime), maxTime)
         
@@ -421,7 +389,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             toleranceAfter: .zero
         ) { [weak self] success in
             Task { @MainActor [weak self] in
-                guard let self = self else { return }
+                guard let self else { return }
                 if success {
                     self.integratedTimelineCurrentTime = CMTimeGetSeconds(timeline.currentTime)
                 }
@@ -431,8 +399,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
     
     public func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @escaping (Bool) -> Void) {
-        let targetTime = integratedTimelineCurrentTime + delta
-        seekOnIntegratedTimeline(to: targetTime, completion: completion)
+        seekOnIntegratedTimeline(to: integratedTimelineCurrentTime + delta, completion: completion)
     }
     
     private func resetTimelineMetrics() {

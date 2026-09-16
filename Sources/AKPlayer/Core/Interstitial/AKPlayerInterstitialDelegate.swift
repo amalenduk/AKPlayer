@@ -6,14 +6,38 @@
 //
 
 import AVFoundation
+import CoreMedia
 
-public protocol AKPlayerInterstitialDelegate: AnyObject {
-    /// Called when an interstitial starts playing
-    func player(_ monitor: AVPlayerInterstitialEventMonitor, didStartInterstitial event: AVPlayerInterstitialEvent)
+public struct AKInterstitialScheduleConfig {
+    public var time: CMTime
+    public var templateItems: [AVPlayerItem]
+    public var identifier: String?
+    public var restrictions: AVPlayerInterstitialEvent.Restrictions
+    public var resumptionOffset: CMTime
+    public var playoutLimit: CMTime
+    public var timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy
+    public var supplementsPrimaryContent: Bool
+    public var contentMayVary: Bool
     
-    /// Called periodically with current ad time & duration
-    func player(_ monitor: AVPlayerInterstitialEventMonitor, didUpdateInterstitialProgress progress: AKPlayerInterstitialProgress)
-    
-    /// Called when an interstitial finishes or is skipped
-    func player(_ monitor: AVPlayerInterstitialEventMonitor, didFinishInterstitial event: AVPlayerInterstitialEvent)
+    public init(
+        time: CMTime,
+        templateItems: [AVPlayerItem],
+        identifier: String? = nil,
+        restrictions: AVPlayerInterstitialEvent.Restrictions = [],
+        resumptionOffset: CMTime = .zero,
+        playoutLimit: CMTime = .invalid,
+        timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy = .singlePoint,
+        supplementsPrimaryContent: Bool = false,
+        contentMayVary: Bool = true
+    ) {
+        self.time = time
+        self.templateItems = templateItems
+        self.identifier = identifier
+        self.restrictions = restrictions
+        self.resumptionOffset = resumptionOffset
+        self.playoutLimit = playoutLimit
+        self.timelineOccupancy = timelineOccupancy
+        self.supplementsPrimaryContent = supplementsPrimaryContent
+        self.contentMayVary = contentMayVary
+    }
 }
