@@ -43,6 +43,8 @@ public protocol AKPlayable: AnyObject, Equatable, Sendable {
     var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? { get }
     
     var cachePolicy: AKMediaCachePolicy { get }
+    
+    var cacheManager: (any AKMediaCacheProtocol)? { get }
 
     /// Indicates whether the media item is a live stream.
     func isLive() -> Bool
@@ -75,6 +77,14 @@ public extension AKPlayable {
     /// matches the target.
     func isEqual(to other: any AKPlayable) -> Bool {
         self === other || (url == other.url && type == other.type)
+    }
+}
+
+public extension AKPlayable {
+    /// A textual representation of the playable media item detailing its URL
+    /// and type.
+    var cacheManager: (any AKMediaCacheProtocol)? {
+        nil
     }
 }
 

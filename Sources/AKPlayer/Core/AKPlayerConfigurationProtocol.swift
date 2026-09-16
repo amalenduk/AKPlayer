@@ -118,8 +118,6 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     var backoffMultiplier: Double { get }              // e.g. 1.8
     var maxWaitingForNetworkCooldown: TimeInterval { get } // e.g. 20.0
     var bufferStallTickLimit: Int { get } // e.g. 4
-    
-    var cacheManager: (any AKMediaCacheProtocol)? { get }
 }
 
 // MARK: - Protocol Extension

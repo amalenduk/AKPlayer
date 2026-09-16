@@ -104,8 +104,6 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable {
     
     public var bufferStallTickLimit: Int = 4
     
-    public var cacheManager: (any AKMediaCacheProtocol)?
-    
     // MARK: - Static Default Instance
     
     /// A shared default configuration instance initialized with standard preset
