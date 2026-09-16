@@ -40,6 +40,7 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         set {
             stateSubject.send(newValue)
             emit(.stateDidChange(state))
+            delegate?.akMedia(media!, didChangeState: state)
         }
     }
     

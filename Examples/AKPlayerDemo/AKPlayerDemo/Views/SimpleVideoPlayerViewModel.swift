@@ -93,7 +93,10 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
               print("Printing add \(event)")
                     
                 case .progress(let progress):
-                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
+//                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
+//                    print(interstitialService.integratedTimeline?.currentTime)
+                    
+                    break
                     
                 case .didFinish(_, let reason):
                     print("Finish Reason : \(reason)")
@@ -106,6 +109,9 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 }
             }
         }
+        
+        // Later – schedule a mid-roll
+        
     }
     
     deinit {
@@ -293,7 +299,10 @@ extension SimpleVideoPlayerViewModel: AKMediaDelegate {
         case .playerItemLoaded:
             break
         case .readyToPlay:
-            break
+            interstitialService.schedule(
+                at: CMTime(seconds: 10, preferredTimescale: 600),
+                templateItems: [AVPlayerItem(url: URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")!)]
+            )
         case .failed:
             break
         }

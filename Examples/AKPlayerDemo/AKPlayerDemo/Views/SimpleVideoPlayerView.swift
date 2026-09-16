@@ -464,6 +464,7 @@ public struct SimpleVideoPlayerView: View {
             tracksButton()
             infoButton()
             testButton()
+            test2Button()
         }
         .padding(.horizontal)
     }
@@ -490,8 +491,14 @@ public struct SimpleVideoPlayerView: View {
     @ViewBuilder
     private func testButton() -> some View {
         Button("Test") {
-            print(initialMedia?.asset)
-            print(initialMedia?.playerItem)
+            viewModel.interstitialService.interstitialPlayer?.pause()
+        }
+    }
+    
+    @ViewBuilder
+    private func test2Button() -> some View {
+        Button("Test") {
+            viewModel.interstitialService.cancelCurrent()
         }
     }
     
