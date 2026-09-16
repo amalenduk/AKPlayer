@@ -30,6 +30,8 @@ public enum AKInterstitialEvent: @unchecked Sendable {
     /// The interstitial finished, was skipped, or was cancelled.
     case didFinish(AVPlayerInterstitialEvent, reason: FinishReason)
     
+    case integratedTimeline(_ event: AKIntegratedTimelineEvent)
+    
     // MARK: - FinishReason
     
     public enum FinishReason: Sendable, Equatable {
@@ -70,4 +72,11 @@ extension AKInterstitialEvent: Equatable {
             false
         }
     }
+}
+
+
+public enum AKIntegratedTimelineEvent: Sendable, Equatable {
+    case segmentsUpdated(pointSegments: [AVPlayerItemSegment], fillSegments: [AVPlayerItemSegment])
+    case timeUpdated(currentTime: Double, startTime: Double, duration: Double)
+    case snapshotOutOfSync
 }

@@ -83,15 +83,15 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
             for await event in interstitialService.events {
                 switch event {
                 case .scheduleDidChange(let events):
-                    print("Schedule updated: \(events.count) events")
-                    
+                    //print("Schedule updated: \(events.count) events")
+                    break
                 case .willStart(let event):
-                    print("Ad about to start: \(event.identifier)")
-                    
+                    //print("Ad about to start: \(event.identifier)")
+                    break
                 case .didStart(let event):
                     // Show “Skip Ad” button, hide primary controls, etc.
-              print("Printing add \(event)")
-                    
+              //print("Printing add \(event)")
+                    break
                 case .progress(let progress):
 //                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
 //                    print(interstitialService.integratedTimeline?.currentTime)
@@ -99,13 +99,32 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                     break
                     
                 case .didFinish(_, let reason):
-                    print("Finish Reason : \(reason)")
+                    //print("Finish Reason : \(reason)")
                     switch reason {
                     case .completed: break
-                    case .skipped:   break
                     case .cancelled: break
                     case .error(let err): print(err)
                     }
+                case .integratedTimeline(let timelineevent):
+                    switch timelineevent {
+                    case .segmentsUpdated(pointSegments: let pointSegments, fillSegments: let fillSegments):
+                        for (index, segment) in pointSegments.enumerated() {
+                            print("--- Interstitial Segment \(index + 1) ---")
+                            print("Start Time (Primary): \(segment.timeMapping.source.start.seconds)")
+                            print("Duration: \(segment.timeMapping.source.duration.seconds)")
+                            
+                            if let event = segment.interstitialEvent {
+                                print("Event Identifier: \(event.identifier)")
+                                print("Template Items Count: \(event.templateItems.count)")
+                                print("Timeline Occupancy: \(event.timelineOccupancy == .singlePoint ? "singlePoint" : "fill")")
+                            }
+                        }
+                    case .timeUpdated(currentTime: let currentTime, startTime: let startTime, duration: let duration):
+                        break
+                    case .snapshotOutOfSync:
+                        break
+                    }
+                    
                 }
             }
         }
@@ -300,9 +319,20 @@ extension SimpleVideoPlayerViewModel: AKMediaDelegate {
             break
         case .readyToPlay:
             interstitialService.schedule(
-                at: CMTime(seconds: 10, preferredTimescale: 600),
-                templateItems: [AVPlayerItem(url: URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")!)]
+                at: CMTime(seconds: 0, preferredTimescale: 600),
+                templateItems: [AVPlayerItem(url: URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!)]
             )
+            
+            interstitialService.schedule(
+                at: CMTime(seconds: 8, preferredTimescale: 600),
+                templateItems: [AVPlayerItem(url: URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!)]
+            )
+            
+            interstitialService.schedule(
+                at: CMTime(seconds: 15, preferredTimescale: 600),
+                templateItems: [AVPlayerItem(url: URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!)]
+            )
+            break
         case .failed:
             break
         }

@@ -3,38 +3,72 @@
 //  AKPlayer
 //
 
+//  AKPlayerInterstitialServiceProtocol.swift
+//  AKPlayer
+
 import AVFoundation
 import CoreMedia
 
+@MainActor
 public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
     
-    /// Dedicated stream of interstitial-only events.
+    // MARK: - Streams & Core State
+    
+    /// Dedicated stream of interstitial and integrated timeline events.
     var events: AsyncStream<AKInterstitialEvent> { get }
     
-    /// Currently playing interstitial (nil when primary content is active).
+    /// Currently active interstitial event (nil when playing primary content).
     var currentEvent: AVPlayerInterstitialEvent? { get }
     
-    /// Convenience flag.
+    /// Convenience flag indicating whether an interstitial is playing.
     var isPlayingInterstitial: Bool { get }
     
-    /// Full current schedule (both server-side HLS + client-side).
+    /// Scheduled interstitial events (both server-side HLS and client-side).
     var scheduledEvents: [AVPlayerInterstitialEvent] { get }
     
-    /// The interstitial player (useful for custom UI / volume etc.).
+    /// Internal player handling the active interstitial item.
     var interstitialPlayer: AVPlayer? { get }
     
-    /// Integrated timeline of the primary item (point + fill occupancy).
+    /// Native integrated timeline reference.
     var integratedTimeline: AVPlayerItemIntegratedTimeline? { get }
     
-    // MARK: - Scheduling
+    // MARK: - Integrated Timeline UI Properties
     
-    /// Replace the entire client-side schedule.
+    /// Distinct point markers along the integrated timeline (e.g., ad insertion locations).
+    var integratedTimelinePointSegments: [AVPlayerItemSegment] { get }
+    
+    /// Continuous ranges along the integrated timeline (content vs ad pods).
+    var integratedTimelineFillSegments: [AVPlayerItemSegment] { get }
+    
+    /// Current position in seconds across the entire integrated timeline.
+    var integratedTimelineCurrentTime: Double { get }
+    
+    /// Start offset in seconds of the overall integrated timeline.
+    var integratedTimelineStartTime: Double { get }
+    
+    /// Total aggregate duration in seconds of content + ad segments.
+    var integratedTimelineDuration: Double { get }
+    
+    // MARK: - Ad Restrictions & Capabilities
+    
+    /// Returns the active restrictions configured on the current interstitial (e.g., `.constrainsSeeking`).
+    var currentRestrictions: AVPlayerInterstitialEvent.Restrictions { get }
+    
+    /// Indicates whether seeking or scrubbing is permitted on the current active item.
+    var canSeek: Bool { get }
+    
+    /// Indicates whether fast-forwarding is allowed on the current item.
+    var canFastForward: Bool { get }
+    
+    // MARK: - Observation Lifecycle & Scheduling
+    
+    /// Replaces the client-side interstitial schedule.
     func setEvents(_ events: [AVPlayerInterstitialEvent])
     
-    /// Append one or more events.
+    /// Appends events to the client-side schedule.
     func appendEvents(_ events: [AVPlayerInterstitialEvent])
     
-    /// Convenience for a single ad / ad-pod at a specific time.
+    /// Schedules an ad or ad-pod event at a specific time position.
     func schedule(
         at time: CMTime,
         templateItems: [AVPlayerItem],
@@ -47,8 +81,8 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
         contentMayVary: Bool
     )
     
-    // MARK: - Control
+    // MARK: - Playback Control
     
-    /// Cancel current + pending and resume primary at the given offset.
+    /// Cancels the active interstitial event and resumes primary content at the offset.
     func cancelCurrent(resumptionOffset: CMTime)
 }

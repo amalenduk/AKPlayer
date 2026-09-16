@@ -54,6 +54,7 @@ public class AKFailedState: AKBaseState {
     override public func processStateChange() {
         super.processStateChange()
         playerController.emit(.didFail(with: error))
+        AKLogger.error(error.localizedDescription, category: .player)
     }
 
     // MARK: - Preflight Checks
