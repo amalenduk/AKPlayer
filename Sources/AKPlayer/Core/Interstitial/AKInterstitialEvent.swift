@@ -34,13 +34,12 @@ public enum AKInterstitialEvent: @unchecked Sendable {
     
     public enum FinishReason: Sendable, Equatable {
         case completed
-        case skipped
         case cancelled(resumptionOffset: CMTime)
         case error(Error)
         
         public static func == (lhs: FinishReason, rhs: FinishReason) -> Bool {
             switch (lhs, rhs) {
-            case (.completed, .completed), (.skipped, .skipped):
+            case (.completed, .completed):
                 true
             case let (.cancelled(l), .cancelled(r)):
                 l == r

@@ -216,28 +216,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     
     // MARK: - Public API – Control
     
-    public func skipCurrent() {
-        guard let event = currentEvent else { return }
-        
-        // Prefer Apple’s official API when available
-        if let controller {
-            // Note: Value of type 'AVPlayerInterstitialEventController' has no member 'skipCurrentEvent'
-            // controller.skipCurrentEvent()
-        } else {
-            // Fallback
-            if let item = interstitialPlayer?.currentItem {
-                let end = item.duration
-                if end.isValid && !end.isIndefinite {
-                    interstitialPlayer?.seek(to: end)
-                }
-            }
-        }
-        
-        emit(.didFinish(event, reason: .skipped))
-        lastStartedEvent = nil
-        removeProgressObserver()
-    }
-    
     public func cancelCurrent(resumptionOffset: CMTime = .zero) {
         guard let event = currentEvent else { return }
         

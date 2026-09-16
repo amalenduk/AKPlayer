@@ -49,9 +49,6 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
     
     // MARK: - Control
     
-    /// Skip the currently playing interstitial (Apple’s official API).
-    func skipCurrent()
-    
     /// Cancel current + pending and resume primary at the given offset.
     func cancelCurrent(resumptionOffset: CMTime)
 }
