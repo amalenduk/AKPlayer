@@ -118,7 +118,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     }
     
     deinit {
-        print("Deinit called from AKMedia 👌🏼")
+        AKLogger.logDeinit(String(describing: Self.self),
+                           pointer: Unmanaged.passUnretained(self))
     }
     
     // MARK: - Public Methods

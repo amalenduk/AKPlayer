@@ -127,7 +127,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     }
     
     deinit {
-        print("Deinit called from ", #file)
+       
     }
     
     public func load(media: AKMedia, autoPlay: Bool) {
@@ -250,7 +250,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 case .didStart:
                     self.isPipActive = true
                 case .failedToStart(let reason):
-                    print("PiP failed: \(reason)")
+                 
                     self.isPipActive = false
                 case .willStop:
                     break

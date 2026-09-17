@@ -111,7 +111,6 @@ public class AKPlayingState: AKBaseState {
         switch playerController.player.timeControlStatus {
         case .playing:
             playingStarted = true
-            print("From palying state play")
         case .waitingToPlayAtSpecifiedRate:
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {

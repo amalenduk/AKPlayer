@@ -496,7 +496,6 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         player.publisher(for: \.timeControlStatus)
             .sink { [weak self] status in
                 guard let self else { return }
-                print("State ", self.state , " ", status.isPlaying || status.isWaitingToPlayAtSpecifiedRate)
                 self.controller.handleTimeControlStatusChange(status)
             }
             .store(in: &subscriptions)
