@@ -132,7 +132,6 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     
     public func load(media: AKMedia, autoPlay: Bool) {
         self.lastLoadedMedia = media
-        media.delegate = self
         player.load(media: media, autoPlay: autoPlay)
     }
     
@@ -297,41 +296,6 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
     nonisolated public func akPlayer(_ player: AKPlayer, didFailWith error: AKPlayerError) {}
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeVolumeTo volume: Float) {}
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {}
-}
-
-extension SimpleVideoPlayerViewModel: AKMediaDelegate {
-    
-    public func akMedia(_ media: any AKPlayable, didChangeState state: AKPlayableState) {
-        switch state {
-            
-        case .idle:
-            break
-        case .assetLoaded:
-            break
-        case .playerItemLoaded:
-            let url = URL(string: "http://127.0.0.1:8000/IMG_1828.mp4")!
-            let avplayerItem = AVPlayerItem(url: url)
-            
-            interstitialService.schedule([
-                AKInterstitialScheduleConfig(time: CMTime(seconds: 10, preferredTimescale: 600), templateItems: [avplayerItem]),
-                AKInterstitialScheduleConfig(time: CMTime(seconds: 60, preferredTimescale: 600), templateItems: [avplayerItem, avplayerItem], restrictions: [.constrainsSeekingForwardInPrimaryContent]),
-            ], replaceExisting: true)
-        case .readyToPlay:
-            
-            
-            break
-        case .failed:
-            break
-        }
-    }
-    
-    public func akMedia(_ media: any AKPlayable, didChangeItemDurationTo itemDuration: CMTime) {
-        DispatchQueue.main.async {
-            if itemDuration.isNumeric && itemDuration.seconds.isFinite {
-                self.duration = itemDuration.seconds
-            }
-        }
-    }
 }
 
 // MARK: - AKPictureInPictureDelegate

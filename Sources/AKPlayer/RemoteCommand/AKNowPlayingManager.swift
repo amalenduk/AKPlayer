@@ -10,11 +10,14 @@ import AVFoundation
 import Foundation
 import MediaPlayer
 
+extension MPNowPlayingInfoLanguageOptionGroup: @retroactive @unchecked Sendable {}
+extension MPNowPlayingInfoLanguageOption: @retroactive @unchecked Sendable {}
+
 // MARK: - Queue Metadata Provider
 
 /// Optional interface allowing players (such as AKQueuePlayer) to supply queue index and count info.
 @MainActor
-public protocol AKNowPlayingQueueInfoProvider: AnyObject {
+public protocol AKNowPlayingQueueInfoProvider: AnyObject, Sendable {
     var queueCount: Int { get }
     var currentQueueIndex: Int? { get }
 }
@@ -23,7 +26,7 @@ public protocol AKNowPlayingQueueInfoProvider: AnyObject {
 
 /// Protocol defining high-level Now Playing and Remote Command management.
 @MainActor
-public protocol AKNowPlayingManagerProtocol: AnyObject {
+public protocol AKNowPlayingManagerProtocol: AnyObject, Sendable {
     /// The underlying low-level session managing MPRemoteCommandCenter and MPNowPlayingInfoCenter.
     var session: any AKNowPlayingSessionProtocol { get }
     
@@ -73,7 +76,6 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     // Cached language options extracted when media is ready to play
     private var cachedCurrentLanguageOptions: [MPNowPlayingInfoLanguageOption]?
     private var cachedAvailableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]?
-    
     private var cachedTrackGroups: [AKMediaTrackGroup]?
     
     // MARK: - Initialization & Lifecycle
@@ -98,18 +100,23 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             guard session.canBecomeActive() else {
                 throw AKPlayerError.nowPlayingSessionFailure
             }
-            Task { [weak session] in
-                let active = await session?.becomeActiveIfPossible()
-                guard active ?? false else {
-                    throw AKPlayerError.nowPlayingSessionFailure
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let active = await self.session.becomeActiveIfPossible()
+                guard active else {
+                    AKLogger.warning("Failed to activate Now Playing session.", category: .remote)
+                    return
                 }
-                await setupDefaultRemoteCommands()
+                await self.setupDefaultRemoteCommands()
+            }
+        } else {
+            Task { @MainActor [weak self] in
+                await self?.setupDefaultRemoteCommands()
             }
         }
         
         observePlayerEvents()
     }
-    
     
     public func stop() {
         playerObservationTask?.cancel()
@@ -123,16 +130,14 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     }
     
     deinit {
-        defer {
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
-        }
         playerObservationTask?.cancel()
         playerObservationTask = nil
         mediaObservationTask?.cancel()
         mediaObservationTask = nil
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - High-Level Command Forwarding
@@ -162,7 +167,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     private func observePlayerEvents() {
         playerObservationTask?.cancel()
         
-        playerObservationTask = Task { [weak self, weak playerManager] in
+        playerObservationTask = Task { @MainActor [weak self, weak playerManager] in
             guard let events = playerManager?.events else { return }
             
             for await event in events {
@@ -187,7 +192,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     private func observeMediaEvents(for media: any AKPlayable) {
         mediaObservationTask?.cancel()
         
-        mediaObservationTask = Task { [weak self, weak media] in
+        mediaObservationTask = Task { @MainActor [weak self, weak media] in
             guard let stream = media?.events else { return }
             
             for await event in stream {
@@ -240,12 +245,22 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         else { return nil }
         
         let position: Double? = currentMedia.isLive() ? nil : {
-            guard let item = playerManager.currentItem, item.currentTime().isValid else { return nil }
+            guard let item = playerManager.currentItem,
+                  item.currentTime().isValid,
+                  !item.currentTime().isIndefinite,
+                  !item.currentTime().seconds.isNaN,
+                  item.currentTime().seconds.isFinite
+            else { return nil }
             return Double(item.currentTime().seconds)
         }()
         
         let duration: Float? = currentMedia.isLive() ? nil : {
-            guard let item = playerManager.currentItem, item.duration.isValid else { return nil }
+            guard let item = playerManager.currentItem,
+                  item.duration.isValid,
+                  !item.duration.isIndefinite,
+                  !item.duration.seconds.isNaN,
+                  item.duration.seconds.isFinite
+            else { return nil }
             return Float(item.duration.seconds)
         }()
         
@@ -255,7 +270,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         }()
         
         // Populate queue info if available
-        let queueProvider = playerManager as? AKNowPlayingQueueInfoProvider
+        let queueProvider = playerManager as? (any AKNowPlayingQueueInfoProvider)
         
         return AKNowPlayableDynamicMetadata(
             rate: Double(playerManager.rate.rate),
@@ -281,10 +296,13 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let groups = try await media.trackSelection.availableLanguageOptionGroups()
-                let current = try await media.trackSelection.currentLanguageOptions()
+                let trackTypes: [AKTrackType] = [.audio, .audioDescription, .subtitle, .closedCaption]
+                let groups = try await media.trackSelection.availableLanguageOptionGroups(for: trackTypes)
+                let current = try await media.trackSelection.currentLanguageOptions(for: trackTypes)
+                let domainTrackGroups = try await media.trackSelection.trackGroups(for: trackTypes)
                 cachedAvailableLanguageOptionGroups = groups
                 cachedCurrentLanguageOptions = current
+                cachedTrackGroups = domainTrackGroups
                 updateNowPlayingInfo()
             } catch {
                 // keep previous cache
@@ -295,49 +313,49 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     private func clearCachedLanguageOptions() {
         cachedCurrentLanguageOptions = nil
         cachedAvailableLanguageOptionGroups = nil
+        cachedTrackGroups = nil
     }
     
     // MARK: - Default Remote Commands Setup
     
     private func setupDefaultRemoteCommands() async {
-        
         let defaultConfig = AKNowPlayingCommandConfiguration()
-            .add(.play).enable(.play)
-            .add(.pause).enable(.pause)
-            .add(.stop).enable(.stop)
-            .add(.togglePlayPause).enable(.togglePlayPause)
-            .add(.changePlaybackPosition).enable(.changePlaybackPosition)
-            .add(.skipForward(preferredIntervals: [15])).enable(.skipForward(preferredIntervals: [15]))
-            .add(.skipBackward(preferredIntervals: [15])).enable(.skipBackward(preferredIntervals: [15]))
+            .add(.play)
+            .add(.pause)
+            .add(.stop)
+            .add(.togglePlayPause)
+            .add(.changePlaybackPosition)
+            .add(.skipForward(preferredIntervals: [15]))
+            .add(.skipBackward(preferredIntervals: [15]))
         
         await session.applyConfiguration(defaultConfig)
         
         await session.setHandler(for: .play) { @MainActor [weak playerManager] _ in
-            guard let playerManager = playerManager else { return .commandFailed }
+            guard let playerManager else { return .commandFailed }
             playerManager.play()
             return playerManager.state.isPlaying || playerManager.autoPlay ? .success : .commandFailed
         }
         
         await session.setHandler(for: .pause) { @MainActor [weak playerManager] _ in
-            guard let playerManager = playerManager else { return .commandFailed }
+            guard let playerManager else { return .commandFailed }
             playerManager.pause()
             return playerManager.state.isPaused ? .success : .commandFailed
         }
         
         await session.setHandler(for: .stop) { @MainActor [weak playerManager] _ in
-            guard let playerManager = playerManager else { return .commandFailed }
+            guard let playerManager else { return .commandFailed }
             playerManager.stop()
             return playerManager.state.isStopped ? .success : .commandFailed
         }
         
         await session.setHandler(for: .togglePlayPause) { @MainActor [weak playerManager] _ in
-            guard let playerManager = playerManager else { return .commandFailed }
+            guard let playerManager else { return .commandFailed }
             playerManager.togglePlayPause()
             return .success
         }
         
         await session.setHandler(for: .changePlaybackPosition) { @MainActor [weak playerManager] event in
-            guard let playerManager = playerManager,
+            guard let playerManager,
                   let positionEvent = event as? MPChangePlaybackPositionCommandEvent
             else { return .commandFailed }
             
@@ -354,11 +372,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                     .allCases.map(\.rate)
             )
         ) { @MainActor [weak playerManager] event in
-            guard let playerManager = playerManager,
+            guard let playerManager,
                   let currentMedia = playerManager.currentMedia,
                   let rateEvent = event as? MPChangePlaybackRateCommandEvent,
-                  currentMedia
-                .canPlay(at: AKPlaybackRate(rate: rateEvent.playbackRate))
+                  currentMedia.canPlay(at: AKPlaybackRate(rate: rateEvent.playbackRate))
             else {
                 return .commandFailed
             }
@@ -367,50 +384,48 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             return .success
         }
         
-        await session
-            .setHandler(for: .seekForward) { @MainActor [weak playerManager] event in
-                guard let playerManager = playerManager,
-                      let currentMedia = playerManager.currentMedia,
-                      let seekEvent = event as? MPSeekCommandEvent,
-                      currentMedia.canPlay(at: AKPlaybackRate.fastest)
-                else {
-                    return .commandFailed
-                }
-                
-                switch seekEvent.type {
-                case .beginSeeking:
-                    playerManager.fastForward(at: .fastest)
-                case .endSeeking:
-                    playerManager.play(at: .normal)
-                @unknown default:
-                    return .commandFailed
-                }
-                return .success
+        await session.setHandler(for: .seekForward) { @MainActor [weak playerManager] event in
+            guard let playerManager,
+                  let currentMedia = playerManager.currentMedia,
+                  let seekEvent = event as? MPSeekCommandEvent,
+                  currentMedia.canPlay(at: AKPlaybackRate.fastest)
+            else {
+                return .commandFailed
             }
+            
+            switch seekEvent.type {
+            case .beginSeeking:
+                playerManager.fastForward(at: .fastest)
+            case .endSeeking:
+                playerManager.play(at: .normal)
+            @unknown default:
+                return .commandFailed
+            }
+            return .success
+        }
         
-        await session
-            .setHandler(for: .seekBackward) { @MainActor [weak playerManager] event in
-                guard let playerManager = playerManager,
-                      let currentMedia = playerManager.currentMedia,
-                      let seekEvent = event as? MPSeekCommandEvent,
-                      currentMedia.canPlay(at: AKPlaybackRate.slowest)
-                else {
-                    return .commandFailed
-                }
-                
-                switch seekEvent.type {
-                case .beginSeeking:
-                    playerManager.rewind(at: .slowest)
-                case .endSeeking:
-                    playerManager.play(at: .normal)
-                @unknown default:
-                    return .commandFailed
-                }
-                return .success
+        await session.setHandler(for: .seekBackward) { @MainActor [weak playerManager] event in
+            guard let playerManager,
+                  let currentMedia = playerManager.currentMedia,
+                  let seekEvent = event as? MPSeekCommandEvent,
+                  currentMedia.canPlay(at: AKPlaybackRate.slowest)
+            else {
+                return .commandFailed
             }
+            
+            switch seekEvent.type {
+            case .beginSeeking:
+                playerManager.rewind(at: .slowest)
+            case .endSeeking:
+                playerManager.play(at: .normal)
+            @unknown default:
+                return .commandFailed
+            }
+            return .success
+        }
         
         await session.setHandler(for: .skipForward(preferredIntervals: [15])) { @MainActor [weak playerManager] event in
-            guard let playerManager = playerManager,
+            guard let playerManager,
                   let skipEvent = event as? MPSkipIntervalCommandEvent
             else { return .commandFailed }
             
@@ -422,7 +437,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         }
         
         await session.setHandler(for: .skipBackward(preferredIntervals: [15])) { @MainActor [weak playerManager] event in
-            guard let playerManager = playerManager,
+            guard let playerManager,
                   let skipEvent = event as? MPSkipIntervalCommandEvent
             else { return .commandFailed }
             
@@ -433,24 +448,70 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             return .success
         }
         
+        await session.setHandler(for: .nextTrack) { @MainActor [weak playerManager] _ in
+            guard let queuePlayer = playerManager as? any AKQueuePlayerProtocol else { return .commandFailed }
+            queuePlayer.next()
+            return .success
+        }
+        
+        await session.setHandler(for: .previousTrack) { @MainActor [weak playerManager] _ in
+            guard let queuePlayer = playerManager as? any AKQueuePlayerProtocol else { return .commandFailed }
+            queuePlayer.previous()
+            return .success
+        }
+        
+        await session.setHandler(for: .changeRepeatMode) { @MainActor [weak playerManager] event in
+            guard let queuePlayer = playerManager as? any AKQueuePlayerProtocol,
+                  let repeatEvent = event as? MPChangeRepeatModeCommandEvent
+            else { return .commandFailed }
+            
+            switch repeatEvent.repeatType {
+            case .off:
+                queuePlayer.repeatMode = .off
+            case .one:
+                queuePlayer.repeatMode = .one
+            case .all:
+                queuePlayer.repeatMode = .all
+            @unknown default:
+                return .commandFailed
+            }
+            return .success
+        }
+        
+        await session.setHandler(for: .changeShuffleMode) { @MainActor [weak playerManager] event in
+            guard let queuePlayer = playerManager as? any AKQueuePlayerProtocol,
+                  let shuffleEvent = event as? MPChangeShuffleModeCommandEvent
+            else { return .commandFailed }
+            
+            switch shuffleEvent.shuffleType {
+            case .off:
+                queuePlayer.isShuffleEnabled = false
+            case .items, .collections:
+                queuePlayer.isShuffleEnabled = true
+            @unknown default:
+                return .commandFailed
+            }
+            return .success
+        }
+        
         await session.setHandler(for: .enableLanguageOption) { @MainActor [weak self] event in
             guard let self,
-                  let playerManager = playerManager,
+                  let playerManager = self.playerManager,
                   let media = playerManager.currentMedia,
                   let languageEvent = event as? MPChangeLanguageOptionCommandEvent
             else { return .commandFailed }
             
-            return enable(languageOption: languageEvent.languageOption, on: media)
+            return self.enable(languageOption: languageEvent.languageOption, on: media)
         }
         
         await session.setHandler(for: .disableLanguageOption) { @MainActor [weak self] event in
             guard let self,
-                  let playerManager = playerManager,
+                  let playerManager = self.playerManager,
                   let media = playerManager.currentMedia,
                   let languageEvent = event as? MPChangeLanguageOptionCommandEvent
             else { return .commandFailed }
             
-            return disable(languageOption: languageEvent.languageOption, on: media)
+            return self.disable(languageOption: languageEvent.languageOption, on: media)
         }
     }
     
@@ -458,27 +519,29 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         languageOption: MPNowPlayingInfoLanguageOption,
         on media: any AKPlayable
     ) -> MPRemoteCommandHandlerStatus {
-        
         let types: [AKTrackType] = languageOption.languageOptionType == .legible
-        ? [.subtitle, .closedCaption]
-        : [.audio, .audioDescription]
+            ? [.subtitle, .closedCaption]
+            : [.audio, .audioDescription]
         
         guard let cachedTrackGroups else {
             return .noSuchContent
         }
         
         for type in types {
-            
             guard let group = cachedTrackGroups.first(where: { $0.type == type }) else { continue }
             
             if let match = group.options.first(where: { trackOption in
                 guard let avOption = trackOption.option else { return false }
                 
                 return avOption.extendedLanguageTag == languageOption.languageTag ||
-                avOption.displayName == languageOption.displayName
+                    avOption.displayName == languageOption.displayName
             }) {
                 Task {
-                    try await media.trackSelection.select(match, for: type)
+                    do {
+                        try await media.trackSelection.select(match, for: type)
+                    } catch {
+                        AKLogger.error("Failed to select language track: \(error)", category: .media)
+                    }
                 }
                 return .success
             }
@@ -491,10 +554,9 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         languageOption: MPNowPlayingInfoLanguageOption,
         on media: any AKPlayable
     ) -> MPRemoteCommandHandlerStatus {
-        
         let types: [AKTrackType] = languageOption.languageOptionType == .legible
-        ? [.subtitle, .closedCaption]
-        : [.audio]   // audio tracks usually cannot be fully disabled
+            ? [.subtitle, .closedCaption]
+            : [.audio]
         
         guard let cachedTrackGroups else {
             return .noSuchContent
@@ -511,11 +573,15 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             }
             
             let matches = avOption.extendedLanguageTag == languageOption.languageTag ||
-            avOption.displayName == languageOption.displayName
+                avOption.displayName == languageOption.displayName
             
             if matches {
                 Task {
-                    try await media.trackSelection.select(nil, for: type)
+                    do {
+                        try await media.trackSelection.select(nil, for: type)
+                    } catch {
+                        AKLogger.error("Failed to disable language track: \(error)", category: .remote)
+                    }
                 }
                 return .success
             }

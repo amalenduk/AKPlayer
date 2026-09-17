@@ -14,7 +14,7 @@ import Foundation
 /// Delegate protocol for receiving high-level player state changes, playback
 /// progress, media updates, and error events.
 @MainActor
-public protocol AKPlayerDelegate: AnyObject {
+public protocol AKPlayerDelegate: AnyObject, Sendable {
     /// Called when the player transitions to a new operational state.
     /// - Parameters:
     ///   - player: The issuing player instance.

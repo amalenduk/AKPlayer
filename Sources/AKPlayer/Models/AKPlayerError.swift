@@ -54,7 +54,7 @@ public enum AKPlayerError: Error, Equatable, @unchecked Sendable {
 
     /// Reasons for player item execution failures.
     public enum PlayerItemFailedToPlayReason: @unchecked Sendable {
-        case failedToPlayToEndTime(error: Error)
+        case failedToPlayToEndTime(error: Error?)
     }
 
     /// Reasons for track selection and media group failures.
@@ -126,7 +126,7 @@ extension AKPlayerError.PlayerItemFailedToPlayReason: LocalizedError {
         switch self {
         case let .failedToPlayToEndTime(error):
             NSLocalizedString(
-                "AVPlayerItem failed to play to end time with error: \(error.localizedDescription)",
+                "AVPlayerItem failed to play to end time with error: \(error?.localizedDescription)",
                 comment: "Item failed to finish playing"
             )
         }

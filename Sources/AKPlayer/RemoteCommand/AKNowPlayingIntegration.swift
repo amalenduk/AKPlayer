@@ -17,8 +17,8 @@ public extension AKPlayer {
     func configureNowPlaying(
         with configuration: AKNowPlayingCommandConfiguration
     ) async {
-        guard let session = nowPlayingManager?.session else { return }
-        await session.applyConfiguration(configuration)
+        guard let nowPlayingManager else { return }
+        await nowPlayingManager.applyConfiguration(configuration)
     }
 }
 
@@ -26,14 +26,14 @@ public extension AKPlayer {
 
 /// Protocol to be added to AKPlayerManager for Now Playing session integration.
 @MainActor
-public protocol AKNowPlayingSessionProvider: AnyObject {
+public protocol AKNowPlayingSessionProvider: AnyObject, Sendable {
     var nowPlayingSession: AKNowPlayingSession? { get }
 }
 
 // MARK: - Command Preset Manager
 
 /// Manages predefined command presets for different use cases.
-public enum AKNowPlayingCommandPresets {
+public enum AKNowPlayingCommandPresets: Sendable {
     /// Preset: Minimal playback controls only
     public static func minimal() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.minimal()
@@ -46,19 +46,17 @@ public enum AKNowPlayingCommandPresets {
     
     /// Preset: Podcast with 15-second skip back, 30-second skip forward
     public static func podcast() -> AKNowPlayingCommandConfiguration {
-        let config = AKNowPlayingCommandConfiguration.audio()
-        _ = config.add(.skipBackward(preferredIntervals: [15.0]))
-        _ = config.add(.skipForward(preferredIntervals: [30.0]))
-        _ = config.disable(.changeShuffleMode)
-        return config
+        AKNowPlayingCommandConfiguration.audio()
+            .add(.skipBackward(preferredIntervals: [15.0]))
+            .add(.skipForward(preferredIntervals: [30.0]))
+            .disable(.changeShuffleMode)
     }
     
     /// Preset: Audiobook with bookmarking
     public static func audiobook() -> AKNowPlayingCommandConfiguration {
-        let config = AKNowPlayingCommandConfiguration.audio()
-        _ = config.add(.bookmark)
-        _ = config.disable(.changeShuffleMode)
-        return config
+        AKNowPlayingCommandConfiguration.audio()
+            .add(.bookmark)
+            .disable(.changeShuffleMode)
     }
     
     /// Preset: Standard video playback
@@ -68,10 +66,9 @@ public enum AKNowPlayingCommandPresets {
     
     /// Preset: Live stream (no seeking)
     public static func livestream() -> AKNowPlayingCommandConfiguration {
-        let config = AKNowPlayingCommandConfiguration.audio()
-        _ = config.disable(.seekBackward)
-        _ = config.disable(.seekForward)
-        _ = config.disable(.changePlaybackPosition)
-        return config
+        AKNowPlayingCommandConfiguration.audio()
+            .disable(.seekBackward)
+            .disable(.seekForward)
+            .disable(.changePlaybackPosition)
     }
 }

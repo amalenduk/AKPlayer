@@ -1,29 +1,70 @@
+//
+//   AKNowPlayingSession.swift
+//   AKPlayer
+//
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
+//
+
 import AVFoundation
 import Foundation
 import MediaPlayer
 
+// MARK: - AKNowPlayingSessionProtocol
+
+/// Protocol defining the interface for managing system Now Playing and MPRemoteCommandCenter sessions.
 @MainActor
-public protocol AKNowPlayingSessionProtocol: AnyObject {
+public protocol AKNowPlayingSessionProtocol: AnyObject, Sendable {
+    /// Indicates whether the underlying Now Playing session is actively registered with the system.
     var isActive: Bool { get }
+    
+    /// The remote command center instance receiving media control events.
     var remoteCommandCenter: MPRemoteCommandCenter { get }
+    
+    /// The now playing info center managing the lock screen and Control Center metadata.
     var nowPlayingInfoCenter: MPNowPlayingInfoCenter { get }
     
+    /// Applies a remote command configuration to register and enable system commands.
     func applyConfiguration(_ config: AKNowPlayingCommandConfiguration) async
+    
+    /// Assigns a handler closure for a specific remote command.
     func setHandler(for command: AKRemoteCommand, handler: @escaping AKRemoteCommandHandler) async
+    
+    /// Removes the assigned handler closure for a specific remote command.
     func removeHandler(for command: AKRemoteCommand) async
+    
+    /// Enables a list of remote commands.
     func enable(commands: [AKRemoteCommand]) async
+    
+    /// Disables a list of remote commands.
     func disable(commands: [AKRemoteCommand]) async
+    
+    /// Checks whether a specific command is currently enabled.
     func isCommandEnabled(_ command: AKRemoteCommand) -> Bool
     
+    /// Sets the Now Playing metadata dictionary on the info center.
     func setNowPlayingInfo(_ metadata: AKNowPlayableMetadata?)
+    
+    /// Clears any active Now Playing metadata from the info center.
     func clearNowPlayingPlaybackInfo()
+    
+    /// Unregisters all command handlers and targets from the remote command center.
     func unregisterAll()
     
+    /// Indicates whether the session can become active.
     func canBecomeActive() -> Bool
+    
+    /// Requests the system to activate the Now Playing session.
     func becomeActiveIfPossible() async -> Bool
+    
+    /// Adds an AVPlayer instance to the multi-player session.
     func addPlayer(_ player: AVPlayer)
+    
+    /// Removes an AVPlayer instance from the multi-player session.
     func removePlayer(_ player: AVPlayer)
 }
+
+// MARK: - AKNowPlayingSession
 
 @MainActor
 public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
@@ -46,7 +87,7 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
         nowPlayingSession?.isActive ?? false
     }
     
-    // MARK: - Local command state (replaces public Registry)
+    // MARK: - Local command state
     
     private struct CommandEntry {
         var handler: AKRemoteCommandHandler?
@@ -56,7 +97,7 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     
     private var commands: [String: CommandEntry] = [:]
     
-    // MARK: - Init
+    // MARK: - Initialization
     
     public init(players: [AVPlayer]) {
         let session = MPNowPlayingSession(players: players)
@@ -72,10 +113,6 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
         nowPlayingSession = nil
         fallbackRemoteCommandCenter = remoteCommandCenter
         fallbackNowPlayingInfoCenter = nowPlayingInfoCenter
-    }
-    
-    deinit {
-        // targets cleaned when centers go away; avoid main-actor calls here
     }
     
     // MARK: - Configuration
@@ -138,6 +175,7 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
                let command = AKRemoteCommand.all().first(where: { $0.id == id }) {
                 let remote = command.metadata.getCommand(remoteCommandCenter)
                 remote.removeTarget(target)
+                remote.isEnabled = false
             }
         }
         commands.removeAll()
@@ -171,23 +209,40 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     
     private func registerIfNeeded(_ command: AKRemoteCommand) {
         let id = command.id
-        guard commands[id] == nil else { return }
-        
-        let remote = command.metadata.getCommand(remoteCommandCenter)
         
         switch command {
         case let .skipBackward(intervals):
-            remoteCommandCenter.skipBackwardCommand.preferredIntervals = intervals.map { NSNumber(value: $0) }
+            if !intervals.isEmpty {
+                remoteCommandCenter.skipBackwardCommand.preferredIntervals = intervals.map { NSNumber(value: $0) }
+            }
         case let .skipForward(intervals):
-            remoteCommandCenter.skipForwardCommand.preferredIntervals = intervals.map { NSNumber(value: $0) }
+            if !intervals.isEmpty {
+                remoteCommandCenter.skipForwardCommand.preferredIntervals = intervals.map { NSNumber(value: $0) }
+            }
         case let .changePlaybackRate(rates):
-            remoteCommandCenter.changePlaybackRateCommand.supportedPlaybackRates = rates.map { NSNumber(value: $0) }
+            if !rates.isEmpty {
+                remoteCommandCenter.changePlaybackRateCommand.supportedPlaybackRates = rates.map { NSNumber(value: $0) }
+            }
         default:
             break
         }
         
+        guard commands[id] == nil else { return }
+        
+        let remote = command.metadata.getCommand(remoteCommandCenter)
+        
         let target = remote.addTarget { [weak self] event in
-            self?.handle(command, event: event) ?? .commandFailed
+            if Thread.isMainThread {
+                return MainActor.assumeIsolated {
+                    self?.handle(command, event: event) ?? .commandFailed
+                }
+            } else {
+                return DispatchQueue.main.sync {
+                    MainActor.assumeIsolated {
+                        self?.handle(command, event: event) ?? .commandFailed
+                    }
+                }
+            }
         }
         
         commands[id] = CommandEntry(handler: nil, isEnabled: false, target: target)

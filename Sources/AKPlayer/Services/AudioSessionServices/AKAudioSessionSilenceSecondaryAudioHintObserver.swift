@@ -9,152 +9,116 @@
 // Ref: https://developer.apple.com/documentation/avfaudio/avaudiosession/1616622-silencesecondaryaudiohintnotific
 
 import AVFoundation
-import Combine
+import Foundation
+import Synchronization
 
-// MARK: - AKAudioSessionSilenceSecondaryAudioHintObserverDelegate
+// MARK: - AKAudioSessionSilenceSecondaryAudioHintEvent
 
-/// A delegate protocol for receiving callbacks when secondary audio hints start
-/// or end.
-@MainActor
-public protocol AKAudioSessionSilenceSecondaryAudioHintObserverDelegate: AnyObject {
-    /// Informs the delegate that a secondary audio hint to silence audio has
-    /// begun.
-    /// - Parameters:
-    ///   - observer: The secondary audio hint observer reporting the event.
-    ///   - audioSession: The active `AVAudioSession` instance receiving the
-    /// hint.
-    func audioSessionSilenceSecondaryAudioHintObserver(
-        _ observer: AKAudioSessionSilenceSecondaryAudioHintObserverProtocol,
-        silenceSecondaryAudioHintDidStartFor audioSession: AVAudioSession
-    )
-
-    /// Informs the delegate that a secondary audio hint to silence audio has
-    /// ended.
-    /// - Parameters:
-    ///   - observer: The secondary audio hint observer reporting the event.
-    ///   - audioSession: The active `AVAudioSession` instance recovering from
-    /// the hint.
-    func audioSessionSilenceSecondaryAudioHintObserver(
-        _ observer: AKAudioSessionSilenceSecondaryAudioHintObserverProtocol,
-        silenceSecondaryAudioHintDidEndFor audioSession: AVAudioSession
-    )
+/// Events emitted when system secondary audio silence hints begin or end.
+public enum AKAudioSessionSilenceSecondaryAudioHintEvent: Sendable, Equatable {
+    case began
+    case ended
 }
 
 // MARK: - AKAudioSessionSilenceSecondaryAudioHintObserverProtocol
 
-/// A protocol defining requirements for observing secondary audio hints using
-/// Combine.
-@MainActor
-public protocol AKAudioSessionSilenceSecondaryAudioHintObserverProtocol: AnyObject {
+/// A protocol defining requirements for observing secondary audio hints.
+public protocol AKAudioSessionSilenceSecondaryAudioHintObserverProtocol: AnyObject, Sendable {
     /// The target `AVAudioSession` instance being monitored.
     var audioSession: AVAudioSession { get }
 
-    /// The delegate object notified of secondary audio hint events.
-    var delegate: AKAudioSessionSilenceSecondaryAudioHintObserverDelegate? {
-        get set
-    }
+    /// Asynchronous stream of secondary audio hint events for Swift Concurrency.
+    var events: AsyncStream<AKAudioSessionSilenceSecondaryAudioHintEvent> { get }
 
     /// Begins observing system-level secondary audio hint notifications.
     func startObserving()
 
-    /// Stops monitoring secondary audio hint notifications and clears active
-    /// subscriptions.
+    /// Stops monitoring secondary audio hint notifications and clears active tasks.
     func stopObserving()
 }
 
 // MARK: - AKAudioSessionSilenceSecondaryAudioHintObserver
 
-/// A concrete implementation of
-/// `AKAudioSessionSilenceSecondaryAudioHintObserverProtocol` utilizing Combine
-/// to monitor `AVAudioSession.silenceSecondaryAudioHintNotification`.
-@MainActor
-public class AKAudioSessionSilenceSecondaryAudioHintObserver:
-    AKAudioSessionSilenceSecondaryAudioHintObserverProtocol
+/// A thread-safe observer class responsible for monitoring `AVAudioSession.silenceSecondaryAudioHintNotification`
+/// and broadcasting events via `AsyncStream`.
+public final class AKAudioSessionSilenceSecondaryAudioHintObserver:
+    AKAudioSessionSilenceSecondaryAudioHintObserverProtocol, Sendable
 {
     // MARK: - Properties
 
     /// The `AVAudioSession` instance managed by this observer.
     public let audioSession: AVAudioSession
 
-    /// The delegate object notified of secondary audio hint callbacks.
-    public weak var delegate: AKAudioSessionSilenceSecondaryAudioHintObserverDelegate?
+    /// Broadcaster managing the asynchronous stream of secondary audio hint events.
+    private let eventBroadcaster = AKEventBroadcaster<AKAudioSessionSilenceSecondaryAudioHintEvent>()
 
-    /// A Boolean flag tracking whether notification subscriptions are currently
-    /// active.
-    private var isObserving = false
+    /// Asynchronous stream of secondary audio hint events for Swift Concurrency.
+    public var events: AsyncStream<AKAudioSessionSilenceSecondaryAudioHintEvent> {
+        eventBroadcaster.makeStream()
+    }
 
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
+    /// Mutex protecting the active notification observation task.
+    private let observationTask = Mutex<Task<Void, Never>?>(nil)
 
     // MARK: - Init & Deinit
 
-    /// Initializes a new secondary audio hint observer with a target audio
-    /// session.
+    /// Initializes a new secondary audio hint observer with a target audio session.
     /// - Parameter audioSession: The `AVAudioSession` instance to observe.
     public init(audioSession: AVAudioSession) {
         self.audioSession = audioSession
     }
 
-    deinit {}
+    deinit {
+        stopObserving()
+        eventBroadcaster.finish()
+    }
 
     // MARK: - Observation Lifecycle
 
-    /// Starts observing secondary audio hint notifications on the main queue.
+    /// Starts observing secondary audio hint notifications.
     public func startObserving() {
-        guard !isObserving else { return }
+        stopObserving()
 
-        NotificationCenter.default.publisher(
-            for: AVAudioSession.silenceSecondaryAudioHintNotification,
-            object: audioSession
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] notification in
-            guard let self else { return }
-            handleSilenceSecondaryAudioHintNotification(notification)
+        let task = Task { [weak self, audioSession] in
+            for await notification in NotificationCenter.default.notifications(
+                named: AVAudioSession.silenceSecondaryAudioHintNotification,
+                object: audioSession
+            ) {
+                guard !Task.isCancelled, let self else { break }
+                self.handleSilenceSecondaryAudioHintNotification(notification)
+            }
         }
-        .store(in: &subscriptions)
 
-        isObserving = true
+        observationTask.withLock { $0 = task }
     }
 
-    /// Stops observing secondary audio hint notifications and clears active
-    /// subscriptions.
+    /// Stops observing secondary audio hint notifications and cancels active tasks.
     public func stopObserving() {
-        guard isObserving else { return }
-        subscriptions.removeAll()
-        isObserving = false
+        observationTask.withLock {
+            $0?.cancel()
+            $0 = nil
+        }
     }
 
     // MARK: - Handlers
 
-    /// Processes incoming secondary audio hint notifications and notifies the
-    /// delegate.
-    /// - Parameter notification: The `Notification` object containing hint
-    /// metadata.
-    public func handleSilenceSecondaryAudioHintNotification(
+    /// Processes incoming secondary audio hint notifications and emits stream events.
+    /// - Parameter notification: The `Notification` object containing hint metadata.
+    private func handleSilenceSecondaryAudioHintNotification(
         _ notification: Notification
     ) {
         guard let userInfo = notification.userInfo,
-              let typeValue =
-              userInfo[AVAudioSessionSilenceSecondaryAudioHintTypeKey] as? UInt,
-              let type =
-              AVAudioSession
-                  .SilenceSecondaryAudioHintType(rawValue: typeValue)
+              let typeValue = userInfo[AVAudioSessionSilenceSecondaryAudioHintTypeKey] as? UInt,
+              let type = AVAudioSession.SilenceSecondaryAudioHintType(rawValue: typeValue)
         else {
             return
         }
 
         switch type {
         case .begin:
-            delegate?.audioSessionSilenceSecondaryAudioHintObserver(
-                self,
-                silenceSecondaryAudioHintDidStartFor: audioSession
-            )
+            eventBroadcaster.send(.began)
         case .end:
-            delegate?.audioSessionSilenceSecondaryAudioHintObserver(
-                self,
-                silenceSecondaryAudioHintDidEndFor: audioSession
-            )
+            eventBroadcaster.send(.ended)
         @unknown default:
             break
         }

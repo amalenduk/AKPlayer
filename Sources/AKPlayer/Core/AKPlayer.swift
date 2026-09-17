@@ -360,7 +360,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     private func startObservingPlayerEvents() {
         playerEventsTask?.cancel()
         
-        playerEventsTask = Task { @MainActor [weak self] in
+        playerEventsTask = Task { [weak self] in
             guard let managerEvents = self?.manager.events else { return }
             
             for await event in managerEvents {

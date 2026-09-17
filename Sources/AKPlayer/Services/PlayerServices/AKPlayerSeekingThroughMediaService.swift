@@ -14,16 +14,14 @@ import Foundation
 /// A protocol defining the service interface for managing sequential media
 /// seeking operations.
 @MainActor
-public protocol AKPlayerSeekingThroughMediaServiceProtocol: AnyObject {
-    /// The underlying `AVPlayer` executing media playback and underlying seek
-    /// operations.
+public protocol AKPlayerSeekingThroughMediaServiceProtocol: AnyObject, Sendable {
+    /// The underlying `AVPlayer` executing media playback and underlying seek operations.
     var player: AVPlayer { get }
     
     /// An ordered collection of pending seek requests queued for execution.
     var pendingSeeks: [AKSeek] { get }
     
-    /// The target position of the most recent seek request, if one is pending
-    /// or active.
+    /// The target position of the most recent seek request, if one is pending or active.
     var lastRequestedSeekTarget: AKSeekTarget? { get }
     
     /// Indicates whether a seek operation is currently active or queued.
@@ -32,8 +30,7 @@ public protocol AKPlayerSeekingThroughMediaServiceProtocol: AnyObject {
     /// Queues or executes a seek operation for the given request target.
     func seek(to seek: AKSeek)
     
-    /// Cancels all pending and currently active seek operations, notifying
-    /// callbacks of cancellation.
+    /// Cancels all pending and currently active seek operations, notifying callbacks of cancellation.
     func cancelAll()
 }
 
@@ -41,7 +38,7 @@ public protocol AKPlayerSeekingThroughMediaServiceProtocol: AnyObject {
 
 /// A service class managing queued media seek operations for an `AVPlayer`.
 @MainActor
-public class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
+public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
     // MARK: - Properties
     
     public let player: AVPlayer
@@ -69,7 +66,7 @@ public class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServ
     public func seek(to seek: AKSeek) {
         guard player.currentItem != nil else {
             requestedSeekTarget = nil
-            seek.completionHandler?(false)
+            seek.complete(with: false)
             return
         }
         
@@ -85,12 +82,16 @@ public class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServ
     }
     
     public func cancelAll() {
-        activeSeek?.completionHandler?(false)
-        activeSeek = nil
+        player.currentItem?.cancelPendingSeeks()
         
-        while let seek = pendingSeeks.first {
-            pendingSeeks.removeFirst()
-            seek.completionHandler?(false)
+        let currentActive = activeSeek
+        activeSeek = nil
+        currentActive?.complete(with: false)
+        
+        let pending = pendingSeeks
+        pendingSeeks.removeAll()
+        for seek in pending {
+            seek.complete(with: false)
         }
         
         requestedSeekTarget = nil
@@ -106,24 +107,28 @@ public class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServ
         }
         
         // Cancel intermediate skipped seeks
-        while let seekToCancel = pendingSeeks.first,
-              seekToCancel != latestSeek
-        {
-            pendingSeeks.removeFirst()
-            seekToCancel.completionHandler?(false)
+        let intermediateSeeks = pendingSeeks.dropLast()
+        pendingSeeks.removeAll()
+        
+        for seekToCancel in intermediateSeeks {
+            seekToCancel.complete(with: false)
         }
         
         activeSeek = latestSeek
-        if let index = pendingSeeks.firstIndex(of: latestSeek) {
-            pendingSeeks.remove(at: index)
-        }
-        
         enqueue(seek: latestSeek)
     }
     
     private func enqueue(seek: AKSeek) {
-        let completion: @Sendable (Bool) -> Void = { [weak self] finished in
+        guard let currentItem = player.currentItem else {
+            activeSeek = nil
+            requestedSeekTarget = nil
+            seek.complete(with: false)
+            return
+        }
+        
+        let completion: @Sendable (Bool) -> Void = { [weak self, weak seek] finished in
             Task { @MainActor in
+                guard let seek else { return }
                 self?.handleSeekCompletion(for: seek, finished: finished)
             }
         }
@@ -134,26 +139,18 @@ public class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServ
             return
         }
         
-        guard let currentItem = player.currentItem else {
-            completion(false)
-            return
-        }
+        let timescale = currentItem.duration.timescale > 0 ? currentItem.duration.timescale : 600
         
-        let timescale =
-        currentItem.duration.timescale > 0
-        ? currentItem
-            .duration.timescale : 600
-        
-        // Resolve target to CMTime using AKSeekTarget resolve
-        guard
-            let targetCMTime = seek.target.resolve(
-                currentTime: player.currentTime(),
-                duration: currentItem.duration,
-                preferredTimescale: timescale,
-                clampToDuration: true
-            )
-        else {
-            completion(false)
+        // Resolve target to CMTime using unified AKSeekTarget resolve
+        guard let targetCMTime = seek.target.resolve(
+            currentTime: player.currentTime(),
+            duration: currentItem.duration,
+            preferredTimescale: timescale,
+            clampToDuration: true
+        ) else {
+            activeSeek = nil
+            requestedSeekTarget = nil
+            seek.complete(with: false)
             return
         }
         
@@ -169,14 +166,14 @@ public class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServ
         for completedSeek: AKSeek,
         finished: Bool
     ) {
-        guard activeSeek == completedSeek else { return }
-        
-        completedSeek.completionHandler?(finished)
-        activeSeek = nil
+        if activeSeek == completedSeek {
+            activeSeek = nil
+        }
+        completedSeek.complete(with: finished)
         
         if !pendingSeeks.isEmpty {
             performNextSeek()
-        } else {
+        } else if activeSeek == nil {
             requestedSeekTarget = nil
         }
     }

@@ -1,9 +1,15 @@
+//
+//   AKPlayerInterstitialService.swift
+//   AKPlayer
+//
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
+//
+
 import AVFoundation
-import Combine
 import Foundation
 
-@MainActor
-public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialServiceProtocol {
+public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialServiceProtocol, @unchecked Sendable {
     
     public var events: AsyncStream<AKInterstitialEvent> {
         eventBroadcaster.makeStream()
@@ -59,13 +65,22 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private let eventBroadcaster = AKEventBroadcaster<AKInterstitialEvent>()
     
     private var progressObserverToken: Any?
-    private var cancellables = Set<AnyCancellable>()
-    private var timelineCancellables = Set<AnyCancellable>()
-    private var interstitialStatusObservations = Set<AnyCancellable>()
+    
+    private var playerObservations: [NSKeyValueObservation] = []
+    private var timelineObservations: [NSKeyValueObservation] = []
+    private var interstitialStatusObservations: [NSKeyValueObservation] = []
+    
+    private var currentEventTask: Task<Void, Never>?
+    private var scheduleEventsTask: Task<Void, Never>?
+    private var timelineEventsTask: Task<Void, Never>?
+    private var timelineTimerTask: Task<Void, Never>?
     
     private var lastStartedEvent: AVPlayerInterstitialEvent?
     
     public init(with player: AVPlayer) {
+        defer {
+            AKLogger.logInit(self)
+        }
         self.primaryPlayer = player
         super.init()
         
@@ -76,72 +91,106 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
     
     deinit {
-        // removeProgressObserver()
+        playerObservations.removeAll()
+        timelineObservations.removeAll()
+        interstitialStatusObservations.removeAll()
+        currentEventTask?.cancel()
+        currentEventTask = nil
+        scheduleEventsTask?.cancel()
+        scheduleEventsTask = nil
+        timelineEventsTask?.cancel()
+        timelineEventsTask = nil
+        timelineTimerTask?.cancel()
+        timelineTimerTask = nil
         eventBroadcaster.finish()
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     public func stopObserving() {
         stopObservingTimeline()
         removeProgressObserver()
-        cancellables.removeAll()
+        playerObservations.removeAll()
+        currentEventTask?.cancel()
+        currentEventTask = nil
+        scheduleEventsTask?.cancel()
+        scheduleEventsTask = nil
         interstitialStatusObservations.removeAll()
     }
     
     private func stopObservingTimeline() {
-        timelineCancellables.removeAll()
+        timelineObservations.removeAll()
+        timelineEventsTask?.cancel()
+        timelineEventsTask = nil
+        timelineTimerTask?.cancel()
+        timelineTimerTask = nil
         currentItem = nil
         resetTimelineMetrics()
     }
     
     private func setupObservers() {
-        guard let monitor else { return }
+        guard let primaryPlayer, let monitor else { return }
         
-        primaryPlayer?
-            .publisher(for: \.currentItem)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newItem in
-                guard let self else { return }
-                guard let newItem else {
-                    self.stopObservingTimeline()
-                    return
+        // 1. Observe primary player's current item via KVO
+        playerObservations.append(
+            primaryPlayer.observe(\.currentItem, options: [.initial, .new]) { [weak self] player, _ in
+                let newItem = player.currentItem
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    guard let newItem else {
+                        self.stopObservingTimeline()
+                        return
+                    }
+                    self.handleItemChanged(newItem)
                 }
-                self.handleItemChanged(newItem)
             }
-            .store(in: &cancellables)
+        )
         
-        NotificationCenter.default
-            .publisher(for: AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification, object: monitor)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.handleCurrentEventDidChange()
+        // 2. Observe Interstitial Event Monitor notifications
+        currentEventTask?.cancel()
+        currentEventTask = Task { [weak self, weak monitor] in
+            guard let monitor else { return }
+            for await _ in NotificationCenter.default.notifications(
+                named: AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification,
+                object: monitor
+            ) {
+                guard !Task.isCancelled, let self else { break }
+                self.handleCurrentEventDidChange()
             }
-            .store(in: &cancellables)
+        }
         
-        NotificationCenter.default
-            .publisher(for: AVPlayerInterstitialEventMonitor.eventsDidChangeNotification, object: monitor)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.handleScheduleDidChange()
+        scheduleEventsTask?.cancel()
+        scheduleEventsTask = Task { [weak self, weak monitor] in
+            guard let monitor else { return }
+            for await _ in NotificationCenter.default.notifications(
+                named: AVPlayerInterstitialEventMonitor.eventsDidChangeNotification,
+                object: monitor
+            ) {
+                guard !Task.isCancelled, let self else { break }
+                self.handleScheduleDidChange()
             }
-            .store(in: &cancellables)
+        }
     }
     
     private func handleItemChanged(_ newItem: AVPlayerItem) {
         stopObservingTimeline()
         currentItem = newItem
         
-        newItem.publisher(for: \.status)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self, weak newItem] status in
-                guard let self, let newItem, self.currentItem === newItem else { return }
-                
-                if status == .readyToPlay {
-                    self.setupIntegratedTimelineObservation(for: newItem)
-                } else if status == .failed {
-                    self.stopObservingTimeline()
+        timelineObservations.append(
+            newItem.observe(\.status, options: [.initial, .new]) { [weak self, weak newItem] item, _ in
+                let status = item.status
+                Task { @MainActor [weak self, weak newItem] in
+                    guard let self, let activeItem = newItem, self.currentItem === activeItem else { return }
+                    if status == .readyToPlay {
+                        self.setupIntegratedTimelineObservation(for: activeItem)
+                    } else if status == .failed {
+                        self.stopObservingTimeline()
+                    }
                 }
             }
-            .store(in: &timelineCancellables)
+        )
     }
     
     private func setupIntegratedTimelineObservation(for item: AVPlayerItem) {
@@ -149,22 +198,27 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         
         syncSnapshot(timeline.currentSnapshot)
         
-        NotificationCenter.default
-            .publisher(for: AVPlayerItemIntegratedTimeline.snapshotsOutOfSyncNotification, object: timeline)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self, weak item] _ in
-                guard let self, let activeItem = item, self.currentItem === activeItem else { return }
+        timelineEventsTask?.cancel()
+        timelineEventsTask = Task { [weak self, weak item, weak timeline] in
+            guard let timeline else { return }
+            for await _ in NotificationCenter.default.notifications(
+                named: AVPlayerItemIntegratedTimeline.snapshotsOutOfSyncNotification,
+                object: timeline
+            ) {
+                guard !Task.isCancelled, let self, let activeItem = item, self.currentItem === activeItem else { break }
                 self.syncSnapshot(activeItem.integratedTimeline.currentSnapshot)
                 self.emit(.integratedTimeline(.snapshotOutOfSync))
             }
-            .store(in: &timelineCancellables)
+        }
         
-        Timer.publish(every: 0.25, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self, weak item] _ in
-                guard let self, let activeItem = item, self.currentItem === activeItem else { return }
+        timelineTimerTask?.cancel()
+        timelineTimerTask = Task { [weak self, weak item] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled, let self, let activeItem = item, self.currentItem === activeItem else { break }
+                
                 let time = activeItem.integratedTimeline.currentTime.seconds
-                guard !time.isNaN, !time.isInfinite else { return }
+                guard !time.isNaN, !time.isInfinite else { continue }
                 
                 self.integratedTimelineCurrentTime = time
                 self.emit(.integratedTimeline(.timeUpdated(
@@ -173,7 +227,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                     duration: self.integratedTimelineDuration
                 )))
             }
-            .store(in: &timelineCancellables)
+        }
     }
     
     private func handleCurrentEventDidChange() {
@@ -433,42 +487,47 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         guard let player = monitor?.interstitialPlayer else { return }
         
         // timeControlStatus
-        player.publisher(for: \.timeControlStatus)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.updatePlaybackState()
+        interstitialStatusObservations.append(
+            player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] _, _ in
+                Task { @MainActor [weak self] in
+                    self?.updatePlaybackState()
+                }
             }
-            .store(in: &interstitialStatusObservations)
+        )
         
-        // current item buffer flags
-        player.publisher(for: \.currentItem)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] item in
-                self?.observeItemBufferFlags(item)
-                self?.updatePlaybackState()
+        // currentItem
+        interstitialStatusObservations.append(
+            player.observe(\.currentItem, options: [.initial, .new]) { [weak self] observedPlayer, _ in
+                let newItem = observedPlayer.currentItem
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.observeItemBufferFlags(newItem)
+                    self.updatePlaybackState()
+                }
             }
-            .store(in: &interstitialStatusObservations)
+        )
     }
     
     private func observeItemBufferFlags(_ item: AVPlayerItem?) {
-        // Clear previous item observers by recreating the set is already handled
-        // when we call startObserving… again. Just observe the new item.
         guard let item else { return }
         
-        item.publisher(for: \.isPlaybackLikelyToKeepUp)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.updatePlaybackState() }
-            .store(in: &interstitialStatusObservations)
+        interstitialStatusObservations.append(
+            item.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor [weak self] in self?.updatePlaybackState() }
+            }
+        )
         
-        item.publisher(for: \.isPlaybackBufferEmpty)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.updatePlaybackState() }
-            .store(in: &interstitialStatusObservations)
+        interstitialStatusObservations.append(
+            item.observe(\.isPlaybackBufferEmpty, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor [weak self] in self?.updatePlaybackState() }
+            }
+        )
         
-        item.publisher(for: \.status)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.updatePlaybackState() }
-            .store(in: &interstitialStatusObservations)
+        interstitialStatusObservations.append(
+            item.observe(\.status, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor [weak self] in self?.updatePlaybackState() }
+            }
+        )
     }
     
     private func stopObservingInterstitialPlaybackState() {
@@ -513,6 +572,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private func setPlaybackState(_ newState: AKInterstitialPlaybackState) {
         guard playbackState != newState else { return }
         playbackState = newState
-        emit(.playbackStateDidChange(newState))   // add this case to AKInterstitialEvent
+        emit(.playbackStateDidChange(newState))
     }
 }

@@ -519,7 +519,6 @@ public struct SimpleVideoPlayerView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 viewModel.stop()
-                viewModel.player.stop()
                 dismiss()
             } label: {
                 Image(systemName: "xmark")

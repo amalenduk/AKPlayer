@@ -9,69 +9,48 @@
 // Ref: https://developer.apple.com/documentation/avfaudio/avaudiosession/1616540-mediaserviceswereresetnotificati
 
 import AVFoundation
-import Combine
-
-// MARK: - AKAudioSessionMediaServicesResetObserverDelegate
-
-/// A delegate protocol for receiving callbacks when system media services have
-/// been reset.
-@MainActor
-public protocol AKAudioSessionMediaServicesResetObserverDelegate: AnyObject {
-    /// Informs the delegate that audio media services were reset for the
-    /// specified audio session.
-    /// - Parameters:
-    ///   - observer: The media services reset observer reporting the event.
-    ///   - audioSession: The active `AVAudioSession` instance affected by the
-    /// media services reset.
-    func audioSessionMediaServicesResetObserver(
-        _ observer: AKAudioSessionMediaServicesWereResetObserverProtocol,
-        mediaServicesWereResetFor audioSession: AVAudioSession
-    )
-}
+import Foundation
+import Synchronization
 
 // MARK: - AKAudioSessionMediaServicesWereResetObserverProtocol
 
-/// A protocol defining requirements for observing audio media services reset
-/// events using Combine.
-@MainActor
-public protocol AKAudioSessionMediaServicesWereResetObserverProtocol: AnyObject {
+/// A protocol defining requirements for observing audio media services reset events.
+public protocol AKAudioSessionMediaServicesWereResetObserverProtocol: AnyObject, Sendable {
     /// The target `AVAudioSession` instance being monitored.
     var audioSession: AVAudioSession { get }
 
-    /// The delegate object notified when media services are reset.
-    var delegate: AKAudioSessionMediaServicesResetObserverDelegate? { get set }
+    /// Asynchronous stream emitting signals when media services are reset.
+    var events: AsyncStream<Void> { get }
 
     /// Begins observing system-level media services reset notifications.
     func startObserving()
 
-    /// Stops monitoring media services reset notifications and clears active
-    /// Combine subscriptions.
+    /// Stops monitoring media services reset notifications and clears active tasks.
     func stopObserving()
 }
 
 // MARK: - AKAudioSessionMediaServicesWereResetObserver
 
-/// A concrete implementation of
-/// `AKAudioSessionMediaServicesWereResetObserverProtocol` utilizing Combine to
-/// monitor `AVAudioSession.mediaServicesWereResetNotification`.
-@MainActor
-public class AKAudioSessionMediaServicesWereResetObserver:
-    AKAudioSessionMediaServicesWereResetObserverProtocol
+/// A thread-safe observer class responsible for monitoring `AVAudioSession.mediaServicesWereResetNotification`
+/// and broadcasting events via `AsyncStream`.
+public final class AKAudioSessionMediaServicesWereResetObserver:
+    AKAudioSessionMediaServicesWereResetObserverProtocol, Sendable
 {
     // MARK: - Properties
 
     /// The `AVAudioSession` instance managed by this observer.
     public let audioSession: AVAudioSession
 
-    /// The delegate object notified of media services reset callbacks.
-    public weak var delegate: AKAudioSessionMediaServicesResetObserverDelegate?
+    /// Broadcaster managing the asynchronous stream of media services reset events.
+    private let eventBroadcaster = AKEventBroadcaster<Void>()
 
-    /// A Boolean flag tracking whether notification subscriptions are currently
-    /// active.
-    private var isObserving = false
+    /// Asynchronous stream of media services reset events for Swift Concurrency.
+    public var events: AsyncStream<Void> {
+        eventBroadcaster.makeStream()
+    }
 
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
+    /// Mutex protecting the active notification observation task.
+    private let observationTask = Mutex<Task<Void, Never>?>(nil)
 
     // MARK: - Init & Deinit
 
@@ -81,46 +60,35 @@ public class AKAudioSessionMediaServicesWereResetObserver:
         self.audioSession = audioSession
     }
 
-    deinit {}
+    deinit {
+        stopObserving()
+        eventBroadcaster.finish()
+    }
 
     // MARK: - Observation Lifecycle
 
-    /// Starts observing audio media services reset notifications on the main
-    /// queue.
+    /// Starts observing audio media services reset notifications.
     public func startObserving() {
-        guard !isObserving else { return }
+        stopObserving()
 
-        NotificationCenter.default.publisher(
-            for: AVAudioSession.mediaServicesWereResetNotification, object: nil
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] notification in
-            guard let self else { return }
-            handleMediaServicesWereReset(notification)
+        let task = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(
+                named: AVAudioSession.mediaServicesWereResetNotification,
+                object: nil
+            ) {
+                guard !Task.isCancelled, let self else { break }
+                self.eventBroadcaster.send(())
+            }
         }
-        .store(in: &subscriptions)
 
-        isObserving = true
+        observationTask.withLock { $0 = task }
     }
 
-    /// Stops observing media services reset notifications and clears active
-    /// subscriptions.
+    /// Stops observing media services reset notifications and cancels active tasks.
     public func stopObserving() {
-        guard isObserving else { return }
-        subscriptions.removeAll()
-        isObserving = false
-    }
-
-    // MARK: - Handlers
-
-    /// Processes incoming media services were reset notifications and notifies
-    /// the delegate.
-    /// - Parameter notification: The `Notification` object posted by the
-    /// system.
-    public func handleMediaServicesWereReset(_: Notification) {
-        delegate?.audioSessionMediaServicesResetObserver(
-            self,
-            mediaServicesWereResetFor: audioSession
-        )
+        observationTask.withLock {
+            $0?.cancel()
+            $0 = nil
+        }
     }
 }

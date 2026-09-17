@@ -7,102 +7,112 @@
 //
 
 import AVFoundation
+import Foundation
 
 // MARK: - AKPlayerConfiguration
 
 /// Default concrete implementation of `AKPlayerConfigurationProtocol` providing
 /// customizable playback, buffering, and audio session options.
-public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable {
+public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Equatable, Hashable {
     
     // MARK: - Playback Observer Configurations
     
     /// The frequency interval at which periodic time observers trigger updates.
     /// Defaults to `.everyQuarterSecond`.
-    public var periodicTimeInterval: AKTimeEventFrequency = .everyQuarterSecond
+    public var periodicTimeInterval: AKTimeEventFrequency
     
     /// The preferred timescale used when calculating time observations.
     /// Defaults to nanosecond precision (`NSEC_PER_SEC`).
-    public var preferredTimeScale: CMTimeScale = .init(NSEC_PER_SEC)
+    public var preferredTimeScale: CMTimeScale
     
     /// The offset multiplier applied when calculating boundary time observer
     /// positions relative to media duration. Defaults to `0.10`.
-    public var boundaryTimeObserverMultiplier = 0.10
+    public var boundaryTimeObserverMultiplier: Double
     
     // MARK: - Buffer Management Configurations
     
     /// The maximum duration in seconds the player waits for buffering before
     /// triggering a timeout error. Defaults to `20` seconds.
-    public var bufferObservingTimeout: TimeInterval = 20
+    public var bufferObservingTimeout: TimeInterval
     
     /// The polling time interval in seconds used to check current buffer
     /// status. Defaults to `0.05` seconds.
-    public var bufferObservingTimeInterval: TimeInterval = 0.05
+    public var bufferObservingTimeInterval: TimeInterval
     
     // MARK: - Audio Session Configurations
     
     /// The configuration parameters applied to the system audio session
     /// service.
-    public var audioSession: AKAudioSessionConfiguration = .init()
+    public var audioSession: AKAudioSessionConfiguration
     
     // MARK: - System Integration Configurations
     
     /// Indicates whether Now Playing metadata integration with
     /// `MPNowPlayingInfoCenter` and remote commands is enabled. Defaults to
     /// `true`.
-    public var isNowPlayingEnabled = true
+    public var isNowPlayingEnabled: Bool
     
     /// The list of player states during which the system idle timer (screen
     /// sleep) is disabled. Defaults to `[.buffering, .playing]`.
-    public var idleTimerDisabledForStates: [AKPlayerState] = [
-        .buffering,
-        .playing,
-    ]
+    public var idleTimerDisabledForStates: [AKPlayerState]
     
     // MARK: - Lifecycle Behavior Configurations
     
     /// Specifies whether playback automatically pauses when the application
     /// resigns active status. Defaults to `false`.
-    public var playbackPausesWhenResigningActive = false
+    public var playbackPausesWhenResigningActive: Bool
     
     /// Specifies whether playback automatically pauses when the application
     /// enters the background. Defaults to `false`.
-    public var playbackPausesWhenBackgrounded = false
+    public var playbackPausesWhenBackgrounded: Bool
     
     /// Specifies whether playback automatically resumes when the application
     /// returns to active status. Defaults to `true`.
-    public var playbackResumesWhenBecameActive = true
+    public var playbackResumesWhenBecameActive: Bool
     
     /// Specifies whether playback automatically resumes when the application
     /// enters the foreground. Defaults to `true`.
-    public var playbackResumesWhenEnteringForeground = true
+    public var playbackResumesWhenEnteringForeground: Bool
     
     /// Specifies whether playback automatically resumes after an audio session
     /// interruption ends. Defaults to `true`.
-    public var playbackResumesWhenAudioSessionInterruptionEnded = true
+    public var playbackResumesWhenAudioSessionInterruptionEnded: Bool
     
     /// Specifies whether playback freezes on the final video frame upon
     /// reaching media end instead of auto-resetting. Defaults to `true`.
-    public var playbackFreezesAtEnd = true
+    public var playbackFreezesAtEnd: Bool
     
     // MARK: - Speed Configurations
     
     /// The default speed multiplier used when fast-forwarding playback.
     /// Defaults to `.superfast`.
-    public var fastForwardRate: AKPlaybackRate = .superfast
+    public var fastForwardRate: AKPlaybackRate
     
     /// The default speed multiplier used when rewinding playback. Defaults to
     /// `.slowest`.
-    public var rewindRate: AKPlaybackRate = .slowest
+    public var rewindRate: AKPlaybackRate
     
-    public var maxBufferRetryCount: Int = 4
+    // MARK: - Network & Stall Resilience Configurations
     
-    public var waitingForNetworkBaseCooldown: TimeInterval = 2.0
+    /// The maximum number of consecutive buffer stall retry attempts before declaring failure.
+    /// Defaults to `4`.
+    public var maxBufferRetryCount: Int
     
-    public var backoffMultiplier: Double = 1.8
+    /// The initial base backoff cooldown in seconds when waiting for network reconnection.
+    /// Defaults to `2.0` seconds.
+    public var waitingForNetworkBaseCooldown: TimeInterval
     
-    public var maxWaitingForNetworkCooldown: TimeInterval = 20.0
+    /// The exponential multiplier applied to retry delay intervals during repeated network recovery cycles.
+    /// Defaults to `1.8`.
+    public var backoffMultiplier: Double
     
-    public var bufferStallTickLimit: Int = 4
+    /// The maximum ceiling in seconds for exponential backoff network delay.
+    /// Defaults to `20.0` seconds.
+    public var maxWaitingForNetworkCooldown: TimeInterval
+    
+    /// The consecutive threshold count of stalled buffer observation ticks required to trigger a stall state transition.
+    /// Defaults to `4`.
+    public var bufferStallTickLimit: Int
     
     // MARK: - Static Default Instance
     
@@ -112,7 +122,50 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable {
     
     // MARK: - Initialization
     
-    /// Creates a new player configuration instance initialized with default
-    /// parameters.
-    public init() {}
+    /// Creates a new player configuration instance with optional custom parameters.
+    public init(
+        periodicTimeInterval: AKTimeEventFrequency = .everyQuarterSecond,
+        preferredTimeScale: CMTimeScale = .init(NSEC_PER_SEC),
+        boundaryTimeObserverMultiplier: Double = 0.10,
+        bufferObservingTimeout: TimeInterval = 20,
+        bufferObservingTimeInterval: TimeInterval = 0.05,
+        audioSession: AKAudioSessionConfiguration = .init(),
+        isNowPlayingEnabled: Bool = true,
+        idleTimerDisabledForStates: [AKPlayerState] = [.buffering, .playing],
+        playbackPausesWhenResigningActive: Bool = false,
+        playbackPausesWhenBackgrounded: Bool = false,
+        playbackResumesWhenBecameActive: Bool = true,
+        playbackResumesWhenEnteringForeground: Bool = true,
+        playbackResumesWhenAudioSessionInterruptionEnded: Bool = true,
+        playbackFreezesAtEnd: Bool = true,
+        fastForwardRate: AKPlaybackRate = .superfast,
+        rewindRate: AKPlaybackRate = .slowest,
+        maxBufferRetryCount: Int = 4,
+        waitingForNetworkBaseCooldown: TimeInterval = 2.0,
+        backoffMultiplier: Double = 1.8,
+        maxWaitingForNetworkCooldown: TimeInterval = 20.0,
+        bufferStallTickLimit: Int = 4
+    ) {
+        self.periodicTimeInterval = periodicTimeInterval
+        self.preferredTimeScale = preferredTimeScale
+        self.boundaryTimeObserverMultiplier = boundaryTimeObserverMultiplier
+        self.bufferObservingTimeout = bufferObservingTimeout
+        self.bufferObservingTimeInterval = bufferObservingTimeInterval
+        self.audioSession = audioSession
+        self.isNowPlayingEnabled = isNowPlayingEnabled
+        self.idleTimerDisabledForStates = idleTimerDisabledForStates
+        self.playbackPausesWhenResigningActive = playbackPausesWhenResigningActive
+        self.playbackPausesWhenBackgrounded = playbackPausesWhenBackgrounded
+        self.playbackResumesWhenBecameActive = playbackResumesWhenBecameActive
+        self.playbackResumesWhenEnteringForeground = playbackResumesWhenEnteringForeground
+        self.playbackResumesWhenAudioSessionInterruptionEnded = playbackResumesWhenAudioSessionInterruptionEnded
+        self.playbackFreezesAtEnd = playbackFreezesAtEnd
+        self.fastForwardRate = fastForwardRate
+        self.rewindRate = rewindRate
+        self.maxBufferRetryCount = maxBufferRetryCount
+        self.waitingForNetworkBaseCooldown = waitingForNetworkBaseCooldown
+        self.backoffMultiplier = backoffMultiplier
+        self.maxWaitingForNetworkCooldown = maxWaitingForNetworkCooldown
+        self.bufferStallTickLimit = bufferStallTickLimit
+    }
 }

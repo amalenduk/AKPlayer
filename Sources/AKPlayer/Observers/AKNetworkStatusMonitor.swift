@@ -6,15 +6,14 @@
 //   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import Combine
 import Foundation
 import Network
+import Synchronization
 
 // MARK: - AKNetworkStatusMonitorProtocol
 
 /// A contract for monitoring network status changes via NWPathMonitor.
-@MainActor
-public protocol AKNetworkStatusMonitorProtocol: AnyObject {
+public protocol AKNetworkStatusMonitorProtocol: AnyObject, Sendable {
     // MARK: - Properties
     
     /// The current network path object.
@@ -23,47 +22,43 @@ public protocol AKNetworkStatusMonitorProtocol: AnyObject {
     /// The current status of the network path.
     var currentNetworkStatus: NWPath.Status { get }
     
-    /// A convenience boolean indicating if the network status is currently
-    /// satisfied.
+    /// A convenience boolean indicating if the network status is currently satisfied.
     var isConnected: Bool { get }
     
-    /// A publisher emitting network status changes.
-    var networkStatusPublisher: AnyPublisher<NWPath.Status, Never> { get }
+    /// An asynchronous stream emitting network status changes.
+    var networkStatus: AsyncStream<NWPath.Status> { get }
     
     // MARK: - Methods
     
     /// Begins observing network status updates.
     func startObserving()
     
-    /// Stops observing network status updates and cleans up monitoring
-    /// resources.
+    /// Stops observing network status updates and cleans up monitoring resources.
     func stopObserving()
 }
 
 // MARK: - AKNetworkStatusMonitor
 
-/// A monitor class responsible for tracking network connectivity changes using
-/// `NWPathMonitor`
-/// and exposing status updates through Combine publishers on the main thread.
-@MainActor
-public class AKNetworkStatusMonitor: AKNetworkStatusMonitorProtocol {
-    // MARK: - Properties
+/// A thread-safe monitor class responsible for tracking network connectivity changes using `NWPathMonitor`
+/// and exposing status updates through `AsyncStream`.
+public final class AKNetworkStatusMonitor: AKNetworkStatusMonitorProtocol, Sendable {
+    // MARK: - State
     
-    /// Opaque reference to system path monitor.
-    /// Marked `nonisolated(unsafe)` to permit cancellation during `deinit`.
-    private nonisolated(unsafe) var networkPathMonitor: NWPathMonitor?
+    private struct State {
+        var networkPathMonitor: NWPathMonitor?
+        var isObserving = false
+        var latestPath: NWPath?
+    }
     
-    private var isObserving = false
+    private let state = Mutex(State())
+    
     private let monitorQueue = DispatchQueue(
         label: "com.akplayer.networkmonitor",
         qos: .utility
     )
     
-    /// Track the latest confirmed path state safely.
-    private var latestPath: NWPath?
-    
     public var currentPath: NWPath? {
-        networkPathMonitor?.currentPath ?? latestPath
+        state.withLock { $0.networkPathMonitor?.currentPath ?? $0.latestPath }
     }
     
     public var currentNetworkStatus: NWPath.Status {
@@ -74,15 +69,10 @@ public class AKNetworkStatusMonitor: AKNetworkStatusMonitorProtocol {
         currentNetworkStatus == .satisfied
     }
     
-    private let networkStatusSubject = CurrentValueSubject<
-        NWPath.Status,
-        Never
-    >(.requiresConnection)
+    private let eventBroadcaster = AKEventBroadcaster<NWPath.Status>()
     
-    public var networkStatusPublisher: AnyPublisher<NWPath.Status, Never> {
-        networkStatusSubject
-            .removeDuplicates()
-            .eraseToAnyPublisher()
+    public var networkStatus: AsyncStream<NWPath.Status> {
+        eventBroadcaster.makeStream()
     }
     
     // MARK: - Init & Deinit
@@ -91,39 +81,52 @@ public class AKNetworkStatusMonitor: AKNetworkStatusMonitorProtocol {
     public init() {}
     
     deinit {
-        networkPathMonitor?.pathUpdateHandler = nil
-        networkPathMonitor?.cancel()
-        networkPathMonitor = nil
+        let oldMonitor = state.withLock { s -> NWPathMonitor? in
+            let m = s.networkPathMonitor
+            s.networkPathMonitor = nil
+            s.isObserving = false
+            return m
+        }
+        oldMonitor?.pathUpdateHandler = nil
+        oldMonitor?.cancel()
+        eventBroadcaster.finish()
     }
     
     // MARK: - Control Methods
     
     /// Starts observing network path changes.
     public func startObserving() {
-        guard !isObserving else { return }
+        let shouldStart = state.withLock { s -> Bool in
+            guard !s.isObserving else { return false }
+            s.isObserving = true
+            return true
+        }
+        
+        guard shouldStart else { return }
         
         let monitor = NWPathMonitor()
         
         monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.latestPath = path
-                self.networkStatusSubject.send(path.status)
-            }
+            guard let self else { return }
+            self.state.withLock { $0.latestPath = path }
+            self.eventBroadcaster.send(path.status)
         }
         
-        networkPathMonitor = monitor
+        state.withLock { $0.networkPathMonitor = monitor }
         monitor.start(queue: monitorQueue)
-        isObserving = true
     }
     
     /// Stops observing network path changes and cancels the path monitor.
     public func stopObserving() {
-        guard isObserving else { return }
+        let oldMonitor = state.withLock { s -> NWPathMonitor? in
+            guard s.isObserving else { return nil }
+            let m = s.networkPathMonitor
+            s.networkPathMonitor = nil
+            s.isObserving = false
+            return m
+        }
         
-        networkPathMonitor?.pathUpdateHandler = nil
-        networkPathMonitor?.cancel()
-        networkPathMonitor = nil
-        isObserving = false
+        oldMonitor?.pathUpdateHandler = nil
+        oldMonitor?.cancel()
     }
 }

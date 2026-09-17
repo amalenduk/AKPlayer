@@ -1,14 +1,15 @@
 //
-//  AKPlayerInterstitialDelegate.swift
+//  AKInterstitialScheduleConfig.swift
 //  AKPlayer
 //
-//  Created by Amalendu Kar on 10/09/26.
+//  Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//  Licensed under the MIT license. See LICENSE file in the project root.
 //
 
 import AVFoundation
 import CoreMedia
 
-public struct AKInterstitialScheduleConfig {
+public struct AKInterstitialScheduleConfig: @unchecked Sendable {
     public var time: CMTime
     public var templateItems: [AVPlayerItem]
     public var identifier: String?

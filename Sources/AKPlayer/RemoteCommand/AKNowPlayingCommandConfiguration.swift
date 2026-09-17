@@ -20,9 +20,8 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     /// Unique set of remote commands added to this configuration.
     private var commands: Set<AKRemoteCommand> = []
 
-    /// Map tracking enablement state for registered commands indexed by command
-    /// key.
-    private var commandEnablementMap: [String: Bool] = [:]
+    /// Map tracking enablement state for registered commands.
+    private var commandEnablementMap: [AKRemoteCommand: Bool] = [:]
 
     /// Dictionary mapping explicit remote commands to their custom handlers.
     private var customHandlers: [AKRemoteCommand: AKRemoteCommandHandler] = [:]
@@ -41,7 +40,7 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     public func add(_ command: AKRemoteCommand) -> Self {
         var copy = self
         copy.commands.insert(command)
-        copy.commandEnablementMap[command.hashKey] = true
+        copy.commandEnablementMap[command] = true
         return copy
     }
 
@@ -64,7 +63,7 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     public func remove(_ command: AKRemoteCommand) -> Self {
         var copy = self
         copy.commands.remove(command)
-        copy.commandEnablementMap.removeValue(forKey: command.hashKey)
+        copy.commandEnablementMap.removeValue(forKey: command)
         copy.customHandlers.removeValue(forKey: command)
         return copy
     }
@@ -138,7 +137,8 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     @discardableResult
     public func enable(_ command: AKRemoteCommand) -> Self {
         var copy = self
-        copy.commandEnablementMap[command.hashKey] = true
+        copy.commands.insert(command)
+        copy.commandEnablementMap[command] = true
         return copy
     }
 
@@ -160,7 +160,8 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     @discardableResult
     public func disable(_ command: AKRemoteCommand) -> Self {
         var copy = self
-        copy.commandEnablementMap[command.hashKey] = false
+        copy.commands.insert(command)
+        copy.commandEnablementMap[command] = false
         return copy
     }
 
@@ -190,7 +191,7 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
         copy.customHandlers[command] = handler
         if !copy.commands.contains(command) {
             copy.commands.insert(command)
-            copy.commandEnablementMap[command.hashKey] = true
+            copy.commandEnablementMap[command] = true
         }
         return copy
     }
@@ -215,12 +216,12 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
 
     /// Returns an array containing only currently enabled commands.
     public var enabledCommands: [AKRemoteCommand] {
-        commands.filter { commandEnablementMap[$0.hashKey] ?? false }
+        commands.filter { commandEnablementMap[$0] ?? false }
     }
 
     /// Returns an array containing only currently disabled commands.
     public var disabledCommands: [AKRemoteCommand] {
-        commands.filter { !(commandEnablementMap[$0.hashKey] ?? false) }
+        commands.filter { !(commandEnablementMap[$0] ?? false) }
     }
 
     /// Retrieves the registered custom handler for a given command.
@@ -236,7 +237,7 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     /// - Parameter command: Target command to inspect.
     /// - Returns: `true` if configured and enabled; otherwise `false`.
     public func isEnabled(_ command: AKRemoteCommand) -> Bool {
-        commandEnablementMap[command.hashKey] ?? false
+        commandEnablementMap[command] ?? false
     }
 }
 

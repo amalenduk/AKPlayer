@@ -7,97 +7,84 @@
 //
 
 import AVFoundation
+import Foundation
 
 // MARK: - AKMediaMetadata
 
-/// A model representing metadata extracted from media assets using common
-/// metadata identifiers.
-///
-/// Ref:
-/// https://developer.apple.com/documentation/avfoundation/avmetadataidentifier
-public struct AKMediaMetadata {
+/// A model representing metadata extracted from media assets using common metadata identifiers.
+public struct AKMediaMetadata: Equatable, Sendable {
     // MARK: - Properties
 
-    /// Accessibility description metadata.
-    public private(set) var accessibilityDescription: String?
-
-    /// The title of the album associated with the media.
-    public private(set) var albumName: String?
-
-    /// The primary artist or performer.
-    public private(set) var artist: String?
-
-    /// Raw artwork image data.
-    public private(set) var artwork: Data?
-
-    /// Author of the content.
-    public private(set) var author: String?
-
-    /// Secondary contributors to the media item.
-    public private(set) var contributor: String?
-
-    /// Copyright statement or notice.
-    public private(set) var copyrights: String?
-
-    /// Creation timestamp or date string.
-    public private(set) var creationDate: String?
-
-    /// Creator of the asset.
-    public private(set) var creator: String?
-
-    /// Summary or description of the content.
-    public private(set) var description: String?
-
-    /// Format specification of the media item.
-    public private(set) var format: String?
-
-    /// Language code or specification.
-    public private(set) var language: String?
-
-    /// Last modification timestamp or date string.
-    public private(set) var lastModifiedDate: String?
-
-    /// Geographical location metadata.
-    public private(set) var location: String?
-
-    /// Device make or manufacturer.
-    public private(set) var make: String?
-
-    /// Device model name or number.
-    public private(set) var model: String?
-
-    /// Publishing entity or label.
-    public private(set) var publisher: String?
-
-    /// Related resource or reference metadata.
-    public private(set) var relation: String?
-
-    /// Software or application used to produce the media.
-    public private(set) var software: String?
-
-    /// Source origin of the media item.
-    public private(set) var source: String?
-
-    /// Subject matter classification.
-    public private(set) var subject: String?
-
-    /// Title of the media asset.
-    public private(set) var title: String?
-
-    /// Type descriptor or media category.
-    public private(set) var type: String?
-
-    /// Array of raw `AVMetadataItem` objects representing the common metadata
-    /// set.
-    public private(set) var commonMetadata: [AVMetadataItem]?
+    public var accessibilityDescription: String?
+    public var albumName: String?
+    public var artist: String?
+    public var artwork: Data?
+    public var author: String?
+    public var contributor: String?
+    public var copyrights: String?
+    public var creationDate: String?
+    public var creator: String?
+    public var description: String?
+    public var format: String?
+    public var language: String?
+    public var lastModifiedDate: String?
+    public var location: String?
+    public var make: String?
+    public var model: String?
+    public var publisher: String?
+    public var relation: String?
+    public var software: String?
+    public var source: String?
+    public var title: String?
+    public var type: String?
 
     // MARK: - Initialization
 
-    /// Initializes a metadata instance with an array of `AVMetadataItem`
-    /// objects.
-    /// - Parameter commonMetadata: The collection of metadata items retrieved
-    /// from an asset.
-    public init(with commonMetadata: [AVMetadataItem]) {
-        self.commonMetadata = commonMetadata
+    public init(
+        accessibilityDescription: String? = nil,
+        albumName: String? = nil,
+        artist: String? = nil,
+        artwork: Data? = nil,
+        author: String? = nil,
+        contributor: String? = nil,
+        copyrights: String? = nil,
+        creationDate: String? = nil,
+        creator: String? = nil,
+        description: String? = nil,
+        format: String? = nil,
+        language: String? = nil,
+        lastModifiedDate: String? = nil,
+        location: String? = nil,
+        make: String? = nil,
+        model: String? = nil,
+        publisher: String? = nil,
+        relation: String? = nil,
+        software: String? = nil,
+        source: String? = nil,
+        title: String? = nil,
+        type: String? = nil
+    ) {
+        self.accessibilityDescription = accessibilityDescription
+        self.albumName = albumName
+        self.artist = artist
+        self.artwork = artwork
+        self.author = author
+        self.contributor = contributor
+        self.copyrights = copyrights
+        self.creationDate = creationDate
+        self.creator = creator
+        self.description = description
+        self.format = format
+        self.language = language
+        self.lastModifiedDate = lastModifiedDate
+        self.location = location
+        self.make = make
+        self.model = model
+        self.publisher = publisher
+        self.relation = relation
+        self.software = software
+        self.source = source
+        self.title = title
+        self.type = type
     }
 }

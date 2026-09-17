@@ -1,19 +1,12 @@
-//
-//   AKSeek.swift
-//   AKPlayer
-//
-//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
-//   Licensed under the MIT license. See LICENSE file in the project root.
-//
-
 import CoreMedia
 import Foundation
+import Synchronization
 
 // MARK: - AKSeek
 
 /// Represents a media seek command containing the target position, tolerances,
-/// and completion callback.
-public struct AKSeek: Equatable, Hashable, Identifiable, Sendable {
+/// and completion callback, guaranteeing single-execution safety.
+public final class AKSeek: Equatable, Hashable, Identifiable, @unchecked Sendable {
     // MARK: - Properties
 
     /// Unique identifier for this specific seek request.
@@ -22,18 +15,14 @@ public struct AKSeek: Equatable, Hashable, Identifiable, Sendable {
     /// The target playback position.
     public let target: AKSeekTarget
 
-    /// The maximum allowable time before the target time that the player may
-    /// seek.
+    /// The maximum allowable time before the target time that the player may seek.
     public let toleranceBefore: CMTime
 
-    /// The maximum allowable time after the target time that the player may
-    /// seek.
+    /// The maximum allowable time after the target time that the player may seek.
     public let toleranceAfter: CMTime
 
-    /// A completion handler invoked when the seek operation finishes or is
-    /// canceled.
-    /// Matches AVPlayer's native @Sendable closure signature.
-    public let completionHandler: (@Sendable (Bool) -> Void)?
+    /// Internal thread-safe storage for the completion handler, cleared upon invocation.
+    private let completionStorage: Mutex<(@Sendable (Bool) -> Void)?>
 
     // MARK: - Initialization
 
@@ -41,12 +30,9 @@ public struct AKSeek: Equatable, Hashable, Identifiable, Sendable {
     /// - Parameters:
     ///   - id: Unique identifier for this request. Defaults to a new `UUID()`.
     ///   - target: The target position to seek to.
-    ///   - toleranceBefore: Tolerance before the target position. Defaults to
-    /// `.positiveInfinity`.
-    ///   - toleranceAfter: Tolerance after the target position. Defaults to
-    /// `.positiveInfinity`.
-    ///   - completionHandler: Callback executed when seeking completes or is
-    /// canceled.
+    ///   - toleranceBefore: Tolerance before the target position. Defaults to `.positiveInfinity`.
+    ///   - toleranceAfter: Tolerance after the target position. Defaults to `.positiveInfinity`.
+    ///   - completionHandler: Callback executed when seeking completes or is canceled.
     public init(
         id: UUID = UUID(),
         target: AKSeekTarget,
@@ -58,7 +44,20 @@ public struct AKSeek: Equatable, Hashable, Identifiable, Sendable {
         self.target = target
         self.toleranceBefore = toleranceBefore
         self.toleranceAfter = toleranceAfter
-        self.completionHandler = completionHandler
+        self.completionStorage = Mutex(completionHandler)
+    }
+
+    // MARK: - Completion Execution
+
+    /// Invokes the completion handler with the given result.
+    /// Guarantees that the completion handler is called at most once.
+    public func complete(with result: Bool) {
+        let handler = completionStorage.withLock { storage in
+            let action = storage
+            storage = nil
+            return action
+        }
+        handler?(result)
     }
 
     // MARK: - Equatable & Hashable

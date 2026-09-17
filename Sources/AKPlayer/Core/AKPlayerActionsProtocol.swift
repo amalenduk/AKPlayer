@@ -14,7 +14,7 @@ import Foundation
 /// Protocol defining core player user action interface commands, including
 /// media loading, playback state controls, seeking, and frame navigation.
 @MainActor
-public protocol AKPlayerActionsProtocol {
+public protocol AKPlayerActionsProtocol: Sendable {
     // MARK: - Loading Media
 
     /// Loads a playable media item into the player pipeline with optional

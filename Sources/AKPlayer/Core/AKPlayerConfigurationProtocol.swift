@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import Foundation
 
 // MARK: - AKAudioSessionConfiguration
 
@@ -33,8 +34,43 @@ public struct AKAudioSessionConfiguration: Sendable {
     
     // MARK: - Initialization
     
-    /// Initializes a new audio session configuration with default options.
-    public init() {}
+    /// Initializes a new audio session configuration with customizable options.
+    /// - Parameters:
+    ///   - category: The audio session category. Defaults to `.playback`.
+    ///   - activeOptions: Options applied during session activation/deactivation. Defaults to `[]`.
+    ///   - mode: The intended operational audio session mode. Defaults to `.default`.
+    ///   - categoryOptions: Options refining audio category behavior. Defaults to `[]`.
+    public init(
+        category: AVAudioSession.Category = .playback,
+        activeOptions: AVAudioSession.SetActiveOptions = [],
+        mode: AVAudioSession.Mode = .default,
+        categoryOptions: AVAudioSession.CategoryOptions = []
+    ) {
+        self.category = category
+        self.activeOptions = activeOptions
+        self.mode = mode
+        self.categoryOptions = categoryOptions
+    }
+}
+
+// MARK: - Equatable & Hashable Conformance
+
+extension AKAudioSessionConfiguration: Equatable {
+    public static func == (lhs: AKAudioSessionConfiguration, rhs: AKAudioSessionConfiguration) -> Bool {
+        lhs.category == rhs.category &&
+        lhs.activeOptions.rawValue == rhs.activeOptions.rawValue &&
+        lhs.mode == rhs.mode &&
+        lhs.categoryOptions.rawValue == rhs.categoryOptions.rawValue
+    }
+}
+
+extension AKAudioSessionConfiguration: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(category)
+        hasher.combine(activeOptions.rawValue)
+        hasher.combine(mode)
+        hasher.combine(categoryOptions.rawValue)
+    }
 }
 
 // MARK: - AKPlayerConfigurationProtocol
@@ -113,11 +149,22 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     /// The default speed multiplier used when rewinding playback.
     var rewindRate: AKPlaybackRate { get set }
     
-    var maxBufferRetryCount: Int { get }              // e.g. 4
-    var waitingForNetworkBaseCooldown: TimeInterval { get }   // e.g. 2.0
-    var backoffMultiplier: Double { get }              // e.g. 1.8
-    var maxWaitingForNetworkCooldown: TimeInterval { get } // e.g. 20.0
-    var bufferStallTickLimit: Int { get } // e.g. 4
+    // MARK: - Network & Stall Resilience Configurations
+    
+    /// The maximum number of consecutive buffer stall retry attempts before declaring failure.
+    var maxBufferRetryCount: Int { get set }
+    
+    /// The initial base backoff cooldown in seconds when waiting for network reconnection.
+    var waitingForNetworkBaseCooldown: TimeInterval { get set }
+    
+    /// The exponential multiplier applied to retry delay intervals during repeated network recovery cycles.
+    var backoffMultiplier: Double { get set }
+    
+    /// The maximum ceiling in seconds for exponential backoff network delay.
+    var maxWaitingForNetworkCooldown: TimeInterval { get set }
+    
+    /// The consecutive threshold count of stalled buffer observation ticks required to trigger a stall state transition.
+    var bufferStallTickLimit: Int { get set }
 }
 
 // MARK: - Protocol Extension
@@ -138,7 +185,7 @@ public extension AKPlayerConfigurationProtocol {
 // MARK: - AKTimeEventFrequency
 
 /// Defines predefined time event frequency options for periodic time observers.
-public enum AKTimeEventFrequency: Sendable {
+public enum AKTimeEventFrequency: Sendable, Hashable, Equatable, CaseIterable {
     /// Fires time events every second (1.0 second).
     case everySecond
     

@@ -7,7 +7,6 @@
 //
 
 import AVFoundation
-import Combine
 import Foundation
 import Network
 
@@ -15,7 +14,7 @@ import Network
 
 /// Enumeration representing actionable playback intents evaluated by player
 /// state machine preflight checks.
-public enum AKPlayerAction: Equatable {
+public enum AKPlayerAction: Equatable, Sendable {
     case load
     case play
     case pause
@@ -161,6 +160,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     
     /// Stops playback and tears down active player pipeline.
     public func stop() {
+        guard !hasTransitioned && state != .stopped else { return }
         performIfAllowed(
             check: { availability(for: .stop) },
             action: {
@@ -179,114 +179,47 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     // MARK: 3. Seeking Through Media
     
     /// Asynchronously seeks to a given target position within current media.
-    /// - Warning: Do not call state async seek directly. Use
-    /// AKPlayerController.seek instead.
-    /// - Parameter target: The target position (`.time`, `.seconds`, `.offset`,
-    /// `.percentage`, or `.date`).
-    /// - Returns: `true` if the seek command was accepted and successfully
-    /// executed; `false` otherwise.
     @discardableResult
     public func seek(to target: AKSeekTarget) async -> Bool {
         await withCheckedContinuation { con in
-            seek(
-                to: target
-            ) { finished in
+            seek(to: target) { finished in
                 con.resume(returning: finished)
             }
         }
     }
     
-    /// Asynchronously seeks to a given target position with explicit tolerance
-    /// parameters.
-    /// - Warning: Do not call state async seek directly. Use
-    /// AKPlayerController.seek instead.
-    /// - Parameters:
-    ///   - target: The target position.
-    ///   - toleranceBefore: Acceptable time offset before the target.
-    ///   - toleranceAfter: Acceptable time offset after the target.
-    /// - Returns: `true` if the seek command was accepted and successfully
-    /// executed; `false` otherwise.
+    /// Asynchronously seeks to a given target position with explicit tolerance parameters.
     @discardableResult
     public func seek(
         to target: AKSeekTarget,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime
     ) async -> Bool {
-        await performIfAllowed(
-            check: { [unowned self] in
-                availability(for: .seek(to: target))
-            },
-            action: { [weak self] in
-                guard let self else { return false }
-                let controller = AKBufferingState(
-                    playerController: playerController,
-                    autoPlay: state.isPlaying || autoPlay
-                )
-                let success = await controller.seek(
-                    to: target,
-                    toleranceBefore: toleranceBefore,
-                    toleranceAfter: toleranceAfter
-                )
-                change(controller)
-                return success
-            },
-            blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
-            },
-            fallback: false
-        )
+        await withCheckedContinuation { con in
+            seek(
+                to: target,
+                toleranceBefore: toleranceBefore,
+                toleranceAfter: toleranceAfter
+            ) { finished in
+                con.resume(returning: finished)
+            }
+        }
     }
     
-    /// Seeks to a designated target position with a completion handler
-    /// callback.
-    /// - Parameters:
-    ///   - target: The destination target (`.time`, `.seconds`, `.offset`, or
-    /// `.percentage`).
-    ///   - completionHandler: A callback invoked when the seek operation
-    /// completes or is canceled, receiving a boolean indicating success.
+    /// Seeks to a designated target position with a completion handler callback.
     public func seek(
         to target: AKSeekTarget,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
-        performIfAllowed(
-            check: {
-                availability(for: .seek(to: target))
-            },
-            action: {
-                
-                let seekToken = AKSeek(
-                    target: target,
-                    completionHandler: completionHandler
-                )
-                
-                let controller = AKBufferingState(
-                    playerController: playerController,
-                    autoPlay: state.isPlaying || autoPlay,
-                    targetSeek: seekToken
-                )
-                
-                change(controller)
-            },
-            blocked: { [weak self] reason in
-                completionHandler(false)
-                
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
-            },
-            fallback: ()
+        seek(
+            to: target,
+            toleranceBefore: .positiveInfinity,
+            toleranceAfter: .positiveInfinity,
+            completionHandler: completionHandler
         )
     }
     
-    /// Seeks to a designated target position with custom tolerance bounds and a
-    /// completion handler callback.
-    /// - Parameters:
-    ///   - target: The destination target (`.time`, `.seconds`, `.offset`, or
-    /// `.percentage`).
-    ///   - toleranceBefore: The allowable tolerance before the target time.
-    ///   - toleranceAfter: The allowable tolerance after the target time.
-    ///   - completionHandler: A callback invoked when the seek operation
-    /// completes or is canceled, receiving a boolean indicating success.
+    /// Seeks to a designated target position with custom tolerance bounds and a completion handler callback.
     public func seek(
         to target: AKSeekTarget,
         toleranceBefore: CMTime,
@@ -294,10 +227,14 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         completionHandler: @Sendable @escaping (Bool) -> Void
     ) {
         performIfAllowed(
-            check: {
+            check: { [unowned self] in
                 availability(for: .seek(to: target))
             },
-            action: {
+            action: { [weak self] in
+                guard let self else {
+                    completionHandler(false)
+                    return
+                }
                 let seekToken = AKSeek(
                     target: target,
                     toleranceBefore: toleranceBefore,
@@ -315,7 +252,6 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             },
             blocked: { [weak self] reason in
                 completionHandler(false)
-                
                 guard let self else { return }
                 playerController.emit(.commandUnavailable(reason: reason))
             },
@@ -374,7 +310,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     
     /// Transitions the state machine context to a new target state instance.
     /// - Parameter controller: The target state controller to activate.
-    public func change(_ controller: AKPlayerStateControllerProtocol) {
+    public func change(_ controller: any AKPlayerStateControllerProtocol) {
         guard !hasTransitioned else { return }
         isActiveState = false
         hasTransitioned = true
@@ -411,8 +347,6 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         
         return await action()
     }
-    
-    
     
     /// Validates an action requirement and executes a synchronous task if permission check succeeds.
     /// - Parameters:
@@ -475,28 +409,26 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         }
     }
     
-    /// Subscribes to system network status changes to inform streaming
-    /// decisions.
-    /// - Parameters:
-    ///   - subscriptions: The set of `AnyCancellable` storing active Combine
-    /// subscriptions.
-    ///   - handler: Closure invoked when network connectivity status changes.
+    /// Subscribes to system network status changes asynchronously.
+    /// - Parameter handler: Closure invoked when network connectivity status changes.
+    /// - Returns: A structured `Task` managing the observation lifetime.
+    @discardableResult
     public func observeNetworkStatus(
-        in subscriptions: inout Set<AnyCancellable>,
-        handler: @escaping (NWPath.Status) -> Void
-    ) {
+        handler: @escaping @MainActor (NWPath.Status) -> Void
+    ) -> Task<Void, Never>? {
         guard let currentMedia = playerController.currentMedia,
               currentMedia.isOverNetwork()
         else {
-            return
+            return nil
         }
         
-        playerController.networkStatusMonitor.networkStatusPublisher
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .sink { status in
+        return Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await status in self.playerController.networkStatusMonitor.networkStatus {
+                guard !Task.isCancelled else { break }
                 handler(status)
             }
-            .store(in: &subscriptions)
+        }
     }
     
     // MARK: - Private Pipeline
@@ -531,15 +463,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Hook executed immediately prior to performing state transitions.
     public func beforeStateChange() { }
     
-    public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        
-    }
+    public func handlePlayerStatusChange(_ status: AVPlayer.Status) {}
     
-    public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        
-    }
+    public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {}
     
-    public func handle(_ event: AKPlayerItemNotificationEvent) {
-        
-    }
+    public func handle(_ event: AKPlayerItemNotificationEvent) {}
 }

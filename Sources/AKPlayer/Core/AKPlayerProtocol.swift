@@ -14,7 +14,7 @@ import Foundation
 /// Protocol defining the main player instance properties, playback metrics, and
 /// boundary observation capabilities.
 @MainActor
-public protocol AKPlayerProtocol: AnyObject, AKPlayerActionsProtocol {
+public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
     // MARK: - Core Properties
 
     /// The underlying `AVPlayer` instance managing media playback.
@@ -67,7 +67,8 @@ public protocol AKPlayerProtocol: AnyObject, AKPlayerActionsProtocol {
     /// playback.
     var error: AKPlayerError? { get }
     
-    var configuration: AKPlayerConfigurationProtocol { get }
+    /// Player configuration specifying timing, audio session, and buffering policies.
+    var configuration: any AKPlayerConfigurationProtocol { get }
 
     /// An asynchronous sequence of player lifecycle and playback events.
     var events: AsyncStream<AKPlayerEvent> { get }
@@ -83,4 +84,38 @@ public protocol AKPlayerProtocol: AnyObject, AKPlayerActionsProtocol {
     /// Removes the currently registered boundary time observer from the
     /// underlying player instance.
     func removeBoundaryTimeObserver()
+}
+
+// MARK: - Playback State Convenience Extension
+
+public extension AKPlayerProtocol {
+    /// Indicates whether the player is actively playing media.
+    var isPlaying: Bool {
+        state.isPlaying
+    }
+
+    /// Indicates whether the player is currently paused.
+    var isPaused: Bool {
+        state.isPaused
+    }
+
+    /// Indicates whether the player is currently buffering media content.
+    var isBuffering: Bool {
+        state.isBuffering
+    }
+
+    /// Indicates whether the player is currently loading initial media assets.
+    var isLoading: Bool {
+        state.isLoading
+    }
+
+    /// Indicates whether the player is currently in an idle state.
+    var isIdle: Bool {
+        state.isIdle
+    }
+
+    /// Indicates whether playback has encountered a fatal error.
+    var isFailed: Bool {
+        state.isFailed
+    }
 }

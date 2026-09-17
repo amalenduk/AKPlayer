@@ -7,7 +7,6 @@
 //
 
 import AVKit
-import Combine
 import Foundation
 
 // MARK: - AKPictureInPictureController
@@ -51,7 +50,6 @@ public class AKPictureInPictureController: NSObject {
 
     private var pipController: AVPictureInPictureController?
     private let eventBroadcaster = AKEventBroadcaster<AKPictureInPictureEvent>()
-    private var isPossibleObserver: AnyCancellable?
 
     // MARK: - Initialization
 

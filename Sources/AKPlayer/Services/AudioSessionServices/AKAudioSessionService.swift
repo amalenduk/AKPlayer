@@ -6,20 +6,13 @@
 //   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-/*
- Ref:
- https://developer.apple.com/library/archive/documentation/Audio/Conceptual/AudioSessionProgrammingGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40007875-CH1-SW1
- https://developer.apple.com/documentation/avfaudio/avaudiosession/responding_to_audio_session_interruptions
- */
-
 import AVFoundation
 
 // MARK: - AKAudioSessionServiceProtocol
 
 /// A protocol defining requirements for managing audio session configuration,
 /// category settings, and activation state.
-@MainActor
-public protocol AKAudioSessionServiceProtocol: AnyObject {
+public protocol AKAudioSessionServiceProtocol: AnyObject, Sendable {
     /// The underlying `AVAudioSession` instance managed by the service.
     var audioSession: AVAudioSession { get }
 
@@ -52,9 +45,8 @@ public protocol AKAudioSessionServiceProtocol: AnyObject {
 // MARK: - AKAudioSessionService
 
 /// A concrete implementation of `AKAudioSessionServiceProtocol` for managing
-/// system audio session configurations safely on the main actor.
-@MainActor
-public class AKAudioSessionService: AKAudioSessionServiceProtocol {
+/// system audio session configurations safely across any context.
+public final class AKAudioSessionService: AKAudioSessionServiceProtocol, Sendable {
     // MARK: - Properties
 
     /// The managed `AVAudioSession` instance.
@@ -67,9 +59,7 @@ public class AKAudioSessionService: AKAudioSessionServiceProtocol {
     /// - Parameter audioSession: The `AVAudioSession` instance to manage.
     /// Defaults to the shared instance.
     public init(
-        audioSession: AVAudioSession =
-            AVAudioSession
-                .sharedInstance()
+        audioSession: AVAudioSession = AVAudioSession.sharedInstance()
     ) {
         self.audioSession = audioSession
     }
@@ -98,9 +88,7 @@ public class AKAudioSessionService: AKAudioSessionServiceProtocol {
                 options: options
             )
         } catch {
-            throw
-                AKPlayerError
-                .audioSessionFailure(reason: .failedToSetCategory(error: error))
+            throw AKPlayerError.audioSessionFailure(reason: .failedToSetCategory(error: error))
         }
     }
 

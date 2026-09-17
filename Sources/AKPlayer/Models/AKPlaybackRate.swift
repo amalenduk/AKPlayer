@@ -10,7 +10,7 @@ import Foundation
 
 /// Represents playback speed presets and custom multiplier rates for media
 /// playback.
-public enum AKPlaybackRate: CaseIterable, Sendable {
+public enum AKPlaybackRate: CaseIterable, Sendable, Hashable {
     /// 0.25x speed.
     case slowest
     /// 0.50x speed.
@@ -112,7 +112,7 @@ public enum AKPlaybackRate: CaseIterable, Sendable {
     }
 }
 
-// MARK: - Equatable Conformance
+// MARK: - Equatable & Hashable Conformance
 
 extension AKPlaybackRate: Equatable {
     /// Compares two `AKPlaybackRate` instances for equality.
@@ -133,5 +133,9 @@ extension AKPlaybackRate: Equatable {
         default:
             false
         }
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(rate)
     }
 }

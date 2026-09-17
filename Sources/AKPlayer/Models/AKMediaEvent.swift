@@ -11,11 +11,8 @@ import CoreGraphics
 
 // MARK: - AKMediaCapability
 
-/// Capabilities that express what playback actions an AVPlayerItem currently
-/// supports.
-public enum AKMediaCapability: String, Sendable, Hashable, Equatable,
-    CaseIterable
-{
+/// Capabilities that express what playback actions an AVPlayerItem currently supports.
+public enum AKMediaCapability: String, CaseIterable, Equatable, Hashable, Sendable {
     case playReverse
     case playFastForward
     case playFastReverse
@@ -32,8 +29,7 @@ public enum AKMediaCapability: String, Sendable, Hashable, Equatable,
 public enum AKMediaEvent: Sendable {
     // MARK: - State & Duration
 
-    /// The media's internal lifecycle state updated (e.g., loading,
-    /// readyToPlay, failed).
+    /// The media's internal lifecycle state updated (e.g., loading, readyToPlay, failed).
     case stateDidChange(AKPlayableState)
 
     /// The media duration updated or became known.
@@ -44,8 +40,7 @@ public enum AKMediaEvent: Sendable {
 
     // MARK: - Capabilities
 
-    /// A specific playback capability status changed (e.g., fast-forward
-    /// becoming available or restricted).
+    /// A specific playback capability status changed (e.g., fast-forward becoming available or restricted).
     case capabilityDidChange(AKMediaCapability, isSupported: Bool)
 
     // MARK: - Range Updates
@@ -58,8 +53,7 @@ public enum AKMediaEvent: Sendable {
 
     // MARK: - Asset Attributes
 
-    /// The available AVPlayerItemTrack list updated (e.g., audio, video,
-    /// subtitle tracks loaded).
+    /// The available AVPlayerItemTrack list updated (e.g., audio, video, subtitle tracks loaded).
     case tracksDidChange([AVPlayerItemTrack])
 
     /// The native video pixel/presentation resolution updated.

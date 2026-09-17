@@ -7,17 +7,16 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
 
 // MARK: - AKPlayerPlaybackTimeObserverProtocol
 
-/// Protocol declaring capabilities for monitoring AVPlayer periodic and
-/// boundary time updates.
+/// Protocol declaring capabilities for monitoring AVPlayer periodic and boundary time updates.
 @MainActor
-public protocol AKPlayerPlaybackTimeObserverProtocol: AnyObject {
+public protocol AKPlayerPlaybackTimeObserverProtocol: AnyObject, Sendable {
     var player: AVPlayer { get }
-    var periodicTimePublisher: AnyPublisher<CMTime, Never> { get }
-    var boundaryTimePublisher: AnyPublisher<CMTime, Never> { get }
+    var periodicTimes: AsyncStream<CMTime> { get }
+    var boundaryTimes: AsyncStream<CMTime> { get }
 
     func startObservingPeriodicTime(for interval: CMTime)
     func startObservingBoundaryTime(for times: [CMTime])
@@ -27,50 +26,38 @@ public protocol AKPlayerPlaybackTimeObserverProtocol: AnyObject {
 
 // MARK: - AKPlayerPlaybackTimeObserver
 
-/// Concrete observer delivering periodic and boundary time progress updates via
-/// Combine publishers.
+/// Concrete observer delivering periodic and boundary time progress updates via asynchronous event streams.
 @MainActor
-public class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol {
+public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol {
     // MARK: - Properties
 
     public let player: AVPlayer
 
-    public var periodicTimePublisher: AnyPublisher<CMTime, Never> {
-        _periodicTimePublisher.eraseToAnyPublisher()
+    public var periodicTimes: AsyncStream<CMTime> {
+        periodicBroadcaster.makeStream()
     }
 
-    public var boundaryTimePublisher: AnyPublisher<CMTime, Never> {
-        _boundaryTimePublisher.eraseToAnyPublisher()
+    public var boundaryTimes: AsyncStream<CMTime> {
+        boundaryBroadcaster.makeStream()
     }
 
-    private let _periodicTimePublisher = PassthroughSubject<CMTime, Never>()
-    private let _boundaryTimePublisher = PassthroughSubject<CMTime, Never>()
+    private let periodicBroadcaster = AKEventBroadcaster<CMTime>()
+    private let boundaryBroadcaster = AKEventBroadcaster<CMTime>()
 
-    /// Opaque token returned by AVPlayer when registering periodic observer.
-    /// Marked `nonisolated(unsafe)` to enable clean removal during
-    /// deinitialization.
-    private nonisolated(unsafe) var periodicTimeObserverToken: Any?
-
-    /// Opaque token returned by AVPlayer when registering boundary observer.
-    /// Marked `nonisolated(unsafe)` to enable clean removal during
-    /// deinitialization.
-    private nonisolated(unsafe) var boundaryTimeObserverToken: Any?
+    private var periodicTimeObserverToken: Any?
+    private var boundaryTimeObserverToken: Any?
 
     // MARK: - Init & Deinit
 
     /// Initializes an observer for player playback time events.
-    /// - Parameter player: The AVPlayer instance to observe.
+    /// - Parameter player: The AVPlayer instance to monitor.
     public init(with player: AVPlayer) {
         self.player = player
     }
 
     deinit {
-        if let token = periodicTimeObserverToken {
-            player.removeTimeObserver(token)
-        }
-        if let token = boundaryTimeObserverToken {
-            player.removeTimeObserver(token)
-        }
+        periodicBroadcaster.finish()
+        boundaryBroadcaster.finish()
     }
 
     // MARK: - Periodic Time Observation
@@ -82,10 +69,7 @@ public class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol 
             forInterval: interval,
             queue: .main
         ) { [weak self] time in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self._periodicTimePublisher.send(time)
-            }
+            self?.periodicBroadcaster.send(time)
         }
     }
 
@@ -106,10 +90,8 @@ public class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol 
             forTimes: boundaryTimes,
             queue: .main
         ) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self._boundaryTimePublisher.send(self.player.currentTime())
-            }
+            guard let self else { return }
+            self.boundaryBroadcaster.send(self.player.currentTime())
         }
     }
 

@@ -7,7 +7,6 @@
 //
 
 import AVFoundation
-import Combine
 import Foundation
 import MediaPlayer
 
@@ -15,7 +14,6 @@ private nonisolated(unsafe) var managerKey: UInt8 = 0
 
 // MARK: - Manager & Observation Extensions
 
-@MainActor
 public extension AKPlayable {
     /// The backing media manager instance associated with this playable item.
     var manager: any AKMediaManagerProtocol {
@@ -29,44 +27,29 @@ public extension AKPlayable {
         return newManager
     }
     
-    /// Publisher emitting updates when the media state transitions.
-    var statePublisher: AnyPublisher<AKPlayableState, Never> {
-        manager.statePublisher
-    }
-    
-    /// Observes key-path updates on the underlying `AVPlayerItem` on the Main
-    /// Actor.
+    /// Observes key-path updates on the underlying `AVPlayerItem` using native Foundation KVO.
     /// - Parameters:
     ///   - keyPath: Key path on `AVPlayerItem` to observe.
-    ///   - options: Key-value observing options governing initial and change
-    /// notifications.
-    ///   - action: Closure executed on the Main Actor when the observed value
-    /// updates.
-    /// - Returns: An `AnyCancellable` instance managing the observation
-    /// lifetime, or `nil` if `playerItem` is unavailable.
+    ///   - options: Key-value observing options governing initial and change notifications.
+    ///   - action: Closure executed when the observed value updates.
+    /// - Returns: An `NSKeyValueObservation` instance managing the observation lifetime, or `nil` if `playerItem` is unavailable.
     @discardableResult
-    func observe<Value: Sendable>(
+    func observe<Value>(
         _ keyPath: KeyPath<AVPlayerItem, Value>,
         options: NSKeyValueObservingOptions = [.initial, .new],
-        action: @escaping @Sendable @MainActor (
-            any AKMediaManagerProtocol,
-            Value
-        ) -> Void
-    ) -> AnyCancellable? {
+        action: @escaping @Sendable (any AKMediaManagerProtocol, Value) -> Void
+    ) -> NSKeyValueObservation? {
         guard let item = manager.playerItem else { return nil }
         
-        return item.publisher(for: keyPath, options: options)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak manager] value in
-                guard let manager else { return }
-                action(manager, value)
-            }
+        return item.observe(keyPath, options: options) { [weak manager] observedItem, _ in
+            guard let manager else { return }
+            action(manager, observedItem[keyPath: keyPath])
+        }
     }
 }
 
 // MARK: - Direct Delegation via Manager (Properties)
 
-@MainActor
 public extension AKPlayable {
     /// The current state of the playable media item.
     var state: AKPlayableState {
@@ -78,11 +61,6 @@ public extension AKPlayable {
         manager.error
     }
     
-    var delegate: AKMediaDelegate? {
-        get { manager.delegate }
-        set { manager.delegate = newValue }
-    }
-    
     var events: AsyncStream<AKMediaEvent> {
         get { manager.events }
     }
@@ -90,7 +68,6 @@ public extension AKPlayable {
 
 // MARK: - Direct Delegation via Manager (Operations)
 
-@MainActor
 public extension AKPlayable {
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
     func createAsset() async {
@@ -117,7 +94,6 @@ public extension AKPlayable {
 
 // MARK: - Direct Delegation via Manager (Preflight Command Checks)
 
-@MainActor
 public extension AKPlayable {
     /// Evaluates if the player item can step forward or backward by a given
     /// frame count.
@@ -148,7 +124,6 @@ public extension AKPlayable {
 
 // MARK: - Direct Delegation via Manager (Services & Observers)
 
-@MainActor
 public extension AKPlayable {
     /// Subtitle and audio track selection management service.
     var trackSelection: any AKTrackSelectionServiceProtocol {
@@ -168,11 +143,10 @@ public extension AKPlayable {
         manager.playerItemNotificationsObserver
     }
     
-    var metadataProvider: AKMediaMetadataProviderProtocol {
+    var metadataProvider: any AKMediaMetadataProviderProtocol {
         manager.metadataProvider
     }
 }
-
 
 // MARK: - Comparable Helpers
 

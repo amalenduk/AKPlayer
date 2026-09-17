@@ -1,19 +1,8 @@
-//
-//  AKPlayerInterstitialServiceProtocol.swift
-//  AKPlayer
-//
-
-//  AKPlayerInterstitialServiceProtocol.swift
-//  AKPlayer
-
 import AVFoundation
 import CoreMedia
+import Foundation
 
-import AVFoundation
-import CoreMedia
-
-@MainActor
-public protocol AKPlayerInterstitialServiceProtocol: AnyObject {
+public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     
     var events: AsyncStream<AKInterstitialEvent> { get }
     

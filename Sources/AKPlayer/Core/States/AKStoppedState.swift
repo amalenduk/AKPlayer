@@ -7,7 +7,7 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
 
 // MARK: - AKStoppedState
 
@@ -49,13 +49,13 @@ public class AKStoppedState: AKBaseState {
     
     // MARK: - Private Helper Functions
     
-    public override func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+        guard isActiveState else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,
             error: .playerCanNoLongerPlay(
-                error: playerController.player
-                    .error
+                error: playerController.player.error
             )
         )
         change(controller)

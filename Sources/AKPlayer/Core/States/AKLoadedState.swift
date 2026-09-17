@@ -7,7 +7,7 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
 
 // MARK: - AKLoadedState
 
@@ -54,11 +54,10 @@ public class AKLoadedState: AKBaseState {
     }
     
     deinit {
-       
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - Lifecycle Hooks
@@ -109,7 +108,7 @@ public class AKLoadedState: AKBaseState {
             controller = AKBufferingState(
                 playerController: playerController,
                 autoPlay: true,
-                rate: rate,
+                rate: rate
             )
         }
         
@@ -159,21 +158,22 @@ public class AKLoadedState: AKBaseState {
     
     // MARK: - Private Pipeline Helpers
     
-    /// Binds KVO status publishers to monitor player status and missing current
-    /// items.
-    public override func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+    /// Responds to changes in the underlying `AVPlayer.Status`.
+    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+        guard isActiveState else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,
             error: .playerCanNoLongerPlay(
-                error: playerController.player
-                    .error
+                error: playerController.player.error
             )
         )
         change(controller)
     }
     
-    public override func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
+    /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
+    override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
+        guard isActiveState else { return }
         switch status {
         case .playing:
             play()

@@ -7,14 +7,15 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
+import Synchronization
 import UIKit
 
 // MARK: - AKApplicationLifeCycleEvent
 
 /// Events emitted when the application transitions through different lifecycle
 /// phases.
-public enum AKApplicationLifeCycleEvent: Sendable {
+public enum AKApplicationLifeCycleEvent: Sendable, Equatable, Hashable, CaseIterable {
     // MARK: - Cases
 
     /// The application is about to lose active status (e.g., phone call or
@@ -35,7 +36,7 @@ public enum AKApplicationLifeCycleEvent: Sendable {
 // MARK: - AKApplicationLifeCycleState
 
 /// Represents the current tracked state of the application's lifecycle.
-public enum AKApplicationLifeCycleState: Sendable {
+public enum AKApplicationLifeCycleState: Sendable, Equatable, Hashable, CaseIterable {
     // MARK: - Cases
 
     /// The application is in an inactive state.
@@ -65,78 +66,62 @@ public enum AKApplicationLifeCycleState: Sendable {
     }
 }
 
-// MARK: - AKApplicationLifeCycleEventsObserverDelegate
-
-/// Delegate interface for receiving application lifecycle event updates.
-@MainActor
-public protocol AKApplicationLifeCycleEventsObserverDelegate: AnyObject {
-    // MARK: - Methods
-
-    /// Notifies the delegate that an application lifecycle transition event
-    /// occurred.
-    /// - Parameters:
-    ///   - observer: The observer instance monitoring system lifecycle
-    /// notifications.
-    ///   - event: The specific lifecycle event that took place.
-    func applicationLifeCycleEventsObserver(
-        _ observer: AKApplicationLifeCycleEventsObserverProtocol,
-        on event: AKApplicationLifeCycleEvent
-    )
-}
-
 // MARK: - AKApplicationLifeCycleEventsObserverProtocol
 
-/// A contract for monitoring application state transitions and notifying a
-/// delegate.
-@MainActor
-public protocol AKApplicationLifeCycleEventsObserverProtocol: AnyObject {
+/// A protocol defining requirements for observing application lifecycle state transitions.
+public protocol AKApplicationLifeCycleEventsObserverProtocol: AnyObject, Sendable {
     // MARK: - Properties
 
     /// The current state of the application lifecycle.
     var state: AKApplicationLifeCycleState { get }
 
-    /// The delegate object receiving lifecycle event notifications.
-    var delegate: AKApplicationLifeCycleEventsObserverDelegate? { get set }
+    /// Asynchronous stream of lifecycle events.
+    var events: AsyncStream<AKApplicationLifeCycleEvent> { get }
 
     // MARK: - Methods
 
-    /// Begins observing system lifecycle notifications via Combine.
+    /// Begins observing system lifecycle notifications.
     func startObserving()
 
-    /// Stops observing system lifecycle notifications and cleans up active
-    /// subscriptions.
+    /// Stops observing system lifecycle notifications and cleans up active observation tasks.
     func stopObserving()
 }
 
 // MARK: - AKApplicationLifeCycleEventsObserver
 
-/// An observer class responsible for listening to `UIApplication` lifecycle
-/// notifications
-/// using Combine pipelines and forwarding state changes to its delegate on the
-/// main thread.
-@MainActor
-public class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleEventsObserverProtocol {
+/// A thread-safe observer class responsible for listening to `UIApplication` lifecycle
+/// notifications and broadcasting state changes through `AsyncStream`.
+public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleEventsObserverProtocol, Sendable {
     // MARK: - Properties
 
-    /// The delegate object receiving lifecycle event updates.
-    public weak var delegate: AKApplicationLifeCycleEventsObserverDelegate?
-
-    /// Flag indicating whether system notifications are currently being
-    /// observed.
-    private var isObserving = false
+    /// Thread-safe storage for the current lifecycle state of the application.
+    private let stateStorage = Mutex<AKApplicationLifeCycleState>(.foreground)
 
     /// The current lifecycle state of the application.
-    public private(set) var state: AKApplicationLifeCycleState = .foreground
+    public var state: AKApplicationLifeCycleState {
+        stateStorage.withLock { $0 }
+    }
 
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
+    /// Broadcaster managing the asynchronous event stream for lifecycle events.
+    private let eventBroadcaster = AKEventBroadcaster<AKApplicationLifeCycleEvent>()
+
+    /// Asynchronous stream of lifecycle events for Swift Concurrency.
+    public var events: AsyncStream<AKApplicationLifeCycleEvent> {
+        eventBroadcaster.makeStream()
+    }
+
+    /// Mutex protecting the active notification center observation task.
+    private let observationTask = Mutex<Task<Void, Never>?>(nil)
 
     // MARK: - Init & Deinit
 
     /// Initializes a new instance of the application lifecycle events observer.
     public init() {}
 
-    deinit {}
+    deinit {
+        stopObserving()
+        eventBroadcaster.finish()
+    }
 
     // MARK: - Observation Lifecycle
 
@@ -144,94 +129,80 @@ public class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleEventsO
     ///
     /// Subscribes to `willResignActiveNotification`,
     /// `didBecomeActiveNotification`,
-    /// `didEnterBackgroundNotification`, and `willEnterForegroundNotification`
-    /// on the main queue.
+    /// `didEnterBackgroundNotification`, and `willEnterForegroundNotification`.
     public func startObserving() {
-        guard !isObserving else { return }
+        stopObserving()
 
-        NotificationCenter.default
-            .publisher(for: UIApplication.willResignActiveNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                handleApplicationWillResignActive()
+        let task = Task { [weak self] in
+            await withTaskGroup(of: Void.self) { group in
+                // 1. Will Resign Active
+                group.addTask { [weak self] in
+                    for await _ in NotificationCenter.default.notifications(named: UIApplication.willResignActiveNotification) {
+                        guard !Task.isCancelled, let self else { break }
+                        self.handleApplicationWillResignActive()
+                    }
+                }
+
+                // 2. Did Become Active
+                group.addTask { [weak self] in
+                    for await _ in NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification) {
+                        guard !Task.isCancelled, let self else { break }
+                        self.handleApplicationDidBecomeActive()
+                    }
+                }
+
+                // 3. Did Enter Background
+                group.addTask { [weak self] in
+                    for await _ in NotificationCenter.default.notifications(named: UIApplication.didEnterBackgroundNotification) {
+                        guard !Task.isCancelled, let self else { break }
+                        self.handleApplicationDidEnterBackground()
+                    }
+                }
+
+                // 4. Will Enter Foreground
+                group.addTask { [weak self] in
+                    for await _ in NotificationCenter.default.notifications(named: UIApplication.willEnterForegroundNotification) {
+                        guard !Task.isCancelled, let self else { break }
+                        self.handleApplicationWillEnterForeground()
+                    }
+                }
             }
-            .store(in: &subscriptions)
+        }
 
-        NotificationCenter.default
-            .publisher(for: UIApplication.didBecomeActiveNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                handleApplicationDidBecomeActive()
-            }
-            .store(in: &subscriptions)
-
-        NotificationCenter.default
-            .publisher(for: UIApplication.didEnterBackgroundNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                handleApplicationDidEnterBackground()
-            }
-            .store(in: &subscriptions)
-
-        NotificationCenter.default
-            .publisher(for: UIApplication.willEnterForegroundNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                handleApplicationWillEnterForeground()
-            }
-            .store(in: &subscriptions)
-
-        isObserving = true
+        observationTask.withLock { $0 = task }
     }
 
-    /// Stops observing system lifecycle notifications and cancels all active
-    /// subscriptions.
+    /// Stops observing system lifecycle notifications and cancels active observation tasks.
     public func stopObserving() {
-        guard isObserving else { return }
-        subscriptions.removeAll()
-        isObserving = false
+        observationTask.withLock {
+            $0?.cancel()
+            $0 = nil
+        }
     }
 
     // MARK: - Handlers
 
-    /// Updates state to `.resignActive` and triggers delegate callback for
-    /// `.willResignActive`.
-    public func handleApplicationWillResignActive() {
-        state = .resignActive
-        delegate?.applicationLifeCycleEventsObserver(
-            self,
-            on: .willResignActive
-        )
+    /// Updates state to `.resignActive` and emits `.willResignActive` through the event stream.
+    private func handleApplicationWillResignActive() {
+        stateStorage.withLock { $0 = .resignActive }
+        eventBroadcaster.send(.willResignActive)
     }
 
-    /// Updates state to `.active` and triggers delegate callback for
-    /// `.didBecomeActive`.
-    public func handleApplicationDidBecomeActive() {
-        state = .active
-        delegate?.applicationLifeCycleEventsObserver(self, on: .didBecomeActive)
+    /// Updates state to `.active` and emits `.didBecomeActive` through the event stream.
+    private func handleApplicationDidBecomeActive() {
+        stateStorage.withLock { $0 = .active }
+        eventBroadcaster.send(.didBecomeActive)
     }
 
-    /// Updates state to `.background` and triggers delegate callback for
-    /// `.didEnterBackground`.
-    public func handleApplicationDidEnterBackground() {
-        state = .background
-        delegate?.applicationLifeCycleEventsObserver(
-            self,
-            on: .didEnterBackground
-        )
+    /// Updates state to `.background` and emits `.didEnterBackground` through the event stream.
+    private func handleApplicationDidEnterBackground() {
+        stateStorage.withLock { $0 = .background }
+        eventBroadcaster.send(.didEnterBackground)
     }
 
-    /// Updates state to `.foreground` and triggers delegate callback for
-    /// `.willEnterForeground`.
-    public func handleApplicationWillEnterForeground() {
-        state = .foreground
-        delegate?.applicationLifeCycleEventsObserver(
-            self,
-            on: .willEnterForeground
-        )
+    /// Updates state to `.foreground` and emits `.willEnterForeground` through the event stream.
+    private func handleApplicationWillEnterForeground() {
+        stateStorage.withLock { $0 = .foreground }
+        eventBroadcaster.send(.willEnterForeground)
     }
 }

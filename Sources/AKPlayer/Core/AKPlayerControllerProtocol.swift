@@ -7,7 +7,6 @@
 //
 
 import AVFoundation
-import Combine
 import Foundation
 
 // MARK: - AKPlayerControllerPerforming
@@ -46,7 +45,7 @@ public protocol AKPlayerControllerPerforming {
 /// Primary interface representing the core player controller driving playback
 /// engine, state transitions, and configuration.
 @MainActor
-public protocol AKPlayerControllerProtocol: AnyObject, AKPlayerProtocol, AKPlayerControllerPerforming {
+public protocol AKPlayerControllerProtocol: AnyObject, Sendable, AKPlayerProtocol, AKPlayerControllerPerforming {
     /// Configuration options specifying playback policies and default rates.
     var configuration: any AKPlayerConfigurationProtocol { get }
     
@@ -79,7 +78,7 @@ public protocol AKPlayerControllerProtocol: AnyObject, AKPlayerProtocol, AKPlaye
     /// Single entry point for dispatching all player events across the
     /// framework.
     /// Broadcasts the event to the delegate and forwards it to event listeners
-    /// (AsyncStream / Combine).
+    /// (`AsyncStream`).
     /// - Parameter event: The player event that occurred.
     func emit(_ event: AKPlayerEvent)
 }

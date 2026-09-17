@@ -7,7 +7,7 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
 
 // MARK: - AKPausedState
 
@@ -20,17 +20,12 @@ public class AKPausedState: AKBaseState {
     /// reached its end time.
     private let playerItemDidPlayToEndTime: Bool
     
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions: Set<AnyCancellable> = Set<AnyCancellable>()
-    
     // MARK: - Init
     
     /// Initializes a paused state instance.
     /// - Parameters:
-    ///   - playerController: The underlying player controller driving
-    /// execution.
-    ///   - playerItemDidPlayToEndTime: True if the item was paused because it
-    /// played through to the end.
+    ///   - playerController: The underlying player controller driving execution.
+    ///   - playerItemDidPlayToEndTime: True if the item was paused because it played through to the end.
     public init(
         playerController: any AKPlayerControllerProtocol,
         playerItemDidPlayToEndTime: Bool = false
@@ -43,7 +38,6 @@ public class AKPausedState: AKBaseState {
     }
     
     deinit {
-        
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
@@ -55,7 +49,6 @@ public class AKPausedState: AKBaseState {
     /// Entry point for paused state processing. Ensures playback pauses and
     /// fires delegate notifications if end-of-media was reached.
     override public func processStateChange() {
-        startObservingPlayerItemNotifications()
         super.processStateChange()
         
         if !playerController.player.timeControlStatus.isPaused {
@@ -82,8 +75,7 @@ public class AKPausedState: AKBaseState {
             return
         }
         
-        let initialSeek: AKSeek? =
-        playerItemDidPlayToEndTime
+        let initialSeek: AKSeek? = playerItemDidPlayToEndTime
         ? AKSeek(
             target: .time(.zero),
             toleranceBefore: .zero,
@@ -123,8 +115,7 @@ public class AKPausedState: AKBaseState {
             return
         }
         
-        let initialSeek: AKSeek? =
-        playerItemDidPlayToEndTime
+        let initialSeek: AKSeek? = playerItemDidPlayToEndTime
         ? AKSeek(target: .time(.zero)) : nil
         
         let controller = AKBufferingState(
@@ -138,25 +129,24 @@ public class AKPausedState: AKBaseState {
     
     // MARK: - Additional Helper Functions
     
-    public override func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+        guard isActiveState else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,
             error: .playerCanNoLongerPlay(
-                error: playerController.player
-                    .error
+                error: playerController.player.error
             )
         )
         change(controller)
     }
     
-    public override func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
+    override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
+        guard isActiveState else { return }
         switch playerController.player.timeControlStatus {
         case .playing:
-            guard isActiveState else { return }
             play()
         case .waitingToPlayAtSpecifiedRate:
-            guard isActiveState else { return }
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
@@ -166,40 +156,28 @@ public class AKPausedState: AKBaseState {
             default:
                 break
             }
-        default: break
+        default:
+            break
         }
     }
     
-    
-    /// Registers notification center listeners for player item playback failure
-    /// notifications.
-    private func startObservingPlayerItemNotifications() {
-        guard let playerItem = playerController.currentMedia?.playerItem
-        else { return }
-        NotificationCenter.default.publisher(
-            for: .AVPlayerItemFailedToPlayToEndTime,
-            object: playerItem
-        )
-        .sink { [weak self] notification in
-            guard let self,
-                  let error = notification
-                .userInfo?[
-                    AVPlayerItemFailedToPlayToEndTimeErrorKey
-                ] as? NSError
-            else { return }
-            
-            guard error is URLError else {
+    override public func handle(_ event: AKPlayerItemNotificationEvent) {
+        guard isActiveState else { return }
+        switch event {
+        case let .failedToPlayToEndTime(error):
+            if error is URLError {
+                let controller = AKBufferingState(playerController: playerController, autoPlay: false)
+                change(controller)
+            } else {
                 let controller = AKFailedState(
                     playerController: playerController,
                     error: .itemFailedToPlayToEndTime
                 )
-                return change(controller)
+                change(controller)
             }
-            
-            let controller = AKBufferingState(playerController: playerController, autoPlay: false)
-            change(controller)
+        default:
+            break
         }
-        .store(in: &subscriptions)
     }
     
     // MARK: - Availability Overrides
@@ -214,11 +192,5 @@ public class AKPausedState: AKBaseState {
         default:
             super.availability(for: action)
         }
-    }
-    
-    /// Cleans active Combine observers prior to state transition.
-    override public func beforeStateChange() {
-        subscriptions.forEach({ $0.cancel() })
-        subscriptions.removeAll()
     }
 }

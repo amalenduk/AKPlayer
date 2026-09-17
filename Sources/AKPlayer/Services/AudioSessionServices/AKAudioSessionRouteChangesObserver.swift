@@ -9,42 +9,38 @@
 // Ref: https://developer.apple.com/documentation/avfaudio/avaudiosession/responding_to_audio_session_route_changes
 
 import AVFoundation
-import Combine
+import Foundation
+import Synchronization
 
-// MARK: - AKAudioSessionRouteChangesObserverDelegate
+// MARK: - AKAudioSessionRouteChangeEvent
 
-/// A delegate protocol for receiving callbacks whenever an audio session route
-/// change occurs.
-@MainActor
-public protocol AKAudioSessionRouteChangesObserverDelegate: AnyObject {
-    /// Informs the delegate that the active audio route has changed.
-    /// - Parameters:
-    ///   - observer: The route changes observer reporting the event.
-    ///   - currentRoute: The new `AVAudioSessionRouteDescription` after the
-    /// route change.
-    ///   - previousRoute: The previous `AVAudioSessionRouteDescription` before
-    /// the change, if available.
-    ///   - reason: The `AVAudioSession.RouteChangeReason` describing why the
-    /// route changed.
-    func audioSessionRouteChangesObserver(
-        _ observer: AKAudioSessionRouteChangesObserverProtocol,
-        didChangeRouteTo currentRoute: AVAudioSessionRouteDescription,
-        from previousRoute: AVAudioSessionRouteDescription?,
-        with reason: AVAudioSession.RouteChangeReason
-    )
+/// Event payload emitted when the active audio output route changes.
+public struct AKAudioSessionRouteChangeEvent: Sendable, Equatable {
+    public let currentRoute: AVAudioSessionRouteDescription
+    public let previousRoute: AVAudioSessionRouteDescription?
+    public let reason: AVAudioSession.RouteChangeReason
+
+    public init(
+        currentRoute: AVAudioSessionRouteDescription,
+        previousRoute: AVAudioSessionRouteDescription?,
+        reason: AVAudioSession.RouteChangeReason
+    ) {
+        self.currentRoute = currentRoute
+        self.previousRoute = previousRoute
+        self.reason = reason
+    }
 }
 
 // MARK: - AKAudioSessionRouteChangesObserverProtocol
 
 /// A protocol defining requirements for observing audio route changes and
 /// inspecting connected audio output devices.
-@MainActor
-public protocol AKAudioSessionRouteChangesObserverProtocol: AnyObject {
+public protocol AKAudioSessionRouteChangesObserverProtocol: AnyObject, Sendable {
     /// The target `AVAudioSession` instance being monitored.
     var audioSession: AVAudioSession { get }
 
-    /// The delegate object notified of audio route changes.
-    var delegate: AKAudioSessionRouteChangesObserverDelegate? { get set }
+    /// Asynchronous stream of route change events for Swift Concurrency.
+    var events: AsyncStream<AKAudioSessionRouteChangeEvent> { get }
 
     /// Checks if an external audio device (other than the built-in speaker) is
     /// currently connected.
@@ -60,30 +56,30 @@ public protocol AKAudioSessionRouteChangesObserverProtocol: AnyObject {
     func startObserving()
 
     /// Stops monitoring audio route change notifications and clears active
-    /// subscriptions.
+    /// tasks.
     func stopObserving()
 }
 
 // MARK: - AKAudioSessionRouteChangesObserver
 
-/// A concrete implementation of `AKAudioSessionRouteChangesObserverProtocol`
-/// utilizing Combine to monitor `AVAudioSession.routeChangeNotification`.
-@MainActor
-public class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChangesObserverProtocol {
+/// A thread-safe observer class responsible for monitoring audio route changes
+/// and broadcasting events via `AsyncStream`.
+public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChangesObserverProtocol, Sendable {
     // MARK: - Properties
 
     /// The `AVAudioSession` instance managed by this observer.
     public let audioSession: AVAudioSession
 
-    /// The delegate object notified of audio route change callbacks.
-    public weak var delegate: AKAudioSessionRouteChangesObserverDelegate?
+    /// Broadcaster managing the asynchronous stream of route change events.
+    private let eventBroadcaster = AKEventBroadcaster<AKAudioSessionRouteChangeEvent>()
 
-    /// A Boolean flag tracking whether notification subscriptions are currently
-    /// active.
-    private var isObserving = false
+    /// Asynchronous stream of route change events for Swift Concurrency.
+    public var events: AsyncStream<AKAudioSessionRouteChangeEvent> {
+        eventBroadcaster.makeStream()
+    }
 
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
+    /// Mutex protecting the active notification observation task.
+    private let observationTask = Mutex<Task<Void, Never>?>(nil)
 
     // MARK: - Init & Deinit
 
@@ -93,62 +89,60 @@ public class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChangesObser
         self.audioSession = audioSession
     }
 
-    deinit {}
+    deinit {
+        stopObserving()
+        eventBroadcaster.finish()
+    }
 
     // MARK: - Observation Lifecycle
 
-    /// Starts observing audio route change notifications on the main queue.
+    /// Starts observing audio route change notifications.
     public func startObserving() {
-        guard !isObserving else { return }
+        stopObserving()
 
-        NotificationCenter.default.publisher(
-            for: AVAudioSession.routeChangeNotification, object: audioSession
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] notification in
-            guard let self else { return }
-            handleRouteChange(notification)
+        let task = Task { [weak self, audioSession] in
+            for await notification in NotificationCenter.default.notifications(
+                named: AVAudioSession.routeChangeNotification,
+                object: audioSession
+            ) {
+                guard !Task.isCancelled, let self else { break }
+                self.handleRouteChange(notification)
+            }
         }
-        .store(in: &subscriptions)
 
-        isObserving = true
+        observationTask.withLock { $0 = task }
     }
 
-    /// Stops observing audio route change notifications and clears active
-    /// subscriptions.
+    /// Stops observing audio route change notifications and cancels active
+    /// tasks.
     public func stopObserving() {
-        guard isObserving else { return }
-        subscriptions.removeAll()
-        isObserving = false
+        observationTask.withLock {
+            $0?.cancel()
+            $0 = nil
+        }
     }
 
     // MARK: - Handlers
 
-    /// Processes incoming route change notifications, extracting metadata and
-    /// notifying the delegate.
+    /// Processes incoming route change notifications and emits stream events.
     /// - Parameter notification: The `Notification` object posted by the
     /// system.
-    public func handleRouteChange(_ notification: Notification) {
+    private func handleRouteChange(_ notification: Notification) {
         guard let userInfo = notification.userInfo,
-              let reasonValue =
-              userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason =
-              AVAudioSession
-                  .RouteChangeReason(rawValue: reasonValue)
+              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue)
         else {
             return
         }
-        let previousRoute =
-            userInfo[
-                AVAudioSessionRouteChangePreviousRouteKey
-            ] as? AVAudioSessionRouteDescription
+        let previousRoute = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription
+        let currentRoute = audioSession.currentRoute
 
-        delegate?.audioSessionRouteChangesObserver(
-            self,
-            didChangeRouteTo: audioSession.currentRoute,
-            from: previousRoute,
-            with: reason
+        let event = AKAudioSessionRouteChangeEvent(
+            currentRoute: currentRoute,
+            previousRoute: previousRoute,
+            reason: reason
         )
+        eventBroadcaster.send(event)
     }
 
     // MARK: - Helper Functions

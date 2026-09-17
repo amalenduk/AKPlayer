@@ -7,7 +7,7 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
 
 // MARK: - AKLoadingState
 
@@ -34,19 +34,17 @@ public class AKLoadingState: AKBaseState {
     /// cancelled.
     private var isCancelled = false
     
-    /// Asynchronous validation task reference used for loading asset
-    /// playability.
+    /// Asynchronous task reference used for loading asset operations.
     private var task: Task<Void, Never>?
     
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
+    /// Structured task observing media lifecycle events.
+    private var mediaObservationTask: Task<Void, Never>?
     
     // MARK: - Initialization & Deinitialization
     
     /// Initializes a loading state instance with specified options.
     /// - Parameters:
-    ///   - playerController: The underlying player controller driving
-    /// execution.
+    ///   - playerController: The underlying player controller driving execution.
     ///   - media: The target media item to load.
     ///   - autoPlay: Whether auto-start is requested post-loading.
     ///   - position: Optional initial seek target.
@@ -69,12 +67,10 @@ public class AKLoadingState: AKBaseState {
     }
     
     deinit {
-        
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
-        
     }
     
     // MARK: - Lifecycle Hooks
@@ -85,12 +81,18 @@ public class AKLoadingState: AKBaseState {
         super.processStateChange()
         playerController.emit(.mediaDidChange(media))
         
-        media.statePublisher
-            .sink { [weak self] state in
-                guard let self else { return }
-                hanldeChangeInMedia(state)
+        mediaObservationTask?.cancel()
+        mediaObservationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.hanldeChangeInMedia(self.media.state)
+            
+            for await event in self.media.events {
+                guard !Task.isCancelled else { break }
+                if case let .stateDidChange(state) = event {
+                    self.hanldeChangeInMedia(state)
+                }
             }
-            .store(in: &subscriptions)
+        }
     }
     
     // MARK: - Commands
@@ -180,10 +182,6 @@ public class AKLoadingState: AKBaseState {
     
     /// Prepares player item and links it with AVPlayer pipeline once loaded.
     private func playerItemLoaded() {
-        /*
-         You should call this method before associating the player item with the player to make
-         sure you capture all state changes to the item’s status.
-         */
         if let item = media.playerItem {
             playerController.player.replaceCurrentItem(with: item)
         }
@@ -192,25 +190,23 @@ public class AKLoadingState: AKBaseState {
     /// Evaluates AVPlayer ready status and transitions state to `AKLoadedState`
     /// upon success.
     private func becameReadyToPlay() {
-        // Handle "already ready" synchronously without going through Combine.
         if playerController.player.status == .readyToPlay {
-            return transitionToLoaded()
+            transitionToLoaded()
+        } else if playerController.player.status == .failed {
+            transitionToFailed()
         }
-        
-        if playerController.player.status == .failed {
-            return transitionToFailed()
+    }
+    
+    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+        guard isActiveState else { return }
+        switch status {
+        case .readyToPlay:
+            transitionToLoaded()
+        case .failed:
+            transitionToFailed()
+        default:
+            break
         }
-        
-        playerController.player.publisher(for: \.status, options: [.new])
-            .sink { [weak self] status in
-                guard let self else { return }
-                switch status {
-                case .readyToPlay: transitionToLoaded()
-                case .failed: transitionToFailed()
-                default: break
-                }
-            }
-            .store(in: &subscriptions)
     }
     
     private func transitionToLoaded() {
@@ -219,7 +215,7 @@ public class AKLoadingState: AKBaseState {
             autoPlay: autoPlay,
             position: position
         )
-        return change(controller)
+        change(controller)
     }
     
     private func transitionToFailed() {
@@ -227,16 +223,16 @@ public class AKLoadingState: AKBaseState {
             playerController: playerController,
             error: .playerCanNoLongerPlay(error: playerController.player.error)
         )
-        return change(controller)
+        change(controller)
     }
     
     /// Aborts tasks and asset loading operations.
     private func abortAssetInitialization() {
         task?.cancel()
         task = nil
+        mediaObservationTask?.cancel()
+        mediaObservationTask = nil
         isCancelled = true
-        subscriptions.forEach({ $0.cancel() })
-        subscriptions.removeAll()
         media.abortAssetInitialization()
     }
     
@@ -263,8 +259,7 @@ public class AKLoadingState: AKBaseState {
     }
     
     /// Checks availability for specified target actions during loading phase.
-    override public func availability(for action: AKPlayerAction) -> (allowed: Bool, reason: AKPlayerUnavailableCommandReason?)
-    {
+    override public func availability(for action: AKPlayerAction) -> (allowed: Bool, reason: AKPlayerUnavailableCommandReason?) {
         switch action {
         case .seek, .step, .fastForward, .rewind:
             (false, .waitTillMediaLoaded)
@@ -272,12 +267,12 @@ public class AKLoadingState: AKBaseState {
             super.availability(for: action)
         }
     }
-    /// Cleans active Combine observers prior to completing state exit.
+    
+    /// Cleans active tasks prior to completing state exit.
     override public func beforeStateChange() {
         task?.cancel()
         task = nil
-        let subs = subscriptions
-        subscriptions.removeAll()
-        subs.forEach { $0.cancel() }
+        mediaObservationTask?.cancel()
+        mediaObservationTask = nil
     }
 }

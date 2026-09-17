@@ -7,7 +7,6 @@
 //
 
 import AVFoundation
-import Combine
 import Foundation
 
 // MARK: - AKPlayerController
@@ -111,44 +110,51 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     }
     
     /// Configuration options driving player behavior and timing defaults.
-    public private(set) var configuration: AKPlayerConfigurationProtocol
+    public private(set) var configuration: any AKPlayerConfigurationProtocol
     
     /// The active state controller instance representing current player state
     /// logic.
-    public private(set) var controller: AKPlayerStateControllerProtocol {
+    public private(set) var controller: any AKPlayerStateControllerProtocol {
         get { _controller ?? AKIdleState(playerController: self) }
         set {
             _controller = newValue
         }
     }
     
-    private var _controller: AKPlayerStateControllerProtocol?
+    private var _controller: (any AKPlayerStateControllerProtocol)?
     
     private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
     
     /// Service managing seek operation queuing and execution against
     /// `AVPlayer`.
-    public let playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol
+    public let playerSeekingThroughMediaService: any AKPlayerSeekingThroughMediaServiceProtocol
     
+    /// Interstitial service managing ad scheduling and playback.
     public let interstitialService: any AKPlayerInterstitialServiceProtocol
     
     /// Service monitoring network availability and reachability changes.
-    public let networkStatusMonitor: AKNetworkStatusMonitorProtocol
+    public let networkStatusMonitor: any AKNetworkStatusMonitorProtocol
     
     /// Observer service tracking periodic and boundary time playback events.
-    private let playerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol
+    private let playerPlaybackTimeObserver: any AKPlayerPlaybackTimeObserverProtocol
     
     /// Observer service tracking player rate change updates.
-    private let playerRateObserver: AKPlayerRateObserverProtocol
+    private let playerRateObserver: any AKPlayerRateObserverProtocol
     
-    /// Combine cancellable storage for active KVO and notification
-    /// subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
+    /// Native Foundation KVO observations for AVPlayer properties.
+    private var observations: [NSKeyValueObservation] = []
     
     /// Task responsible for asynchronously consuming and processing rate change
     /// events from the player stream.
-    private nonisolated(unsafe) var rateObservationTask: Task<Void, Never>?
+    private var rateObservationTask: Task<Void, Never>?
     
+    /// Task responsible for asynchronously consuming periodic time events.
+    private var periodicTimeObservationTask: Task<Void, Never>?
+    
+    /// Task responsible for asynchronously consuming boundary time events.
+    private var boundaryTimeObservationTask: Task<Void, Never>?
+    
+    /// Task responsible for observing player item notification events.
     private var playerItemNotificationObservationTask: Task<Void, Never>?
     
     // MARK: - Initialization & Teardown
@@ -161,7 +167,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// lifecycle behavior.
     public init(
         player: AVPlayer,
-        configuration: AKPlayerConfigurationProtocol
+        configuration: any AKPlayerConfigurationProtocol
     ) {
         defer {
             AKLogger.logInit(self)
@@ -169,11 +175,11 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         self.player = player
         self.configuration = configuration
         
-        playerRateObserver = AKPlayerRateObserver(with: player)
-        playerPlaybackTimeObserver = AKPlayerPlaybackTimeObserver(with: player)
-        playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(with: player)
-        interstitialService = AKPlayerInterstitialService(with: player)
-        networkStatusMonitor = AKNetworkStatusMonitor()
+        self.playerRateObserver = AKPlayerRateObserver(with: player)
+        self.playerPlaybackTimeObserver = AKPlayerPlaybackTimeObserver(with: player)
+        self.playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(with: player)
+        self.interstitialService = AKPlayerInterstitialService(with: player)
+        self.networkStatusMonitor = AKNetworkStatusMonitor()
     }
     
     deinit {
@@ -183,8 +189,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
                 pointer: Unmanaged.passUnretained(self)
             )
         }
+        observations.removeAll()
         rateObservationTask?.cancel()
         rateObservationTask = nil
+        periodicTimeObservationTask?.cancel()
+        periodicTimeObservationTask = nil
+        boundaryTimeObservationTask?.cancel()
+        boundaryTimeObservationTask = nil
+        playerItemNotificationObservationTask?.cancel()
+        playerItemNotificationObservationTask = nil
         eventBroadcaster.finish()
     }
     
@@ -219,13 +232,6 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     ) {
         if !state.isAny(of: [.idle, .stopped, .failed]) {
             stop()
-            
-            Task { 
-                currentMedia = media
-                controller.load(media: media, autoPlay: autoPlay, at: position)
-            }
-            
-            return
         }
         
         currentMedia = media
@@ -292,16 +298,13 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         to target: AKSeekTarget,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime
-    ) async
-    -> Bool
-    {
+    ) async -> Bool {
         await withCheckedContinuation { continuation in
             seek(
                 to: target,
                 toleranceBefore: toleranceBefore,
                 toleranceAfter: toleranceAfter
-            ) {
-                finished in
+            ) { finished in
                 continuation.resume(returning: finished)
             }
         }
@@ -332,12 +335,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     ///   - completionHandler: A callback invoked when the seek operation
     /// finishes or is canceled, receiving a boolean indicating success.
     public func seek(
-        to target: AKSeekTarget, toleranceBefore: CMTime,
+        to target: AKSeekTarget,
+        toleranceBefore: CMTime,
         toleranceAfter: CMTime,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
         controller.seek(
-            to: target, toleranceBefore: toleranceBefore,
+            to: target,
+            toleranceBefore: toleranceBefore,
             toleranceAfter: toleranceAfter,
             completionHandler: completionHandler
         )
@@ -389,61 +394,46 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     
     /// Transitions the current state controller to a new state controller
     /// instance.
-    /// - Parameter controller: The target state controller conforming to
+    /// - Parameter newController: The target state controller conforming to
     /// `AKPlayerStateControllerProtocol`.
-    // AKPlayerController
-    
-    // AKPlayerController.swift
-    
-    private var isTransitioning = false
-    private var pendingController: AKPlayerStateControllerProtocol?
-    
-    public func change(_ newController: AKPlayerStateControllerProtocol) {
+    public func change(_ newController: any AKPlayerStateControllerProtocol) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            
-            controller = newController
-            eventBroadcaster.send(.stateDidChange(newController.state))
-            processStateChange()
-            controller.processStateChange()
+            self.controller = newController
+            self.eventBroadcaster.send(.stateDidChange(newController.state))
+            self.processStateChange()
+            newController.processStateChange()
         }
     }
-    
     
     /// Hook called whenever state changes to execute custom side effects based
     /// on active state.
     public func processStateChange() {
         switch state {
-        case .idle, .loading, .buffering, .paused, .playing,
-                .waitingForNetwork:
+        case .idle, .loading, .buffering, .paused, .playing, .waitingForNetwork:
             break
             
         case .loaded:
             observePlayerItemNotifications()
-        case .failed:
-            playerItemNotificationObservationTask?.cancel()
-            playerItemNotificationObservationTask = nil
-        case .stopped:
+        case .failed, .stopped:
             playerItemNotificationObservationTask?.cancel()
             playerItemNotificationObservationTask = nil
         }
     }
     
     /// Begins observing player rates, volume, mute state, and time changes via
-    /// Combine publishers.
+    /// native Swift Concurrency AsyncStreams and Foundation KVO.
     private func startPlayerObservers() {
-        playerRateObserver.startObserving()
-        playerPlaybackTimeObserver
-            .startObservingPeriodicTime(
-                for: configuration.getPeriodicTimeInterval()
-            )
+        stopPlayerObservers()
         
-        rateObservationTask?.cancel()
-        rateObservationTask = Task { @MainActor [weak self] in
-            guard let stream = self?.playerRateObserver.rateChanges else {
-                return
-            }
-            
+        playerRateObserver.startObserving()
+        playerPlaybackTimeObserver.startObservingPeriodicTime(
+            for: configuration.getPeriodicTimeInterval()
+        )
+        
+        // Rate changes async stream observation
+        rateObservationTask = Task { [weak self] in
+            guard let stream = self?.playerRateObserver.rateChanges else { return }
             for await change in stream {
                 guard !Task.isCancelled, let self else { break }
                 self.eventBroadcaster.send(
@@ -455,63 +445,75 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             }
         }
         
-        player.publisher(for: \.volume)
-            .sink { @MainActor [weak self] volume in
-                guard let self else { return }
-                self.eventBroadcaster.send(.volumeDidChange(volume))
-            }
-            .store(in: &subscriptions)
-        
-        player.publisher(for: \.isMuted)
-            .sink { @MainActor [weak self] isMuted in
-                guard let self else { return }
-                self.eventBroadcaster
-                    .send(.muteStatusDidChange(isMuted: isMuted))
-            }
-            .store(in: &subscriptions)
-        
-        playerPlaybackTimeObserver.periodicTimePublisher
-            .sink { @MainActor [weak self] time in
-                guard let self, self.currentMedia != nil else { return }
+        // Periodic time updates async stream observation
+        periodicTimeObservationTask = Task { [weak self] in
+            guard let stream = self?.playerPlaybackTimeObserver.periodicTimes else { return }
+            for await time in stream {
+                guard !Task.isCancelled, let self else { break }
+                guard self.currentMedia != nil else { continue }
                 self.eventBroadcaster.send(.timeDidChange(time))
             }
-            .store(in: &subscriptions)
+        }
         
-        playerPlaybackTimeObserver.boundaryTimePublisher
-            .sink { @MainActor [weak self] time in
-                guard let self, self.currentMedia != nil else { return }
+        // Boundary time milestones async stream observation
+        boundaryTimeObservationTask = Task { [weak self] in
+            guard let stream = self?.playerPlaybackTimeObserver.boundaryTimes else { return }
+            for await time in stream {
+                guard !Task.isCancelled, let self else { break }
+                guard self.currentMedia != nil else { continue }
                 self.eventBroadcaster.send(.boundaryReached(at: time))
             }
-            .store(in: &subscriptions)
+        }
         
-        player.publisher(for: \.status)
-            .dropFirst()
-            .sink { @MainActor [weak self] status in
-                guard let self else { return }
-                
-                self.controller.handlePlayerStatusChange(status)
+        // Native Foundation KVO for volume
+        observations.append(
+            player.observe(\.volume, options: [.initial, .new]) { [weak self] observedPlayer, _ in
+                let volume = observedPlayer.volume
+                Task { @MainActor [weak self] in
+                    self?.eventBroadcaster.send(.volumeDidChange(volume))
+                }
             }
-            .store(in: &subscriptions)
+        )
         
-        player.publisher(for: \.timeControlStatus)
-            .sink { [weak self] status in
-                guard let self else { return }
-                self.controller.handleTimeControlStatusChange(status)
+        // Native Foundation KVO for mute status
+        observations.append(
+            player.observe(\.isMuted, options: [.initial, .new]) { [weak self] observedPlayer, _ in
+                let isMuted = observedPlayer.isMuted
+                Task { @MainActor [weak self] in
+                    self?.eventBroadcaster.send(.muteStatusDidChange(isMuted: isMuted))
+                }
             }
-            .store(in: &subscriptions)
+        )
+        
+        // Native Foundation KVO for player readiness status
+        observations.append(
+            player.observe(\.status, options: [.new]) { [weak self] observedPlayer, _ in
+                let status = observedPlayer.status
+                Task { @MainActor [weak self] in
+                    self?.controller.handlePlayerStatusChange(status)
+                }
+            }
+        )
+        
+        // Native Foundation KVO for timeControlStatus
+        observations.append(
+            player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] observedPlayer, _ in
+                let status = observedPlayer.timeControlStatus
+                Task { @MainActor [weak self] in
+                    self?.controller.handleTimeControlStatusChange(status)
+                }
+            }
+        )
     }
     
     private func observePlayerItemNotifications() {
         playerItemNotificationObservationTask?.cancel()
+        guard let events = currentMedia?.playerItemNotifications.events else { return }
         
-        playerItemNotificationObservationTask = Task { @MainActor [weak self] in
-            guard let events = self?.currentMedia?.playerItemNotifications.events else {
-                return
-            }
-            
+        playerItemNotificationObservationTask = Task { [weak self] in
             for await event in events {
                 guard !Task.isCancelled, let self else { break }
-                controller.handle(event)
+                self.controller.handle(event)
             }
         }
     }
@@ -519,6 +521,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Stops time and rate observers attached to the underlying player
     /// instance.
     private func stopPlayerObservers() {
+        observations.removeAll()
+        rateObservationTask?.cancel()
+        rateObservationTask = nil
+        periodicTimeObservationTask?.cancel()
+        periodicTimeObservationTask = nil
+        boundaryTimeObservationTask?.cancel()
+        boundaryTimeObservationTask = nil
+        
         playerRateObserver.stopObserving()
         playerPlaybackTimeObserver.stopObservingPeriodicTime()
         playerPlaybackTimeObserver.stopObservingBoundaryTime()
@@ -529,7 +539,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Single entry point for dispatching all player events across the
     /// framework.
     /// Broadcasts the event to the delegate and forwards it to event listeners
-    /// (AsyncStream / Combine).
+    /// (`AsyncStream`).
     /// - Parameter event: The player event that occurred.
     public func emit(_ event: AKPlayerEvent) {
         eventBroadcaster.send(event)

@@ -182,7 +182,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     private func startObservingQueueEvents() {
         queueEventsTask?.cancel()
         
-        queueEventsTask = Task { @MainActor [weak self] in
+        queueEventsTask = Task { [weak self] in
             guard let self else { return }
             
             for await event in events {

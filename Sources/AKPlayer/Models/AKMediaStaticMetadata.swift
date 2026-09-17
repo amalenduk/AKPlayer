@@ -9,7 +9,7 @@ import AVFoundation
 import MediaPlayer
 import UIKit
 
-public struct AKMediaStaticMetadata: Equatable {
+public struct AKMediaStaticMetadata: Equatable, @unchecked Sendable {
     
     public var title: String?
     public var artist: String?
@@ -62,5 +62,26 @@ public struct AKMediaStaticMetadata: Equatable {
         self.isExplicit = isExplicit
         self.assetURL = assetURL
         self.mediaType = mediaType
+    }
+    
+    // MARK: - Equatable
+    
+    public static func == (lhs: AKMediaStaticMetadata, rhs: AKMediaStaticMetadata) -> Bool {
+        lhs.title == rhs.title &&
+        lhs.artist == rhs.artist &&
+        lhs.albumTitle == rhs.albumTitle &&
+        lhs.albumArtist == rhs.albumArtist &&
+        lhs.genre == rhs.genre &&
+        lhs.composer == rhs.composer &&
+        lhs.artwork == rhs.artwork &&
+        lhs.artworkImage == rhs.artworkImage &&
+        lhs.trackNumber == rhs.trackNumber &&
+        lhs.trackCount == rhs.trackCount &&
+        lhs.discNumber == rhs.discNumber &&
+        lhs.discCount == rhs.discCount &&
+        lhs.releaseDate == rhs.releaseDate &&
+        lhs.isExplicit == rhs.isExplicit &&
+        lhs.assetURL == rhs.assetURL &&
+        lhs.mediaType == rhs.mediaType
     }
 }

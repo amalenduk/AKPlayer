@@ -7,98 +7,79 @@
 //
 
 import AVFoundation
-import Combine
 import Foundation
 
 // MARK: - AKMediaManager
 
 /// Concrete implementation responsible for managing media item asset creation,
-/// status observation, and preflight capability checks.
-@MainActor
-public class AKMediaManager: NSObject, AKMediaManagerProtocol {
+/// status observation, preflight capability checks, and event broadcasting.
+public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked Sendable {
+    
     // MARK: - Properties
     
-    /// The weak reference to the backing playable media item.
-    public private(set) weak var media: (any AKPlayable)?
+    /// The unowned reference to the backing playable media item.
+    public unowned let media: any AKPlayable
     
-    /// The loaded URL asset generated from the media item.
-    public var asset: AVURLAsset? {
-        playerItemInitService.asset
-    }
+    /// The loaded URL asset generated from the media item (Single Source of Truth).
+    public private(set) var asset: AVURLAsset?
     
-    /// The instantiated player item constructed from the asset.
-    public var playerItem: AVPlayerItem? {
-        playerItemInitService.playerItem
-    }
+    /// The instantiated player item constructed from the asset (Single Source of Truth).
+    public private(set) var playerItem: AVPlayerItem?
     
     /// The current player error, if media loading or playback failed.
-    public var error: AKPlayerError?
+    public private(set) var error: AKPlayerError?
     
     /// The current state of the playable media item.
-    public private(set) var state: AKPlayableState {
-        get { stateSubject.value }
-        set {
-            stateSubject.send(newValue)
+    public private(set) var state: AKPlayableState = .idle {
+        didSet {
+            guard oldValue != state else { return }
             emit(.stateDidChange(state))
-            delegate?.akMedia(media!, didChangeState: state)
         }
     }
     
-    /// Publisher emitting state updates starting with the current state upon
-    /// subscription.
-    public var statePublisher: AnyPublisher<AKPlayableState, Never> {
-        stateSubject
-            .removeDuplicates()
-            .eraseToAnyPublisher()
-    }
-    
-    /// Asynchronous stream of media events for Swift Concurrency.
+    /// Asynchronous stream of media events for Swift Concurrency (`for await event in manager.events`).
     public var events: AsyncStream<AKMediaEvent> {
         eventBroadcaster.makeStream()
     }
     
-    public weak var delegate: AKMediaDelegate?
-    
     private let eventBroadcaster = AKEventBroadcaster<AKMediaEvent>()
     
-    private let stateSubject = CurrentValueSubject<
-        AKPlayableState,
-        Never
-    >(.idle)
+    // MARK: - Child Services
     
     /// Service responsible for managing seek feasibility checks and execution.
-    public var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol { _seekingThroughMediaService}
+    public var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol { _seekingThroughMediaService }
     
     /// Service responsible for subtitle and audio track selection management.
     public var trackSelectionService: any AKTrackSelectionServiceProtocol { _trackSelectionService }
     
+    /// Service responsible for extracting asset and item metadata.
     public var metadataProvider: any AKMediaMetadataProviderProtocol { _metadataProvider }
     
     /// Notification observer for player item playback lifecycle events.
-    ///
-    /// Available once `createPlayerItemFromAsset()` initializes the
-    /// `playerItem`.
     public var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol { _playerItemNotificationsObserver }
     
-    private var subscriptions = Set<AnyCancellable>()
+    // MARK: - Private Storage
     
-    private var playerItemInitService: any AKPlayerItemInitServiceProtocol
+    private var observations: [NSKeyValueObservation] = []
     
-    /// Private backing storage initialized post-super.init
+    private let playerItemInitService: any AKPlayerItemInitServiceProtocol
     private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
     private var _trackSelectionService: (any AKTrackSelectionServiceProtocol)!
     private var _metadataProvider: (any AKMediaMetadataProviderProtocol)!
     private var _playerItemNotificationsObserver: (any AKPlayerItemNotificationsObserverProtocol)!
     
-    
-    // MARK: - Init & Deinit
+    // MARK: - Initialization & Cleanup
     
     /// Initializes a new media manager instance for the specified media item.
-    /// - Parameter media: The target playable media item.
-    public init(media: any AKPlayable) {
+    /// - Parameters:
+    ///   - media: The target playable media item.
+    ///   - playerItemInitService: The asset & item creation service.
+    public init(
+        media: any AKPlayable,
+        playerItemInitService: any AKPlayerItemInitServiceProtocol = AKPlayerItemInitService()
+    ) {
         self.media = media
-        playerItemInitService = AKPlayerItemInitService(with: media)
-        
+        self.playerItemInitService = playerItemInitService
         super.init()
         
         // Direct initialization of child services
@@ -108,7 +89,10 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
     }
     
-    deinit {}
+    deinit {
+        observations.removeAll()
+        eventBroadcaster.finish()
+    }
     
     // MARK: - Asset Lifecycle Operations
     
@@ -119,72 +103,67 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
             "This function can only be called if the media is idle or has encountered an error."
         )
         error = nil
-        await playerItemInitService.createAsset()
-        state = .assetLoaded
+        self.asset = await playerItemInitService.createAsset(for: media)
+        self.state = .assetLoaded
     }
     
-    /// Asynchronously validates key asset properties (e.g., playability and DRM
-    /// restrictions).
+    /// Asynchronously validates key asset properties (e.g., playability and DRM restrictions).
     public func validateAssetPlayability() async throws {
         assert(
             state.isAssetLoaded,
             "This function requires the asset to be loaded first."
         )
-        try await playerItemInitService.validateAssetPlayability()
+        guard let asset else {
+            throw AKPlayerError.assetLoadingFailed(reason: .notPlayable)
+        }
+        try await playerItemInitService.validatePlayability(of: asset)
     }
     
-    /// Constructs an `AVPlayerItem` from the initialized `AVURLAsset` and
-    /// instantiates the notification observer.
+    /// Constructs an `AVPlayerItem` from the initialized `AVURLAsset` and binds observers.
     public func createPlayerItemFromAsset() {
         assert(
             state.isAssetLoaded,
             "This function requires the asset to be loaded first."
         )
+        guard let asset else { return }
         error = nil
         
-        // Stop any existing notifications observer instance
-        subscriptions.removeAll()
+        // Stop any existing KVO observations
+        observations.removeAll()
         
-        let newItem = playerItemInitService.createPlayerItemFromAsset()
+        let newItem = playerItemInitService.createPlayerItem(from: asset, for: media)
+        self.playerItem = newItem
         
-        // Instantiate notification observer targeting the newly created player
-        // item
+        // Reset track selection session targeting the new player item
         Task {
             await trackSelectionService.resetSession()
         }
         
         bindObservers(to: newItem)
-        
-        state = .playerItemLoaded
+        self.state = .playerItemLoaded
     }
     
-    /// Aborts active asset property loading and cancels pending asynchronous
-    /// tasks.
+    /// Aborts active asset property loading and cancels pending operations.
     public func abortAssetInitialization() {
-        subscriptions.removeAll()
-        playerItemInitService.abortAssetInitialization()
+        observations.removeAll()
+        asset?.cancelLoading()
+        asset = nil
+        playerItem = nil
     }
     
     // MARK: - Preflight Capability Checks
     
-    /// Evaluates if the player item can step forward or backward by a given
-    /// frame count.
-    /// - Parameter count: The frame offset count.
-    /// - Returns: `true` if stepping by the specified count is supported.
+    /// Evaluates if the player item can step forward or backward by a given frame count.
     public func canStep(by count: Int) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
         else { return false }
+        
         let isForward = count.signum() == 1
-        return isForward
-        ? playerItem.canStepForward
-        : playerItem
-            .canStepBackward
+        return isForward ? playerItem.canStepForward : playerItem.canStepBackward
     }
     
     /// Evaluates whether the player item supports playback at a specified rate.
-    /// - Parameter rate: The target playback rate multiplier.
-    /// - Returns: `true` if playback at the specified rate is supported.
     public func canPlay(at rate: AKPlaybackRate) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
@@ -219,22 +198,13 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
     }
     
     /// Evaluates whether seeking to a target seek target position is permitted.
-    /// - Parameter target: The target `AKSeekTarget` position.
-    /// - Returns: `true` if the seek command is supported.
     public func canSeek(to target: AKSeekTarget) -> Bool {
-        guard state.isPlayerItemLoaded || state.isReadyToPlay
-        else { return false }
+        guard state.isPlayerItemLoaded || state.isReadyToPlay else { return false }
         return seekingThroughMediaService.canSeek(to: target)
     }
     
-    /// Evaluates whether seeking to a target seek target is permitted and
-    /// returns an unavailability reason if disallowed.
-    /// - Parameter target: The target `AKSeekTarget` position.
-    /// - Returns: A tuple containing a boolean flag indicating permission and
-    /// an optional unavailability reason.
-    public func canSeek(to target: AKSeekTarget) -> (
-        flag: Bool, reason: AKPlayerUnavailableCommandReason?
-    ) {
+    /// Evaluates whether seeking to a target seek target is permitted and returns an unavailability reason if disallowed.
+    public func canSeek(to target: AKSeekTarget) -> (flag: Bool, reason: AKPlayerUnavailableCommandReason?) {
         guard state.isPlayerItemLoaded || state.isReadyToPlay else {
             if state.isIdle || state.isFailed {
                 return (false, .loadMediaFirst)
@@ -245,166 +215,11 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         return seekingThroughMediaService.canSeek(to: target)
     }
     
-    // MARK: - Player Item Property Observation
-    
-    /// Helper to keep capability observations DRY (Don't Repeat Yourself)
-    private func observeCapability(
-        _ keyPath: KeyPath<AVPlayerItem, Bool>,
-        capability: AKMediaCapability,
-        on item: AVPlayerItem
-    ) {
-        item.publisher(for: keyPath, options: [.initial, .new])
-            .removeDuplicates()
-            .sink { [weak self] isSupported in
-                guard let self else { return }
-                emit(
-                    .capabilityDidChange(
-                        capability,
-                        isSupported: isSupported
-                    )
-                )
-                delegate?.akMedia(
-                    media!,
-                    didChangeCapability: capability,
-                    to: isSupported
-                )
-            }
-            .store(in: &subscriptions)
-    }
-    
-    private func bindObservers(to item: AVPlayerItem) {
-        // 1. Readiness & Status Observer
-        item.publisher(for: \.status, options: [.initial, .new])
-            .sink { [weak self] status in
-                guard let self else { return }
-                switch status {
-                case .readyToPlay:
-                    state = .readyToPlay
-                case .failed:
-                    let underlyingError =
-                    item.error
-                    ?? NSError(
-                        domain: "AKPlayer",
-                        code: -1,
-                        userInfo: nil
-                    )
-                    error = .playerItemLoadingFailed(
-                        reason: .statusLoadingFailed(error: underlyingError)
-                    )
-                    state = .failed
-                default:
-                    break
-                }
-            }
-            .store(in: &subscriptions)
-        
-        // 2. Duration
-        item.publisher(for: \.duration, options: [.initial, .new])
-            .removeDuplicates()
-            .sink { [weak self] duration in
-                guard let self, let media else { return }
-                delegate?.akMedia(media, didChangeItemDurationTo: duration)
-                emit(.durationDidChange(duration))
-            }
-            .store(in: &subscriptions)
-        
-        // 3. Presentation Resolution Size
-        item.publisher(for: \.presentationSize, options: [.initial, .new])
-            .removeDuplicates()
-            .sink { [weak self] size in
-                guard let self, let media else { return }
-                delegate?.akMedia(media, didChangePresentationSizeTo: size)
-                emit(.presentationSizeDidChange(size))
-            }
-            .store(in: &subscriptions)
-        
-        // 4. Tracks
-        item.publisher(for: \.tracks, options: [.initial, .new])
-            .sink { [weak self] tracks in
-                guard let self, let media else { return }
-                delegate?.akMedia(media, didChangeTracksTo: tracks)
-                emit(.tracksDidChange(tracks))
-            }
-            .store(in: &subscriptions)
-        
-        // 5. Timebase
-        item.publisher(for: \.timebase, options: [.initial, .new])
-            .sink { [weak self] timebase in
-                guard let self, let media else { return }
-                delegate?.akMedia(media, didChangeTimebaseTo: timebase)
-                emit(.timebaseDidChange(timebase))
-            }
-            .store(in: &subscriptions)
-        
-        // 6. Loaded Time Ranges
-        item.publisher(for: \.loadedTimeRanges, options: [.initial, .new])
-            .sink { [weak self] nsValues in
-                guard let self, let media else { return }
-                let ranges = nsValues.map(\.timeRangeValue)
-                delegate?.akMedia(media, didChangeLoadedTimeRangesTo: ranges)
-                emit(.loadedTimeRangesDidChange(ranges))
-            }
-            .store(in: &subscriptions)
-        
-        // 7. Seekable Time Ranges
-        item.publisher(for: \.seekableTimeRanges, options: [.initial, .new])
-            .sink { [weak self] nsValues in
-                guard let self, let media else { return }
-                let ranges = nsValues.map(\.timeRangeValue)
-                delegate?.akMedia(media, didChangeSeekableTimeRangesTo: ranges)
-                emit(.seekableTimeRangesDidChange(ranges))
-            }
-            .store(in: &subscriptions)
-        
-        // 8. Playback Capabilities (DRY Observation)
-        bindCapability(\.canStepForward, capability: .stepForward, on: item)
-        bindCapability(\.canStepBackward, capability: .stepBackward, on: item)
-        bindCapability(\.canPlayReverse, capability: .playReverse, on: item)
-        bindCapability(
-            \.canPlayFastForward,
-             capability: .playFastForward,
-             on: item
-        )
-        bindCapability(
-            \.canPlayFastReverse,
-             capability: .playFastReverse,
-             on: item
-        )
-        bindCapability(
-            \.canPlaySlowForward,
-             capability: .playSlowForward,
-             on: item
-        )
-        bindCapability(
-            \.canPlaySlowReverse,
-             capability: .playSlowReverse,
-             on: item
-        )
-    }
-    
-    private func bindCapability(
-        _ keyPath: KeyPath<AVPlayerItem, Bool>,
-        capability: AKMediaCapability,
-        on item: AVPlayerItem
-    ) {
-        item.publisher(for: keyPath, options: [.initial, .new])
-            .removeDuplicates()
-            .sink { [weak self] isSupported in
-                guard let self, let media else { return }
-                delegate?.akMedia(
-                    media,
-                    didChangeCapability: capability,
-                    to: isSupported
-                )
-                emit(.capabilityDidChange(capability, isSupported: isSupported))
-            }
-            .store(in: &subscriptions)
-    }
-    
     public func isSupported(_ capability: AKMediaCapability) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
         else { return false }
+        
         switch capability {
         case .playReverse: return playerItem.canPlayReverse
         case .playFastForward: return playerItem.canPlayFastForward
@@ -414,6 +229,104 @@ public class AKMediaManager: NSObject, AKMediaManagerProtocol {
         case .stepForward: return playerItem.canStepForward
         case .stepBackward: return playerItem.canStepBackward
         }
+    }
+    
+    // MARK: - Player Item Property Observation (Foundation KVO)
+    
+    private func bindObservers(to item: AVPlayerItem) {
+        // 1. Readiness & Status Observer
+        observations.append(
+            item.observe(\.status, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                switch observedItem.status {
+                case .readyToPlay:
+                    self.state = .readyToPlay
+                case .failed:
+                    let underlyingError = observedItem.error ?? NSError(domain: "AKPlayer", code: -1, userInfo: nil)
+                    self.error = .playerItemLoadingFailed(reason: .statusLoadingFailed(error: underlyingError))
+                    self.state = .failed
+                default:
+                    break
+                }
+            }
+        )
+        
+        // 2. Duration
+        observations.append(
+            item.observe(\.duration, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let duration = observedItem.duration
+                self.emit(.durationDidChange(duration))
+            }
+        )
+        
+        // 3. Presentation Resolution Size
+        observations.append(
+            item.observe(\.presentationSize, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let size = observedItem.presentationSize
+                self.emit(.presentationSizeDidChange(size))
+            }
+        )
+        
+        // 4. Tracks
+        observations.append(
+            item.observe(\.tracks, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let tracks = observedItem.tracks
+                self.emit(.tracksDidChange(tracks))
+            }
+        )
+        
+        // 5. Timebase
+        observations.append(
+            item.observe(\.timebase, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let timebase = observedItem.timebase
+                self.emit(.timebaseDidChange(timebase))
+            }
+        )
+        
+        // 6. Loaded Time Ranges
+        observations.append(
+            item.observe(\.loadedTimeRanges, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let ranges = observedItem.loadedTimeRanges.map(\.timeRangeValue)
+                self.emit(.loadedTimeRangesDidChange(ranges))
+            }
+        )
+        
+        // 7. Seekable Time Ranges
+        observations.append(
+            item.observe(\.seekableTimeRanges, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let ranges = observedItem.seekableTimeRanges.map(\.timeRangeValue)
+                self.emit(.seekableTimeRangesDidChange(ranges))
+            }
+        )
+        
+        // 8. Playback Capabilities
+        bindCapability(\.canStepForward, capability: .stepForward, on: item)
+        bindCapability(\.canStepBackward, capability: .stepBackward, on: item)
+        bindCapability(\.canPlayReverse, capability: .playReverse, on: item)
+        bindCapability(\.canPlayFastForward, capability: .playFastForward, on: item)
+        bindCapability(\.canPlayFastReverse, capability: .playFastReverse, on: item)
+        bindCapability(\.canPlaySlowForward, capability: .playSlowForward, on: item)
+        bindCapability(\.canPlaySlowReverse, capability: .playSlowReverse, on: item)
+    }
+    
+    private func bindCapability(
+        _ keyPath: KeyPath<AVPlayerItem, Bool>,
+        capability: AKMediaCapability,
+        on item: AVPlayerItem
+    ) {
+        observations.append(
+            item.observe(keyPath, options: [.initial, .new]) { [weak self] observedItem, _ in
+                guard let self else { return }
+                let isSupported = observedItem[keyPath: keyPath]
+                self.emit(.capabilityDidChange(capability, isSupported: isSupported))
+            }
+        )
     }
     
     // MARK: - Event Dispatch

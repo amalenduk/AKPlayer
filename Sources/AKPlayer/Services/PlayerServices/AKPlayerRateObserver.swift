@@ -7,20 +7,20 @@
 //
 
 import AVFoundation
-import Combine
+import Foundation
 
 // MARK: - AKPlaybackRateChange
 
 /// Model representing a rate change event emitted by an AVPlayer instance.
-public struct AKPlaybackRateChange: Sendable {
+public struct AKPlaybackRateChange: Equatable, Sendable {
     public let previousRate: AKPlaybackRate
     public let currentRate: AKPlaybackRate
-    public let reason: AVPlayer.RateDidChangeReason
-
+    public let reason: AVPlayer.RateDidChangeReason?
+    
     public init(
         previousRate: AKPlaybackRate,
         currentRate: AKPlaybackRate,
-        reason: AVPlayer.RateDidChangeReason
+        reason: AVPlayer.RateDidChangeReason? = nil
     ) {
         self.previousRate = previousRate
         self.currentRate = currentRate
@@ -30,110 +30,90 @@ public struct AKPlaybackRateChange: Sendable {
 
 // MARK: - AKPlayerRateObserverProtocol
 
-/// Interface describing an object capable of observing rate change
-/// notifications on an AVPlayer.
+/// Interface describing an object capable of observing rate change notifications on an AVPlayer.
 @MainActor
-public protocol AKPlayerRateObserverProtocol: AnyObject {
+public protocol AKPlayerRateObserverProtocol: AnyObject, Sendable {
     var player: AVPlayer { get }
     var rateChanges: AsyncStream<AKPlaybackRateChange> { get }
-
+    
     func startObserving()
     func stopObserving()
 }
 
 // MARK: - AKPlayerRateObserver
 
-/// Class responsible for tracking AVPlayer rate transitions and publishing
-/// unified change events.
+/// Class responsible for tracking AVPlayer rate transitions and broadcasting unified change events.
 @MainActor
-public class AKPlayerRateObserver: AKPlayerRateObserverProtocol {
+public final class AKPlayerRateObserver: AKPlayerRateObserverProtocol {
     // MARK: - Properties
-
+    
     public let player: AVPlayer
-
+    
     public var rateChanges: AsyncStream<AKPlaybackRateChange> {
-        rateChangeStream
+        eventBroadcaster.makeStream()
     }
-
-    private let rateChangeStream: AsyncStream<AKPlaybackRateChange>
-    private let rateChangeContinuation:
-        AsyncStream<AKPlaybackRateChange>
-        .Continuation
-
+    
+    private let eventBroadcaster = AKEventBroadcaster<AKPlaybackRateChange>()
+    
     private var isObserving = false
-
-    /// Container holding reactive Combine event subscriptions.
-    private var subscriptions = Set<AnyCancellable>()
-
     private var currentRate: AKPlaybackRate?
-
+    private var observationTask: Task<Void, Never>?
+    
     // MARK: - Init & Deinit
-
+    
     /// Initializes a rate observer instance bound to an AVPlayer.
     /// - Parameter player: The AVPlayer instance to monitor.
     public init(with player: AVPlayer) {
         self.player = player
-
-        let (stream, continuation) =
-            AsyncStream
-                .makeStream(of: AKPlaybackRateChange.self)
-        rateChangeStream = stream
-        rateChangeContinuation = continuation
     }
-
+    
     deinit {
-        rateChangeContinuation.finish()
+        observationTask?.cancel()
+        observationTask = nil
+        eventBroadcaster.finish()
     }
-
+    
     // MARK: - Observation Lifecycle
-
+    
     public func startObserving() {
         guard !isObserving else { return }
-
-        let initialRate = AKPlaybackRate(rate: player.rate)
-        currentRate = initialRate
-
-        // Listen to NotificationCenter updates using @MainActor closure
-        // isolation
-        NotificationCenter.default.publisher(
-            for: AVPlayer.rateDidChangeNotification,
-            object: player
-        )
-        .sink { [weak self] notification in
-            guard let self else { return }
-
-            guard
-                let userInfo = notification.userInfo,
-                let reason = userInfo[AVPlayer.rateDidChangeReasonKey]
-                as? AVPlayer.RateDidChangeReason
-            else {
-                return
-            }
-
-            let previous =
-                currentRate
-                    ?? AKPlaybackRate(rate: player.rate)
-
-            let current = AKPlaybackRate(rate: player.rate)
-
-            currentRate = current
-
-            let change = AKPlaybackRateChange(
-                previousRate: previous,
-                currentRate: current,
-                reason: reason
-            )
-
-            rateChangeContinuation.yield(change)
-        }
-        .store(in: &subscriptions)
-
         isObserving = true
+        currentRate = AKPlaybackRate(rate: player.rate)
+        
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self, player] in
+            for await notification in NotificationCenter.default.notifications(
+                named: AVPlayer.rateDidChangeNotification,
+                object: player
+            ) {
+                guard !Task.isCancelled, let self else { break }
+                self.handleRateDidChangeNotification(notification)
+            }
+        }
     }
-
+    
     public func stopObserving() {
         guard isObserving else { return }
-        subscriptions.removeAll()
+        observationTask?.cancel()
+        observationTask = nil
         isObserving = false
+    }
+    
+    // MARK: - Private Notification Handling
+    
+    private func handleRateDidChangeNotification(_ notification: Notification) {
+        let reason = notification.userInfo?[AVPlayer.rateDidChangeReasonKey] as? AVPlayer.RateDidChangeReason
+        let previous = currentRate ?? AKPlaybackRate(rate: player.rate)
+        let current = AKPlaybackRate(rate: player.rate)
+        
+        currentRate = current
+        
+        let change = AKPlaybackRateChange(
+            previousRate: previous,
+            currentRate: current,
+            reason: reason
+        )
+        
+        eventBroadcaster.send(change)
     }
 }
