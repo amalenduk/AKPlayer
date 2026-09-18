@@ -42,9 +42,7 @@ public struct AKNowPlayableMetadata: AKNowPlayableInfoProtocol, Sendable {
 
 /// A concrete struct implementing static metadata properties for Now Playing
 /// displays.
-public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
-    @unchecked Sendable
-{
+public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, @unchecked Sendable {
     // MARK: - Properties
 
     /// Destination asset URL.
@@ -91,6 +89,33 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
 
     /// Unique service identifier.
     public var serviceIdentifier: String?
+    
+    /// Music / item genre.
+    public var genre: String?
+    
+    /// Composer name.
+    public var composer: String?
+    
+    /// Track number in album.
+    public var trackNumber: Int?
+    
+    /// Total track count in album.
+    public var trackCount: Int?
+    
+    /// Disc number.
+    public var discNumber: Int?
+    
+    /// Total disc count.
+    public var discCount: Int?
+    
+    /// Explicit content flag.
+    public var isExplicit: Bool?
+    
+    /// Release date.
+    public var releaseDate: Date?
+    
+    /// Comments or description.
+    public var descriptionText: String?
 
     // MARK: - Init
 
@@ -111,6 +136,15 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
     ///   - chapterCount: Total chapter count.
     ///   - creditsStartTime: Start offset for credits.
     ///   - serviceIdentifier: Unique service identifier.
+    ///   - genre: Music / item genre.
+    ///   - composer: Composer name.
+    ///   - trackNumber: Track number in album.
+    ///   - trackCount: Total track count in album.
+    ///   - discNumber: Disc number.
+    ///   - discCount: Total disc count.
+    ///   - isExplicit: Explicit content flag.
+    ///   - releaseDate: Release date.
+    ///   - descriptionText: Comments or description.
     public init(
         assetURL: URL,
         mediaType: MPNowPlayingInfoMediaType,
@@ -126,7 +160,16 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
         adTimeRanges: [MPAdTimeRange]? = nil,
         chapterCount: Int? = nil,
         creditsStartTime: Double? = nil,
-        serviceIdentifier: String? = nil
+        serviceIdentifier: String? = nil,
+        genre: String? = nil,
+        composer: String? = nil,
+        trackNumber: Int? = nil,
+        trackCount: Int? = nil,
+        discNumber: Int? = nil,
+        discCount: Int? = nil,
+        isExplicit: Bool? = nil,
+        releaseDate: Date? = nil,
+        descriptionText: String? = nil
     ) {
         self.assetURL = assetURL
         self.mediaType = mediaType
@@ -143,6 +186,15 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
         self.chapterCount = chapterCount
         self.creditsStartTime = creditsStartTime
         self.serviceIdentifier = serviceIdentifier
+        self.genre = genre
+        self.composer = composer
+        self.trackNumber = trackNumber
+        self.trackCount = trackCount
+        self.discNumber = discNumber
+        self.discCount = discCount
+        self.isExplicit = isExplicit
+        self.releaseDate = releaseDate
+        self.descriptionText = descriptionText
     }
 }
 
@@ -150,9 +202,7 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
 
 /// A concrete struct implementing dynamic metadata properties for Now Playing
 /// displays.
-public struct AKNowPlayableDynamicMetadata: AKNowPlayableDynamicMetadataProtocol,
-    @unchecked
-Sendable {
+public struct AKNowPlayableDynamicMetadata: AKNowPlayableDynamicMetadataProtocol, @unchecked Sendable {
     // MARK: - Properties
 
     /// Current playback speed multiplier.

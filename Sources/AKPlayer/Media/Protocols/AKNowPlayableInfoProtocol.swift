@@ -100,6 +100,33 @@ public protocol AKNowPlayableStaticMetadataProtocol: Sendable {
     
     /// Time ranges for advertisements (`MPNowPlayingInfoPropertyAdTimeRanges`).
     var adTimeRanges: [MPAdTimeRange]? { get set }
+    
+    /// Music / item genre (`MPMediaItemPropertyGenre`).
+    var genre: String? { get set }
+    
+    /// Composer name (`MPMediaItemPropertyComposer`).
+    var composer: String? { get set }
+    
+    /// Track number in album (`MPMediaItemPropertyAlbumTrackNumber`).
+    var trackNumber: Int? { get set }
+    
+    /// Total track count in album (`MPMediaItemPropertyAlbumTrackCount`).
+    var trackCount: Int? { get set }
+    
+    /// Disc number (`MPMediaItemPropertyDiscNumber`).
+    var discNumber: Int? { get set }
+    
+    /// Total disc count (`MPMediaItemPropertyDiscCount`).
+    var discCount: Int? { get set }
+    
+    /// Explicit content flag (`MPMediaItemPropertyIsExplicit`).
+    var isExplicit: Bool? { get set }
+    
+    /// Release date (`MPMediaItemPropertyReleaseDate`).
+    var releaseDate: Date? { get set }
+    
+    /// Comments or description (`MPMediaItemPropertyComments`).
+    var descriptionText: String? { get set }
 }
 
 // Default Optional Property Stubs
@@ -115,6 +142,15 @@ public extension AKNowPlayableStaticMetadataProtocol {
     var creditsStartTime: Double? { get { nil } set {} }
     var serviceIdentifier: String? { get { nil } set {} }
     var adTimeRanges: [MPAdTimeRange]? { get { nil } set {} }
+    var genre: String? { get { nil } set {} }
+    var composer: String? { get { nil } set {} }
+    var trackNumber: Int? { get { nil } set {} }
+    var trackCount: Int? { get { nil } set {} }
+    var discNumber: Int? { get { nil } set {} }
+    var discCount: Int? { get { nil } set {} }
+    var isExplicit: Bool? { get { nil } set {} }
+    var releaseDate: Date? { get { nil } set {} }
+    var descriptionText: String? { get { nil } set {} }
 }
 
 public extension AKNowPlayableStaticMetadataProtocol {
@@ -163,6 +199,42 @@ public extension AKNowPlayableStaticMetadataProtocol {
         
         if let adTimeRanges {
             nowPlayingInfo[MPNowPlayingInfoPropertyAdTimeRanges] = adTimeRanges
+        }
+        
+        if let genre {
+            nowPlayingInfo[MPMediaItemPropertyGenre] = genre
+        }
+        
+        if let composer {
+            nowPlayingInfo[MPMediaItemPropertyComposer] = composer
+        }
+        
+        if let trackNumber {
+            nowPlayingInfo[MPMediaItemPropertyAlbumTrackNumber] = trackNumber
+        }
+        
+        if let trackCount {
+            nowPlayingInfo[MPMediaItemPropertyAlbumTrackCount] = trackCount
+        }
+        
+        if let discNumber {
+            nowPlayingInfo[MPMediaItemPropertyDiscNumber] = discNumber
+        }
+        
+        if let discCount {
+            nowPlayingInfo[MPMediaItemPropertyDiscCount] = discCount
+        }
+        
+        if let isExplicit {
+            nowPlayingInfo[MPMediaItemPropertyIsExplicit] = isExplicit
+        }
+        
+        if let releaseDate {
+            nowPlayingInfo[MPMediaItemPropertyReleaseDate] = releaseDate
+        }
+        
+        if let descriptionText {
+            nowPlayingInfo[MPMediaItemPropertyComments] = descriptionText
         }
         
         if let itemArtwork {

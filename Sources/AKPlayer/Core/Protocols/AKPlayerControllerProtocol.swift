@@ -49,9 +49,6 @@ public protocol AKPlayerControllerProtocol: AnyObject, Sendable, AKPlayerProtoco
     /// Configuration options specifying playback policies and default rates.
     var configuration: any AKPlayerConfigurationProtocol { get }
     
-    /// The active player state machine controller handling command validation.
-    var controller: any AKPlayerStateControllerProtocol { get }
-    
     /// Internal service handling media seek calculations and boundaries.
     var playerSeekingThroughMediaService: any AKPlayerSeekingThroughMediaServiceProtocol { get }
     

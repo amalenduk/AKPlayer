@@ -15,6 +15,7 @@ struct AKPlayerTests {
     
     @Test func testQueuePlayerNowPlayingIntegration() async throws {
         let queuePlayer = AKQueuePlayer()
+        try await queuePlayer.prepare()
         
         let item1 = AKMedia(url: URL(string: "https://example.com/track1.mp3")!, type: .clip)
         let item2 = AKMedia(url: URL(string: "https://example.com/track2.mp3")!, type: .clip)

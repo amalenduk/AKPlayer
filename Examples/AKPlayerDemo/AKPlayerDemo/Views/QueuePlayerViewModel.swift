@@ -51,7 +51,13 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
     override public init() {
         super.init()
         AKLogger.logInit(self)
-        try? queuePlayer.prepare()
+        Task { @MainActor [weak self] in
+            do {
+                try await self?.queuePlayer.prepare()
+            } catch {
+                AKLogger.error("Failed to prepare queue player: \(error)", category: .player)
+            }
+        }
         startSyncingQueueState()
     }
     

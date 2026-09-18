@@ -31,7 +31,7 @@ public protocol AKNowPlayingManagerProtocol: AnyObject, Sendable {
     var session: any AKNowPlayingSessionProtocol { get }
     
     /// Starts event observation loops and configures remote command handlers.
-    func start() throws
+    func start() async throws
     
     /// Stops event observation loops, cancels background tasks, and resets Now Playing metadata.
     func stop()
@@ -60,6 +60,9 @@ public protocol AKNowPlayingManagerProtocol: AnyObject, Sendable {
     /// Optional service identifier for now playing info (MPNowPlayingInfoPropertyServiceIdentifier).
     var serviceIdentifier: String? { get set }
     
+    /// The active remote command configuration.
+    var commandConfiguration: AKNowPlayingCommandConfiguration { get set }
+    
     /// Retrieves the current static and dynamic metadata container.
     func currentNowPlayingMetadata() -> AKNowPlayableMetadata?
     
@@ -76,6 +79,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     public let session: any AKNowPlayingSessionProtocol
     public weak var queueInfoProvider: (any AKNowPlayingQueueInfoProvider)?
     public var serviceIdentifier: String?
+    public var commandConfiguration: AKNowPlayingCommandConfiguration = AKNowPlayingCommandConfiguration()
     private weak var playerManager: (any AKPlayerManagerProtocol)?
     
     private var playerObservationTask: Task<Void, Never>?
@@ -101,7 +105,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         self.session = session ?? AKNowPlayingSession(players: [playerManager.playerController.player])
     }
     
-    public func start() throws {
+    public func start() async throws {
         stop()
         
         guard let playerManager, playerManager.configuration.isNowPlayingEnabled else { return }
@@ -110,21 +114,14 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             guard session.canBecomeActive() else {
                 throw AKPlayerError.nowPlayingSessionFailure
             }
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let active = await self.session.becomeActiveIfPossible()
-                guard active else {
-                    AKLogger.warning("Failed to activate Now Playing session.", category: .remote)
-                    return
-                }
-                await self.setupDefaultRemoteCommands()
-            }
-        } else {
-            Task { @MainActor [weak self] in
-                await self?.setupDefaultRemoteCommands()
+            let active = await session.becomeActiveIfPossible()
+            guard active else {
+                AKLogger.error("Failed to activate Now Playing session.", category: .remote)
+                throw AKPlayerError.nowPlayingSessionFailure
             }
         }
         
+        await setupDefaultRemoteCommands()
         observePlayerEvents()
     }
     
@@ -161,6 +158,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     // MARK: - High-Level Command Forwarding
     
     public func applyConfiguration(_ config: AKNowPlayingCommandConfiguration) async {
+        commandConfiguration = config
         await session.applyConfiguration(config)
     }
     
@@ -269,36 +267,70 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     public func currentNowPlayingMetadata() -> AKNowPlayableMetadata? {
         guard let currentMedia = playerManager?.currentMedia else { return nil }
         
-        let chapterService = currentMedia.manager.chapterService
+        let chapterService = currentMedia.chapterService
         let totalChapters = chapterService.chapterCount > 0 ? chapterService.chapterCount : nil
-        let resolvedCreditsStartTime: Double? = {
-            if let customCredits = (currentMedia.staticMetadata as? AKNowPlayableStaticMetadata)?.creditsStartTime ?? currentMedia.staticMetadata?.creditsStartTime {
-                return customCredits
+        let resolvedCreditsStartTime: Double? = currentMedia.staticMetadata?.creditsStartTime ?? chapterService.creditsStartTime
+        
+        let extracted = currentMedia.manager.metadataProvider.staticMetadata
+        let custom = currentMedia.staticMetadata
+        
+        // Artwork resolution: custom -> extracted (image or MPMediaItemArtwork)
+        let resolvedArtwork: Artwork? = {
+            if let customArtwork = custom?.artwork {
+                return customArtwork
             }
-            if let extractedCredits = currentMedia.manager.metadataProvider.staticMetadata.creditsStartTime {
-                return extractedCredits
+            if let image = extracted.artworkImage {
+                return .image(image)
             }
-            return chapterService.creditsStartTime
+            if let artwork = extracted.artwork {
+                return .artwork(artwork)
+            }
+            return nil
         }()
         
-        let staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = {
-            if var custom = currentMedia.staticMetadata {
-                if custom.chapterCount == nil { custom.chapterCount = totalChapters }
-                if custom.creditsStartTime == nil { custom.creditsStartTime = resolvedCreditsStartTime }
-                if custom.serviceIdentifier == nil { custom.serviceIdentifier = serviceIdentifier }
-                return custom
+        // Dynamic media type detection: Video if visual tracks/presentationSize exist, else Audio
+        let defaultMediaType: MPNowPlayingInfoMediaType = {
+            if let item = playerManager?.currentItem {
+                if item.presentationSize != .zero && item.presentationSize.width > 0 {
+                    return .video
+                }
+                if !item.asset.tracks(withMediaType: .video).isEmpty {
+                    return .video
+                }
+            } else if let asset = currentMedia.manager.asset {
+                if !asset.tracks(withMediaType: .video).isEmpty {
+                    return .video
+                }
             }
-            
-            let extracted = currentMedia.manager.metadataProvider.staticMetadata
-            return extracted.toNowPlayableStaticMetadata(
-                defaultURL: currentMedia.url,
-                defaultMediaType: .audio,
-                isLive: currentMedia.isLive(),
-                defaultChapterCount: totalChapters,
-                defaultCreditsStartTime: resolvedCreditsStartTime,
-                defaultServiceIdentifier: serviceIdentifier
-            )
+            return .audio
         }()
+        
+        let staticMetadata = AKNowPlayableStaticMetadata(
+            assetURL: custom?.assetURL ?? currentMedia.url,
+            mediaType: custom?.mediaType ?? defaultMediaType,
+            isLiveStream: custom?.isLiveStream ?? currentMedia.isLive(),
+            title: custom?.title ?? extracted.title ?? "Unknown Title",
+            artist: custom?.artist ?? extracted.artist,
+            artwork: resolvedArtwork,
+            albumArtist: custom?.albumArtist ?? extracted.albumArtist,
+            albumTitle: custom?.albumTitle ?? extracted.albumTitle,
+            collectionIdentifier: custom?.collectionIdentifier,
+            externalContentIdentifier: custom?.externalContentIdentifier,
+            externalUserProfileIdentifier: custom?.externalUserProfileIdentifier,
+            adTimeRanges: custom?.adTimeRanges,
+            chapterCount: custom?.chapterCount ?? totalChapters,
+            creditsStartTime: resolvedCreditsStartTime,
+            serviceIdentifier: custom?.serviceIdentifier ?? serviceIdentifier,
+            genre: custom?.genre ?? extracted.genre,
+            composer: custom?.composer ?? extracted.composer,
+            trackNumber: custom?.trackNumber ?? extracted.trackNumber,
+            trackCount: custom?.trackCount ?? extracted.trackCount,
+            discNumber: custom?.discNumber ?? extracted.discNumber,
+            discCount: custom?.discCount ?? extracted.discCount,
+            isExplicit: custom?.isExplicit,
+            releaseDate: custom?.releaseDate ?? extracted.releaseDate,
+            descriptionText: custom?.descriptionText ?? extracted.descriptionText
+        )
         
         return AKNowPlayableMetadata(
             staticMetadata: staticMetadata,
@@ -388,7 +420,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     // MARK: - Default Remote Commands Setup
     
     private func setupDefaultRemoteCommands() async {
-        let defaultConfig = AKNowPlayingCommandConfiguration()
+        if commandConfiguration.isEmpty {
+            commandConfiguration = AKNowPlayingCommandConfiguration()
                 .add(.play)
                 .add(.pause)
                 .add(.stop)
@@ -396,8 +429,9 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                 .add(.changePlaybackPosition)
                 .add(.skipForward(preferredIntervals: [15]))
                 .add(.skipBackward(preferredIntervals: [15]))
+        }
         
-        await session.applyConfiguration(defaultConfig)
+        await session.applyConfiguration(commandConfiguration)
         
         await session.setHandler(for: .play) { @MainActor [weak playerManager] _ in
             guard let playerManager else { return .commandFailed }

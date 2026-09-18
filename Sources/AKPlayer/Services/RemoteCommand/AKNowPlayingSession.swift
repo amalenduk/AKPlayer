@@ -118,14 +118,18 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     // MARK: - Configuration
     
     public func applyConfiguration(_ config: AKNowPlayingCommandConfiguration) async {
-        let list = config.allCommands
+        // 1. Cleanly disable and reset all remote commands
+        for command in AKRemoteCommand.all() {
+            setEnabled(false, for: command)
+        }
         
-        for command in list {
+        // 2. Enable and configure only the commands in the new configuration
+        for command in config.enabledCommands {
             registerIfNeeded(command)
             if let handler = config.handler(for: command) {
                 commands[command.id]?.handler = handler
             }
-            setEnabled(config.isEnabled(command), for: command)
+            setEnabled(true, for: command)
         }
     }
     

@@ -40,7 +40,7 @@ public protocol AKPlayerManagerProtocol: AKPlayerProtocol,
     /// player for immediate use.
     /// - Throws: `AKPlayerError` or `AVAudioSession` initialization failures if
     /// preparation fails.
-    func prepare() throws
+    func prepare() async throws
 }
 
 // MARK: - AKPlayerStateSnapshot

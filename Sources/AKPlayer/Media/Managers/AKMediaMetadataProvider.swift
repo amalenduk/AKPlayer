@@ -121,18 +121,11 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             if let v = metadata.discNumber { updated.discNumber = v }
             if let v = metadata.discCount { updated.discCount = v }
             if let v = metadata.releaseDate { updated.releaseDate = v }
-            if let v = metadata.isExplicit { updated.isExplicit = v }
-            if let v = metadata.assetURL { updated.assetURL = v }
-            if let v = metadata.mediaType { updated.mediaType = v }
+            if let v = metadata.creationDate { updated.creationDate = v }
             if let v = metadata.descriptionText { updated.descriptionText = v }
             if let v = metadata.copyrights { updated.copyrights = v }
             if let v = metadata.publisher { updated.publisher = v }
-            if let v = metadata.creationDate { updated.creationDate = v }
             if let v = metadata.language { updated.language = v }
-            if let v = metadata.isLiveStream { updated.isLiveStream = v }
-            if let v = metadata.chapterCount { updated.chapterCount = v }
-            if let v = metadata.creditsStartTime { updated.creditsStartTime = v }
-            if let v = metadata.serviceIdentifier { updated.serviceIdentifier = v }
             
             // Generate MPMediaItemArtwork if image is present without artwork
             if updated.artwork == nil, let image = updated.artworkImage {

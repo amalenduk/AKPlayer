@@ -87,7 +87,13 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     override public init() {
         super.init()
         AKLogger.logInit(self)
-        try? player.prepare()
+        Task { @MainActor [weak self] in
+            do {
+                try await self?.player.prepare()
+            } catch {
+                AKLogger.error("Failed to prepare player: \(error)", category: .player)
+            }
+        }
         observeInterstitialEvents()
     }
     

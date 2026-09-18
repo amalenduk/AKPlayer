@@ -114,14 +114,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     
     /// The active state controller instance representing current player state
     /// logic.
-    public private(set) var controller: any AKPlayerStateControllerProtocol {
-        get { _controller ?? AKIdleState(playerController: self) }
-        set {
-            _controller = newValue
-        }
-    }
-    
-    private var _controller: (any AKPlayerStateControllerProtocol)?
+    private var controller: (any AKPlayerStateControllerProtocol)!
     
     private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
     
@@ -180,6 +173,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         self.playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(with: player)
         self.interstitialService = AKPlayerInterstitialService(with: player)
         self.networkStatusMonitor = AKNetworkStatusMonitor()
+        self.controller = AKIdleState(playerController: self)
     }
     
     deinit {
@@ -386,7 +380,6 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// monitoring, and attaches observers.
     /// - Throws: An error if setting up active pipeline components fails.
     public func prepare() throws {
-        controller = AKIdleState(playerController: self)
         networkStatusMonitor.startObserving()
         startPlayerObservers()
     }

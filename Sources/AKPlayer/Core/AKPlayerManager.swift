@@ -226,10 +226,10 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     /// Now Playing, and begins system observers.
     /// - Throws: `AKPlayerError` or `AVAudioSession` setup errors during
     /// initialization.
-    public func prepare() throws {
+    public func prepare() async throws {
         try setAudioSession(true)
         try playerController.prepare()
-        try nowPlayingManager?.start()
+        try await nowPlayingManager?.start()
         
         startObservers()
         isExternalAudioPlaybackDeviceConnected =

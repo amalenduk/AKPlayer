@@ -180,8 +180,8 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     /// Prepares the player pipeline and configures initial system audio session
     /// settings.
     /// - Throws: An error if setting up the underlying audio session fails.
-    public func prepare() throws {
-        try manager.prepare()
+    public func prepare() async throws {
+        try await manager.prepare()
     }
     
     /// Configures boundary observers to trigger notifications when specific

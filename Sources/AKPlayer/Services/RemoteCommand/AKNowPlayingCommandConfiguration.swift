@@ -208,6 +208,11 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     }
 
     // MARK: - Query Methods
+    
+    /// Indicates whether the configuration contains no registered commands.
+    public var isEmpty: Bool {
+        commands.isEmpty
+    }
 
     /// Returns an array of all registered commands in this configuration.
     public var allCommands: [AKRemoteCommand] {
@@ -256,18 +261,12 @@ public extension AKNowPlayingCommandConfiguration {
         return config.useVideoPreset()
     }
     
-    /// Factory creating a pre-configured queue / playlist preset instance (next/previous track, repeat, shuffle, scrubbing, without skip interval buttons).
+    /// Factory creating a pre-configured queue / playlist preset instance (next/previous track, repeat, shuffle, scrubbing).
     static func queue() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration()
             .usePlaybackCommands()
             .useTrackNavigationCommands()
             .add(.changePlaybackPosition)
-            .disable(commands: [
-                .skipBackward(preferredIntervals: [15.0]),
-                .skipForward(preferredIntervals: [15.0]),
-                .seekBackward,
-                .seekForward
-            ])
     }
 
     /// Factory creating a minimal configuration with primary playback controls
