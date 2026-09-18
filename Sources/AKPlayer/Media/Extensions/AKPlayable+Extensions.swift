@@ -14,8 +14,8 @@ private nonisolated(unsafe) var managerKey: UInt8 = 0
 
 // MARK: - Manager & Observation Extensions
 
-public extension AKPlayable {
-    /// The backing media manager instance associated with this playable item.
+extension AKPlayable {
+    /// The backing media manager instance associated with this playable item (internal to AKPlayer SDK).
     var manager: any AKMediaManagerProtocol {
         objc_sync_enter(self)
         defer { objc_sync_exit(self) }
@@ -35,7 +35,7 @@ public extension AKPlayable {
     ///   - action: Closure executed when the observed value updates.
     /// - Returns: An `NSKeyValueObservation` instance managing the observation lifetime, or `nil` if `playerItem` is unavailable.
     @discardableResult
-    func observe<Value>(
+    public func observe<Value>(
         _ keyPath: KeyPath<AVPlayerItem, Value>,
         options: NSKeyValueObservingOptions = [.initial, .new],
         action: @escaping @Sendable (any AKMediaManagerProtocol, Value) -> Void
@@ -52,6 +52,16 @@ public extension AKPlayable {
 // MARK: - Direct Delegation via Manager (Properties)
 
 public extension AKPlayable {
+    /// The loaded URL asset generated from the media item.
+    var asset: AVURLAsset? {
+        manager.asset
+    }
+    
+    /// The instantiated player item constructed from the asset.
+    var playerItem: AVPlayerItem? {
+        manager.playerItem 
+    }
+    
     /// The current state of the playable media item.
     var state: AKPlayableState {
         manager.state
@@ -150,6 +160,34 @@ public extension AKPlayable {
     
     var chapterService: any AKChapterServiceProtocol {
         manager.chapterService
+    }
+}
+
+// MARK: - Live Stream & DVR Extensions
+
+public extension AKPlayable {
+    /// The active seekable sliding DVR buffer window of this media item.
+    var dvrWindow: CMTimeRange? {
+        manager.playerItem?.seekableTimeRanges.last?.timeRangeValue
+    }
+    
+    /// Wall-clock date from #EXT-X-PROGRAM-DATE-TIME for this media item, if available.
+    var currentLiveDate: Date? {
+        manager.playerItem?.currentDate()
+    }
+    
+    /// Current playback drift latency in seconds behind the live head for this item.
+    var liveDrift: TimeInterval? {
+        guard let dvrWindow, let item = manager.playerItem else { return nil }
+        return max(0.0, dvrWindow.end.seconds - item.currentTime().seconds)
+    }
+    
+    /// Indicates whether playback of this media item is currently synced with the live edge (drift <= threshold).
+    var isAtLiveEdge: Bool {
+        guard isLive() else { return false }
+        guard let liveDrift else { return true }
+        guard let threshold = liveEdgeThreshold else { return true }
+        return liveDrift <= threshold
     }
 }
 

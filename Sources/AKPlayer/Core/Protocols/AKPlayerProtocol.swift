@@ -72,6 +72,14 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
 
     /// An asynchronous sequence of player lifecycle and playback events.
     var events: AsyncStream<AKPlayerEvent> { get }
+    
+    // MARK: - Live Stream Properties
+    
+    /// Indicates whether the active media is a live broadcast stream.
+    var isLive: Bool { get }
+    
+    /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
+    var isAtLiveEdge: Bool { get }
 
     // MARK: - Boundary Time Observers
 

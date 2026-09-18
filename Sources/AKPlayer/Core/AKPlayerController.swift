@@ -109,6 +109,18 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         eventBroadcaster.makeStream()
     }
     
+    // MARK: - Live Stream Properties
+    
+    /// Indicates whether the active media is a live broadcast stream.
+    public var isLive: Bool {
+        currentMedia?.isLive() ?? (currentItem?.duration.isIndefinite == true)
+    }
+    
+    /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
+    public var isAtLiveEdge: Bool {
+        currentMedia?.isAtLiveEdge ?? true
+    }
+    
     /// Configuration options driving player behavior and timing defaults.
     public private(set) var configuration: any AKPlayerConfigurationProtocol
     
@@ -372,6 +384,19 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// - Parameter rate: The target rewind playback speed multiplier.
     public func rewind(at rate: AKPlaybackRate) {
         controller.rewind(at: rate)
+    }
+    
+    // MARK: - Live Stream Navigation
+    
+    /// Jumps directly to the live head of the stream and resumes playback at normal speed.
+    @discardableResult
+    public func jumpToLive() async -> Bool {
+        await controller.jumpToLive()
+    }
+    
+    /// Jumps directly to the live head of the stream with a completion callback.
+    public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        controller.jumpToLive(completionHandler: completionHandler)
     }
     
     // MARK: - Helper & Pipeline Management Functions

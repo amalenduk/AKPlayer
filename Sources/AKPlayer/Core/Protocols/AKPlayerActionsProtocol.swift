@@ -14,7 +14,7 @@ import Foundation
 /// Protocol defining core player user action interface commands, including
 /// media loading, playback state controls, seeking, and frame navigation.
 @MainActor
-public protocol AKPlayerActionsProtocol: Sendable {
+public protocol AKPlayerActionsProtocol: AnyObject, Sendable {
     // MARK: - Loading Media
 
     /// Loads a playable media item into the player pipeline with optional
@@ -132,6 +132,17 @@ public protocol AKPlayerActionsProtocol: Sendable {
     /// Rewinds playback at a custom speed multiplier rate.
     /// - Parameter rate: The target rewind speed rate multiplier.
     func rewind(at rate: AKPlaybackRate)
+    
+    // MARK: - Live Stream Navigation
+    
+    /// Jumps directly to the live head of the stream and resumes playback at normal speed.
+    /// - Returns: `true` if the seek operation completed successfully; `false` otherwise.
+    @discardableResult
+    func jumpToLive() async -> Bool
+    
+    /// Jumps directly to the live head of the stream with a completion callback.
+    /// - Parameter completionHandler: A callback invoked when the seek operation finishes.
+    func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void)
 }
 
 // MARK: - Default Parameters Extension
@@ -152,5 +163,21 @@ public extension AKPlayerActionsProtocol {
     /// media loading completes.
     func load(media: any AKPlayable, autoPlay: Bool) {
         load(media: media, autoPlay: autoPlay, at: nil)
+    }
+    
+    @discardableResult
+    func jumpToLive() async -> Bool {
+        let success = await seek(to: .live)
+        if success {
+            play(at: .normal)
+        }
+        return success
+    }
+    
+    func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        Task { [weak self] in
+            let success = await self?.jumpToLive() ?? false
+            completionHandler(success)
+        }
     }
 }

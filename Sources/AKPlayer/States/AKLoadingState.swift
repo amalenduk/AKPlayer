@@ -185,6 +185,7 @@ public class AKLoadingState: AKBaseState {
     /// Prepares player item and links it with AVPlayer pipeline once loaded.
     private func playerItemLoaded() {
         if let item = media.playerItem {
+            item.automaticallyPreservesTimeOffsetFromLive = playerController.configuration.automaticallyPreservesTimeOffsetFromLive
             playerController.player.replaceCurrentItem(with: item)
         }
     }

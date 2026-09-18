@@ -114,6 +114,11 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// Defaults to `12` (12 ticks * 0.5s = 6.0 seconds).
     public var bufferStallTickLimit: Int
     
+    // MARK: - Live Stream Configurations
+    
+    /// Controls whether AVPlayer automatically preserves time offset from live edge. Defaults to `true`.
+    public var automaticallyPreservesTimeOffsetFromLive: Bool
+    
     // MARK: - Static Default Instance
     
     /// A shared default configuration instance initialized with standard preset
@@ -144,7 +149,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         waitingForNetworkBaseCooldown: TimeInterval = 1.0,
         backoffMultiplier: Double = 1.8,
         maxWaitingForNetworkCooldown: TimeInterval = 20.0,
-        bufferStallTickLimit: Int = 12
+        bufferStallTickLimit: Int = 12,
+        automaticallyPreservesTimeOffsetFromLive: Bool = true
     ) {
         self.periodicTimeInterval = periodicTimeInterval
         self.preferredTimeScale = preferredTimeScale
@@ -167,5 +173,6 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         self.backoffMultiplier = backoffMultiplier
         self.maxWaitingForNetworkCooldown = maxWaitingForNetworkCooldown
         self.bufferStallTickLimit = bufferStallTickLimit
+        self.automaticallyPreservesTimeOffsetFromLive = automaticallyPreservesTimeOffsetFromLive
     }
 }

@@ -103,6 +103,18 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.events
     }
     
+    // MARK: - Live Stream Properties
+    
+    /// Indicates whether the active media is a live broadcast stream.
+    public var isLive: Bool {
+        playerController.isLive
+    }
+    
+    /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
+    public var isAtLiveEdge: Bool {
+        playerController.isAtLiveEdge
+    }
+    
     /// Controller managing underlying AVPlayer actions and state machine
     /// transitions.
     public let playerController: AKPlayerControllerProtocol
@@ -410,6 +422,27 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         performPlaybackAction { [weak self] in
             self?.playerController.rewind(at: rate)
         }
+    }
+    
+    // MARK: - Live Stream Navigation
+    
+    /// Jumps directly to the live head of the stream and resumes playback at normal speed.
+    @discardableResult
+    public func jumpToLive() async -> Bool {
+        guard canPlayInCurrentLifecycleState()
+        else { actionNotPermitted(); return false }
+        return await playerController.jumpToLive()
+    }
+    
+    /// Jumps directly to the live head of the stream with a completion callback.
+    public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        guard canPlayInCurrentLifecycleState()
+        else {
+            actionNotPermitted()
+            completionHandler(false)
+            return
+        }
+        playerController.jumpToLive(completionHandler: completionHandler)
     }
     
     // MARK: - Internal Helper Functions

@@ -165,6 +165,11 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     
     /// The consecutive threshold count of stalled buffer observation ticks required to trigger a stall state transition.
     var bufferStallTickLimit: Int { get set }
+    
+    // MARK: - Live Stream Configurations
+    
+    /// Controls whether AVPlayer automatically preserves time offset from live edge. Defaults to `true`.
+    var automaticallyPreservesTimeOffsetFromLive: Bool { get set }
 }
 
 // MARK: - Protocol Extension

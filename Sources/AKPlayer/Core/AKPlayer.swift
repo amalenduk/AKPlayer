@@ -109,6 +109,18 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.events
     }
     
+    // MARK: - Live Stream Properties
+    
+    /// Indicates whether the active media is a live broadcast stream.
+    public var isLive: Bool {
+        manager.isLive
+    }
+    
+    /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
+    public var isAtLiveEdge: Bool {
+        manager.isAtLiveEdge
+    }
+    
     /// The player manager instance handling core state machine lifecycle and
     /// engine operations.
     private var manager: AKPlayerManagerProtocol
@@ -321,6 +333,21 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
             toleranceAfter: toleranceAfter,
             completionHandler: completionHandler
         )
+    }
+    
+    // MARK: - Live Stream Controls
+    
+    /// Seeks immediately to the live edge of the current broadcast stream.
+    /// - Returns: `true` if the seek command was accepted and executed successfully; `false` otherwise.
+    @discardableResult
+    public func jumpToLive() async -> Bool {
+        await manager.jumpToLive()
+    }
+    
+    /// Seeks immediately to the live edge with a completion callback.
+    /// - Parameter completionHandler: A callback invoked with the success status of the operation.
+    public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        manager.jumpToLive(completionHandler: completionHandler)
     }
     
     // MARK: - Media Navigation

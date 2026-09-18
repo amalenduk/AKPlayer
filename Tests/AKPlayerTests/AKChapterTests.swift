@@ -47,7 +47,7 @@ struct AKChapterTests {
     
     @Test func testChapterServiceQueries() {
         let media = AKMedia(url: URL(string: "https://example.com/audiobook.m4b")!, type: .clip)
-        let service = AKChapterService(mediaManager: media.manager)
+        let service = media.chapterService
         
         #expect(service.chapters.isEmpty)
         #expect(service.chapterCount == 0)

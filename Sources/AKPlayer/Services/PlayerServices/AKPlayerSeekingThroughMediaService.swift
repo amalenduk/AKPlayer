@@ -139,6 +139,21 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             return
         }
         
+        // Handle live broadcast head seek target
+        if case .live = seek.target {
+            let seekableRanges = currentItem.seekableTimeRanges.map(\.timeRangeValue)
+            let liveEdge = seekableRanges.last?.end ?? currentItem.duration
+            if liveEdge.isValid && liveEdge.isNumeric {
+                player.seek(
+                    to: liveEdge,
+                    toleranceBefore: seek.toleranceBefore,
+                    toleranceAfter: seek.toleranceAfter,
+                    completionHandler: completion
+                )
+                return
+            }
+        }
+        
         let timescale = currentItem.duration.timescale > 0 ? currentItem.duration.timescale : 600
         
         // Resolve target to CMTime using unified AKSeekTarget resolve

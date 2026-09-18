@@ -40,7 +40,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     @Published public var playbackRate: AKPlaybackRate = .normal
     @Published public var isLoading: Bool = false
     @Published public var unavailableMessage: String?
-    @Published public var lastLoadedMedia: AKMedia?
+    @Published public var lastLoadedMedia: (any AKPlayable)?
     @Published public var autoPlayEnabled: Bool = true
     @Published public var debugInfo: String?
     
@@ -182,7 +182,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     
     // MARK: - Media Loading
     
-    public func load(media: AKMedia, autoPlay: Bool) {
+    public func load(media: any AKPlayable, autoPlay: Bool) {
         self.lastLoadedMedia = media
         observeChapterEvents(for: media)
         player.load(media: media, autoPlay: autoPlay)

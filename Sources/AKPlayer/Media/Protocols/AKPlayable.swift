@@ -44,6 +44,9 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
     
     /// Optional cache manager instance.
     var cacheManager: (any AKMediaCacheProtocol)? { get }
+    
+    /// The live edge threshold in seconds. Defaults to `4.0` seconds for live streams, and `nil` for non-live media.
+    var liveEdgeThreshold: TimeInterval? { get }
 
     /// Indicates whether the media item is a live stream.
     func isLive() -> Bool
@@ -55,13 +58,14 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 // MARK: - Default Property Implementations
 
 public extension AKPlayable {
-    var asset: AVURLAsset? { nil }
-    var playerItem: AVPlayerItem? { nil }
     var assetInitializationOptions: [String: Any]? { nil }
     var automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? { nil }
     var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? { nil }
     var cachePolicy: AKMediaCachePolicy { .useCacheIfAvailable }
     var cacheManager: (any AKMediaCacheProtocol)? { nil }
+    var liveEdgeThreshold: TimeInterval? {
+        isLive() ? 4.0 : nil
+    }
 }
 
 // MARK: - Equatable Implementation
@@ -88,8 +92,10 @@ public extension AKPlayable {
 
 public extension AKPlayable {
     func isLive() -> Bool {
-        guard case let AKMediaType.stream(isLive) = type, isLive else { return false }
-        return true
+        if case let AKMediaType.stream(isLive) = type, isLive {
+            return true
+        }
+        return playerItem?.duration.isIndefinite == true
     }
 }
 

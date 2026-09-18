@@ -35,6 +35,9 @@ public enum AKSeekTarget: Equatable, Sendable {
     /// Absolute wall-clock date (used primarily for live HLS streams).
     case date(Date)
 
+    /// Live broadcast head (seeks to the latest available seekable edge).
+    case live
+
     // MARK: - Methods
 
     /// Resolves this target to a valid absolute `CMTime`.
@@ -48,7 +51,7 @@ public enum AKSeekTarget: Equatable, Sendable {
     /// `.zero` and `duration` (if `duration` is numeric). Defaults to `true`.
     /// - Returns: A valid `CMTime` target, or `nil` if inputs are
     /// invalid/non-finite, if a percentage is requested when duration is
-    /// unknown, or if the target is `.date`.
+    /// unknown, or if the target is `.date` / `.live`.
     public func resolve(
         currentTime: CMTime,
         duration: CMTime,
@@ -96,9 +99,9 @@ public enum AKSeekTarget: Equatable, Sendable {
                 preferredTimescale: preferredTimescale
             )
 
-        case .date:
-            // Date-based targets cannot be resolved to a relative CMTime and
-            // must be dispatched to AVPlayer.seek(to: Date) directly.
+        case .date, .live:
+            // Date-based and live-head targets cannot be resolved to a static CMTime without player item context
+            // and must be dispatched to seeking services directly.
             return nil
         }
 
@@ -113,3 +116,25 @@ public enum AKSeekTarget: Equatable, Sendable {
         return targetTime
     }
 }
+
+// MARK: - CustomStringConvertible
+
+extension AKSeekTarget: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case let .time(time):
+            return "time(\(time.seconds)s)"
+        case let .seconds(seconds):
+            return "seconds(\(seconds)s)"
+        case let .offset(offset):
+            return "offset(\(offset)s)"
+        case let .percentage(percentage):
+            return "percentage(\(percentage)%)"
+        case let .date(date):
+            return "date(\(date))"
+        case .live:
+            return "live"
+        }
+    }
+}
+

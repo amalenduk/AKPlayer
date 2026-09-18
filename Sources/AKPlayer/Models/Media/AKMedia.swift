@@ -22,14 +22,6 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// The type classification of the media item (e.g., audio, video, stream).
     public let type: AKMediaType
     
-    public var asset: AVURLAsset? {
-        manager.asset ?? customAsset
-    }
-    
-    public var playerItem: AVPlayerItem? {
-        manager.playerItem ?? customPlayerItem
-    }
-    
     /// Optional dictionary options used when initializing the underlying `AVURLAsset`.
     public let assetInitializationOptions: [String: Any]?
     
@@ -45,9 +37,28 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// Optional cache manager instance.
     public var cacheManager: (any AKMediaCacheProtocol)?
     
-    // Internal seed inputs passed by the developer
-    let customAsset: AVURLAsset?
-    let customPlayerItem: AVPlayerItem?
+    private var _liveEdgeThreshold: TimeInterval?
+    
+    /// The live edge threshold in seconds. Returns a custom value if assigned, or defaults to `4.0` seconds for live streams, and `nil` for non-live media.
+    public var liveEdgeThreshold: TimeInterval? {
+        get { _liveEdgeThreshold ?? (isLive() ? 4.0 : nil) }
+        set { _liveEdgeThreshold = newValue }
+    }
+    
+    // MARK: - Initial Seed Properties
+    
+    private let initialAsset: AVURLAsset?
+    private let initialPlayerItem: AVPlayerItem?
+    
+    /// The loaded URL asset, or the initial pre-configured asset if assigned.
+    public var asset: AVURLAsset? {
+        manager.asset ?? initialAsset
+    }
+    
+    /// The instantiated player item, or the initial pre-configured player item if assigned.
+    public var playerItem: AVPlayerItem? {
+        manager.playerItem ?? initialPlayerItem
+    }
     
     // MARK: - Initialization
     
@@ -60,6 +71,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ///   - staticMetadata: Static Now Playing metadata.
     ///   - cachePolicy: Cache policy for this media item.
     ///   - cacheManager: Optional custom cache manager instance.
+    ///   - liveEdgeThreshold: Optional custom live edge threshold in seconds.
     public init(
         url: URL,
         type: AKMediaType,
@@ -67,7 +79,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? = nil,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
-        cacheManager: (any AKMediaCacheProtocol)? = nil
+        cacheManager: (any AKMediaCacheProtocol)? = nil,
+        liveEdgeThreshold: TimeInterval? = nil
     ) {
         self.url = url
         self.type = type
@@ -76,8 +89,9 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
-        self.customAsset = nil
-        self.customPlayerItem = nil
+        self._liveEdgeThreshold = liveEdgeThreshold
+        self.initialAsset = nil
+        self.initialPlayerItem = nil
     }
     
     /// Custom Asset Initializer (For FairPlay DRM / Custom Headers / ResourceLoader)
@@ -87,7 +101,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? = nil,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
-        cacheManager: (any AKMediaCacheProtocol)? = nil
+        cacheManager: (any AKMediaCacheProtocol)? = nil,
+        liveEdgeThreshold: TimeInterval? = nil
     ) {
         self.url = asset.url
         self.type = type
@@ -96,8 +111,9 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
-        self.customAsset = asset
-        self.customPlayerItem = nil
+        self._liveEdgeThreshold = liveEdgeThreshold
+        self.initialAsset = asset
+        self.initialPlayerItem = nil
     }
     
     /// Pre-configured Player Item Initializer (For Video Compositions / Custom Audio Mix)
@@ -109,22 +125,20 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         type: AKMediaType = .clip,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
-        cacheManager: (any AKMediaCacheProtocol)? = nil
+        cacheManager: (any AKMediaCacheProtocol)? = nil,
+        liveEdgeThreshold: TimeInterval? = nil
     ) {
-        if let asset = playerItem.asset as? AVURLAsset {
-            self.url = asset.url
-            self.customAsset = asset
-        } else {
-            self.url = URL(fileURLWithPath: "")
-            self.customAsset = nil
-        }
+        let asset = playerItem.asset as? AVURLAsset
+        self.url = asset?.url ?? URL(fileURLWithPath: "")
         self.type = type
         self.assetInitializationOptions = nil
         self.automaticallyLoadedAssetKeys = nil
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
-        self.customPlayerItem = playerItem
+        self._liveEdgeThreshold = liveEdgeThreshold
+        self.initialAsset = asset
+        self.initialPlayerItem = playerItem
     }
     
     deinit {

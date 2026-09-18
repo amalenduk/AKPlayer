@@ -118,17 +118,10 @@ struct AKPlayerTests {
         let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8")!
         let media: any AKPlayable = AKMedia(url: url, type: .stream(isLive: false))
         
-        let manager1 = media.manager
-        let manager2 = media.manager
-        #expect(manager1 === manager2)
-        
         await media.createAsset()
         #expect(media.asset != nil)
-        #expect(media.manager.asset != nil)
         
         media.createPlayerItemFromAsset()
         #expect(media.playerItem != nil)
-        #expect(media.manager.playerItem != nil)
-        #expect(media.playerItem === media.manager.playerItem)
     }
 }

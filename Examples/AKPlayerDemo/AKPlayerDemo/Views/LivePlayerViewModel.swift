@@ -64,7 +64,9 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     private var clearUnavailableWorkItem: DispatchWorkItem?
     
     /// Threshold in seconds to consider the player at the live edge.
-    public let liveEdgeThreshold: Double = 4.0
+    public var liveEdgeThreshold: Double {
+        media?.liveEdgeThreshold ?? 4.0
+    }
     
     // MARK: - Initialization & Teardown
     
@@ -116,24 +118,10 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
         generator.prepare()
         generator.impactOccurred()
         
-        guard let currentItem = player.currentItem else {
-            player.play()
-            return
-        }
-        
-        // Find the latest seekable end time (Live Edge)
-        let seekableRanges = currentItem.seekableTimeRanges.map(\.timeRangeValue)
-        let liveEdge = seekableRanges.last?.end ?? currentItem.duration
-        
         Task {
-            if liveEdge.isValid && liveEdge.isNumeric {
-                await player.seek(to: .time(liveEdge))
-            }
-            player.play(at: .normal)
-            
+            await player.jumpToLive()
             await MainActor.run {
-                self.isAtLiveEdge = true
-                self.liveOffset = 0.0
+                self.updateDVRWindowAndDrift()
             }
         }
     }
@@ -153,7 +141,8 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
         Task {
             await player.seek(to: .seconds(targetSeconds))
             await MainActor.run {
-                self.updateLiveDrift(currentTimeSeconds: targetSeconds)
+                self.currentTime = targetSeconds
+                self.updateDVRWindowAndDrift()
             }
         }
     }
@@ -164,7 +153,8 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
         Task {
             await player.seek(to: .seconds(target))
             await MainActor.run {
-                self.updateLiveDrift(currentTimeSeconds: target)
+                self.currentTime = target
+                self.updateDVRWindowAndDrift()
             }
         }
     }
@@ -178,7 +168,8 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
             Task {
                 await player.seek(to: .seconds(target))
                 await MainActor.run {
-                    self.updateLiveDrift(currentTimeSeconds: target)
+                    self.currentTime = target
+                    self.updateDVRWindowAndDrift()
                 }
             }
         }
@@ -229,33 +220,25 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     }
     
     private func updateDVRWindowAndDrift() {
-        guard let currentItem = player.currentItem else { return }
-        let seekableRanges = currentItem.seekableTimeRanges.map(\.timeRangeValue)
+        self.isLive = player.isLive
         
-        if let lastRange = seekableRanges.last {
-            let start = lastRange.start.seconds
-            let duration = lastRange.duration.seconds
-            let end = lastRange.end.seconds
-            
+        let atEdge = player.isAtLiveEdge
+        if self.isAtLiveEdge != atEdge {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                self.isAtLiveEdge = atEdge
+            }
+        }
+        
+        self.liveOffset = media?.liveDrift ?? 0.0
+        
+        if let dvr = media?.dvrWindow {
+            let start = dvr.start.seconds
+            let duration = dvr.duration.seconds
+            let end = dvr.end.seconds
             if start.isFinite && duration.isFinite && end.isFinite {
                 self.dvrWindowStart = start
                 self.dvrWindowDuration = duration
                 self.dvrWindowEnd = end
-                
-                updateLiveDrift(currentTimeSeconds: self.currentTime)
-            }
-        }
-    }
-    
-    private func updateLiveDrift(currentTimeSeconds: Double) {
-        guard dvrWindowEnd > 0 else { return }
-        let drift = max(0.0, dvrWindowEnd - currentTimeSeconds)
-        self.liveOffset = drift
-        
-        let atEdge = drift <= liveEdgeThreshold
-        if self.isAtLiveEdge != atEdge {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                self.isAtLiveEdge = atEdge
             }
         }
     }
@@ -270,13 +253,8 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
                 switch event {
                 case .presentationSizeDidChange(let size):
                     self.presentationSize = size
-                case .seekableTimeRangesDidChange(let ranges):
-                    if let lastRange = ranges.last {
-                        self.dvrWindowStart = lastRange.start.seconds
-                        self.dvrWindowDuration = lastRange.duration.seconds
-                        self.dvrWindowEnd = lastRange.end.seconds
-                        self.updateLiveDrift(currentTimeSeconds: self.currentTime)
-                    }
+                case .seekableTimeRangesDidChange:
+                    self.updateDVRWindowAndDrift()
                 case .stateDidChange(let state):
                     self.isLoading = (state == .idle || state == .assetLoaded || state == .playerItemLoaded)
                 default:

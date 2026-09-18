@@ -234,7 +234,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         }
         
         metadataObservationTask = Task { @MainActor [weak self, weak media] in
-            guard let stream = media?.manager.metadataProvider.staticMetadataUpdates else { return }
+            guard let stream = media?.metadataProvider.staticMetadataUpdates else { return }
             for await _ in stream {
                 guard !Task.isCancelled, let self else { break }
                 self.updateNowPlayingInfo()
@@ -242,7 +242,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         }
         
         chaptersObservationTask = Task { @MainActor [weak self, weak media] in
-            guard let stream = media?.manager.chapterService.chaptersUpdates else { return }
+            guard let stream = media?.chapterService.chaptersUpdates else { return }
             for await _ in stream {
                 guard !Task.isCancelled, let self else { break }
                 self.updateNowPlayingInfo()
@@ -271,7 +271,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         let totalChapters = chapterService.chapterCount > 0 ? chapterService.chapterCount : nil
         let resolvedCreditsStartTime: Double? = currentMedia.staticMetadata?.creditsStartTime ?? chapterService.creditsStartTime
         
-        let extracted = currentMedia.manager.metadataProvider.staticMetadata
+        let extracted = currentMedia.metadataProvider.staticMetadata
         let custom = currentMedia.staticMetadata
         
         // Artwork resolution: custom -> extracted (image or MPMediaItemArtwork)
@@ -297,7 +297,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                 if !item.asset.tracks(withMediaType: .video).isEmpty {
                     return .video
                 }
-            } else if let asset = currentMedia.manager.asset {
+            } else if let asset = currentMedia.asset {
                 if !asset.tracks(withMediaType: .video).isEmpty {
                     return .video
                 }
@@ -345,20 +345,20 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         
         let position: Double? = currentMedia.isLive() ? nil : {
             guard let item = playerManager.currentItem,
-                  item.currentTime().isValid,
-                  !item.currentTime().isIndefinite,
-                  !item.currentTime().seconds.isNaN,
-                  item.currentTime().seconds.isFinite
+                   item.currentTime().isValid,
+                   !item.currentTime().isIndefinite,
+                   !item.currentTime().seconds.isNaN,
+                   item.currentTime().seconds.isFinite
             else { return nil }
             return Double(item.currentTime().seconds)
         }()
         
         let duration: Float? = currentMedia.isLive() ? nil : {
             guard let item = playerManager.currentItem,
-                  item.duration.isValid,
-                  !item.duration.isIndefinite,
-                  !item.duration.seconds.isNaN,
-                  item.duration.seconds.isFinite
+                   item.duration.isValid,
+                   !item.duration.isIndefinite,
+                   !item.duration.seconds.isNaN,
+                   item.duration.seconds.isFinite
             else { return nil }
             return Float(item.duration.seconds)
         }()
@@ -368,7 +368,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             return min(max(Float(pos / Double(dur)), 0.0), 1.0)
         }()
         
-        let chapterService = currentMedia.manager.chapterService
+        let chapterService = currentMedia.chapterService
         let currentTime = playerManager.currentItem?.currentTime() ?? .zero
         let currentChapterNum = currentTime.isValid ? chapterService.currentChapterNumber(at: currentTime) : nil
         

@@ -76,6 +76,12 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
             return validateDateSeek(targetDate, playerItem: playerItem)
         }
         
+        // Handle live broadcast head seek target
+        if case .live = target {
+            let ranges = getRangesAvailable()
+            return !ranges.isEmpty ? (true, nil) : (playerItem.duration.isNumeric ? (true, nil) : (false, .seekPositionNotAvailable))
+        }
+        
         let timescale = playerItem.duration.timescale > 0 ? playerItem.duration.timescale : 600
         
         // Resolve target to CMTime using unified AKSeekTarget resolve

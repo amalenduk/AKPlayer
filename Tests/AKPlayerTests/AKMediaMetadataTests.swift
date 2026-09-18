@@ -76,7 +76,7 @@ struct AKMediaMetadataTests {
     
     @Test func testMediaMetadataProviderLifecycleAndUpdates() async {
         let media = AKMedia(url: URL(string: "https://example.com/audio.mp3")!, type: .clip)
-        let provider = AKMediaMetadataProvider(mediaManager: media.manager)
+        let provider = media.metadataProvider
         
         #expect(provider.staticMetadata.title == nil)
         #expect(provider.timedMetadata.isEmpty)
