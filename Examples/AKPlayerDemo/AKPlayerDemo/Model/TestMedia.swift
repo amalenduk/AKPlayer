@@ -186,20 +186,21 @@ public let sampleTestMedia: [TestMedia] = [
         subtitleLanguages: ["en"]
     ),
 
-    // 4. Akamai Live HLS Stream
+    // 4. iReplay 24/7 Live Stream
     TestMedia(
-        name: "Akamai Live HLS Stream",
-        subtitle: "24/7 Live Broadcast Stream + Multi-bitrate H.264",
-        url: URL(string: "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
+        name: "iReplay 24/7 Live Stream",
+        subtitle: "Continuous Live Broadcast + fMP4 + Sliding Window DVR",
+        url: URL(string: "https://ireplay.tv/test/blender.m3u8"),
         kind: .live,
         isPlayable: true,
         note: """
-        Continuous 24/7 live HLS broadcast stream.
+        Continuous 24/7 live HLS broadcast stream with live sliding window DVR.
 
         📺 Video Specifications:
-        • Format: H.264 Video variants (Live Sliding Window)
+        • Format: H.264 Video variants (Live Sliding Window, fMP4)
         • Aspect Ratio: 16:9
-        • Multi-bitrate: 524 kbps up to 2.5 Mbps (576p / 720p / 1080p)
+        • Multi-bitrate: 540p / 720p / 1080p up to 3.1 Mbps
+        • Metadata: #EXT-X-PROGRAM-DATE-TIME wall-clock timestamps
 
         🔊 Audio Specifications:
         • Format: AAC-LC, Stereo, 48 kHz
@@ -207,12 +208,40 @@ public let sampleTestMedia: [TestMedia] = [
         """,
         testCapabilities: [
             "24/7 live stream playback & sliding window buffer",
-            "Live indicator UI & live seek head management",
+            "Jump to Live UI & live seek head management",
             "Live stream pausing & seek-to-live recovery",
-            "Network bandwidth adaptive stream switching"
+            "Live drift calculation & catch-up playback"
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
+    ),
+
+    // 5. Bloomberg Originals Live Stream
+    TestMedia(
+        name: "Bloomberg Originals Live",
+        subtitle: "24/7 Live Financial News Broadcast • 1080p HD",
+        url: URL(string: "https://86fdc85a.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnT3JpZ2luYWxzX0hMUw/playlist.m3u8"),
+        kind: .live,
+        isPlayable: true,
+        note: """
+        Continuous 24/7 live news broadcast stream from Bloomberg Originals.
+
+        📺 Video Specifications:
+        • Format: H.264 Video variants (1080p / 540p / 360p / 216p)
+        • Closed Captions: English CC
+
+        🔊 Audio Specifications:
+        • Format: AAC-LC, Stereo, 48 kHz
+        • Languages: English
+        """,
+        testCapabilities: [
+            "24/7 live broadcast stream playback",
+            "Live head tracking & DVR buffer window",
+            "Live indicator UI & Jump to Live action",
+            "Closed captioning in live streams"
+        ],
+        audioLanguages: ["en"],
+        subtitleLanguages: ["en"]
     ),
 
     // 5. Big Buck Bunny (Progressive MP4)

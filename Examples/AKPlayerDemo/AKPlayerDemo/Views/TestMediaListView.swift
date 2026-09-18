@@ -14,6 +14,7 @@ public struct TestMediaListView: View {
     
     @State private var selectedMedia: TestMedia?
     @State private var playerMedia: TestMedia?
+    @State private var livePlayerMedia: TestMedia?
     @State private var isQueuePlayerPresented: Bool = false
     @State private var queueStartIndex: Int = 0
     
@@ -27,8 +28,20 @@ public struct TestMediaListView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(media.name)
-                                .font(.headline)
+                            HStack(spacing: 6) {
+                                Text(media.name)
+                                    .font(.headline)
+                                
+                                if media.kind == .live {
+                                    Text("LIVE")
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.red.opacity(0.85))
+                                        .foregroundColor(.white)
+                                        .clipShape(Capsule())
+                                }
+                            }
                             
                             if let subtitle = media.subtitle {
                                 Text(subtitle)
@@ -40,6 +53,14 @@ public struct TestMediaListView: View {
                         Spacer()
                         
                         Menu {
+                            if media.kind == .live {
+                                Button {
+                                    livePlayerMedia = media
+                                } label: {
+                                    Label("Play in Live Player (Jump to Live)", systemImage: "dot.radiowaves.left.and.right")
+                                }
+                            }
+                            
                             Button {
                                 playerMedia = media
                             } label: {
@@ -53,9 +74,9 @@ public struct TestMediaListView: View {
                                 Label("Play in Queue", systemImage: "play.square.stack")
                             }
                         } label: {
-                            Image(systemName: "play.circle.fill")
+                            Image(systemName: media.kind == .live ? "dot.radiowaves.left.and.right" : "play.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(media.kind == .live ? .red : .accentColor)
                         }
                     }
                     
@@ -111,6 +132,14 @@ public struct TestMediaListView: View {
                 }
                 .padding(.vertical, 6)
                 .contextMenu {
+                    if media.kind == .live {
+                        Button {
+                            livePlayerMedia = media
+                        } label: {
+                            Label("Play in Live Player (Jump to Live)", systemImage: "dot.radiowaves.left.and.right")
+                        }
+                    }
+                    
                     Button {
                         playerMedia = media
                     } label: {
@@ -129,13 +158,27 @@ public struct TestMediaListView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        queueStartIndex = 0
-                        isQueuePlayerPresented = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "play.square.stack")
-                            Text("Queue")
+                    HStack(spacing: 12) {
+                        Button {
+                            if let live = medias.first(where: { $0.kind == .live }) {
+                                livePlayerMedia = live
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "dot.radiowaves.left.and.right")
+                                Text("Live")
+                            }
+                            .foregroundColor(.red)
+                        }
+                        
+                        Button {
+                            queueStartIndex = 0
+                            isQueuePlayerPresented = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "play.square.stack")
+                                Text("Queue")
+                            }
                         }
                     }
                 }
@@ -216,6 +259,17 @@ public struct TestMediaListView: View {
                         }
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
+                                if media.kind == .live {
+                                    Button("Play in Live Player (Jump to Live)") {
+                                        let chosen = media
+                                        selectedMedia = nil
+                                        Task { @MainActor in
+                                            await Task.yield()
+                                            livePlayerMedia = chosen
+                                        }
+                                    }
+                                }
+                                
                                 Button("Play Single") {
                                     let chosen = media
                                     selectedMedia = nil
@@ -245,6 +299,14 @@ public struct TestMediaListView: View {
             .fullScreenCover(item: $playerMedia) { media in
                 NavigationStack {
                     SimpleVideoPlayerView(
+                        media: makeAKMedia(from: media),
+                        autoPlay: true
+                    )
+                }
+            }
+            .fullScreenCover(item: $livePlayerMedia) { media in
+                NavigationStack {
+                    LivePlayerView(
                         media: makeAKMedia(from: media),
                         autoPlay: true
                     )

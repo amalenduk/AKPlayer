@@ -168,6 +168,8 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
     
     /// Checks whether a specific `CMTime` falls within an array of ranges.
     private func isTimeInRanges(_ time: CMTime, _ ranges: [CMTimeRange]) -> Bool {
-        ranges.contains { $0.containsTime(time) }
+        ranges.contains { range in
+            range.containsTime(time) || (time >= range.start && time <= range.end)
+        }
     }
 }

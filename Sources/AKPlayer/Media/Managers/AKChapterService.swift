@@ -9,7 +9,9 @@
 @preconcurrency import AVFoundation
 import Foundation
 import Synchronization
+#if canImport(UIKit)
 import UIKit
+#endif
 
 // MARK: - AKChapterService
 

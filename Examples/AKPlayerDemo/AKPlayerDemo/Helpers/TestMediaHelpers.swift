@@ -12,9 +12,11 @@ import AKPlayer
 public func makeAKMedia(from test: TestMedia) -> AKMedia? {
     guard let url = test.url else { return nil }
     let headers = ["User-Agent": "AKPlayerDemo/1.0"]
+    let isAudioOnly = test.name.localizedCaseInsensitiveContains("Audio")
+        || (test.subtitle?.localizedCaseInsensitiveContains("Audio") ?? false)
     let staticMetadata = AKNowPlayableStaticMetadata(
         assetURL: url,
-        mediaType: test.kind.akMediaType == .clip ? .video : .audio,
+        mediaType: isAudioOnly ? .audio : .video,
         isLiveStream: test.kind == .live,
         title: test.name,
         artist: test.subtitle,
