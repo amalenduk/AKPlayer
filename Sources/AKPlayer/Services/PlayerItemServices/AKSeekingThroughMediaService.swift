@@ -38,16 +38,16 @@ public protocol AKSeekingThroughMediaServiceProtocol: AnyObject, Sendable {
 // MARK: - AKSeekingThroughMediaService
 
 /// A stateless verification service providing boundary validation for seek actions on an `AVPlayerItem`.
-public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServiceProtocol, Sendable {
+public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServiceProtocol, @unchecked Sendable {
     
     // MARK: - Properties
     
     /// A weak reference to the owner media manager.
-    private unowned let mediaManager: any AKMediaManagerProtocol
+    private weak var mediaManager: (any AKMediaManagerProtocol)?
     
     /// Convenience accessor for the current `AVPlayerItem`.
     private var playerItem: AVPlayerItem? {
-        mediaManager.playerItem
+        mediaManager?.playerItem
     }
     
     // MARK: - Initialization

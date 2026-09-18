@@ -51,13 +51,16 @@ struct AKPlayerTests {
         
         let item2 = AKMedia(url: URL(string: "https://example.com/track2.mp3")!, type: .clip)
         let events = controller.events
-        var receivedStates: [AKPlayerState] = []
+        final class StateCollector: @unchecked Sendable {
+            var states: [AKPlayerState] = []
+        }
+        let collector = StateCollector()
         
         let task = Task {
             for await event in events {
                 if case let .stateDidChange(state) = event {
-                    receivedStates.append(state)
-                    if state == .loading && receivedStates.contains(.stopped) {
+                    collector.states.append(state)
+                    if state == .loading && collector.states.contains(.stopped) {
                         break
                     }
                 }
@@ -67,11 +70,9 @@ struct AKPlayerTests {
         controller.load(media: item2, autoPlay: false, at: nil)
         #expect(controller.state == AKPlayerState.loading)
         
-        // Wait briefly for event stream processing
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        task.cancel()
+        _ = await task.value
         
-        #expect(receivedStates.contains(.stopped))
-        #expect(receivedStates.contains(.loading))
+        #expect(collector.states.contains(.stopped))
+        #expect(collector.states.contains(.loading))
     }
 }

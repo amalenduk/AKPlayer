@@ -83,11 +83,13 @@ public class AKLoadingState: AKBaseState {
         
         mediaObservationTask?.cancel()
         mediaObservationTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            self.hanldeChangeInMedia(self.media.state)
+            guard let initialState = self?.media.state else { return }
+            self?.hanldeChangeInMedia(initialState)
             
-            for await event in self.media.events {
+            guard let events = self?.media.events else { return }
+            for await event in events {
                 guard !Task.isCancelled else { break }
+                guard let self else { break }
                 if case let .stateDidChange(state) = event {
                     self.hanldeChangeInMedia(state)
                 }
@@ -187,21 +189,26 @@ public class AKLoadingState: AKBaseState {
         }
     }
     
-    /// Evaluates AVPlayer ready status and transitions state to `AKLoadedState`
-    /// upon success.
+    /// Evaluates AVPlayer ready status and transitions state upon success.
     private func becameReadyToPlay() {
-        if playerController.player.status == .readyToPlay {
-            transitionToLoaded()
-        } else if playerController.player.status == .failed {
-            transitionToFailed()
+        guard let currentItem = playerController.player.currentItem,
+              currentItem == media.playerItem,
+              currentItem.status == .readyToPlay,
+              playerController.player.status == .readyToPlay
+        else {
+            if playerController.player.status == .failed || media.playerItem?.status == .failed {
+                transitionToFailed()
+            }
+            return
         }
+        transitionToLoaded()
     }
     
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
         guard isActiveState else { return }
         switch status {
         case .readyToPlay:
-            transitionToLoaded()
+            becameReadyToPlay()
         case .failed:
             transitionToFailed()
         default:
@@ -210,12 +217,14 @@ public class AKLoadingState: AKBaseState {
     }
     
     private func transitionToLoaded() {
-        let controller = AKLoadedState(
-            playerController: playerController,
-            autoPlay: autoPlay,
-            position: position
+        change(
+            AKLoadedState(
+                playerController: playerController,
+                autoPlay: autoPlay,
+                position: position,
+                rate: rate
+            )
         )
-        change(controller)
     }
     
     private func transitionToFailed() {

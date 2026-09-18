@@ -67,7 +67,7 @@ public protocol AKTrackSelectionServiceProtocol: AnyObject, Sendable {
 
 // MARK: - Implementation
 
-public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, Sendable {
+public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @unchecked Sendable {
     
     // MARK: - Internal State
     
@@ -81,14 +81,14 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, Sen
     // MARK: - Properties
     
     /// An unowned reference to the owner media manager.
-    private unowned let mediaManager: any AKMediaManagerProtocol
+    private weak var mediaManager: (any AKMediaManagerProtocol)?
     
     /// Thread-safe state container using Swift 6 native Mutex.
     private let state = Mutex(State())
     
     /// Convenience accessor for the active `AVPlayerItem`.
     private var playerItem: AVPlayerItem? {
-        mediaManager.playerItem
+        mediaManager?.playerItem
     }
     
     // MARK: - Initialization & Cleanup

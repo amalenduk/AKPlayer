@@ -155,8 +155,9 @@ public class AKBufferingState: AKBaseState {
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
         performIfAllowed(
-            check: { [unowned self] in
-                availability(for: .seek(to: target))
+            check: { [weak self] in
+                guard let self else { return (false, nil) }
+                return availability(for: .seek(to: target))
             },
             action: { [weak self] in
                 guard let s = self else {
@@ -195,8 +196,9 @@ public class AKBufferingState: AKBaseState {
         completionHandler: @Sendable @escaping (Bool) -> Void
     ) {
         performIfAllowed(
-            check: { [unowned self] in
-                availability(for: .seek(to: target))
+            check: { [weak self] in
+                guard let self else { return (false, nil) }
+                return availability(for: .seek(to: target))
             },
             action: { [weak self] in
                 guard let s = self else {
@@ -289,30 +291,49 @@ public class AKBufferingState: AKBaseState {
         
         observations.append(
             playerItem.observe(\.isPlaybackBufferFull, options: [.initial, .new]) { [weak self] _, _ in
-                Task { @MainActor [weak self] in
-                    self?.evaluateBufferingReadiness()
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.evaluateBufferingReadiness()
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.evaluateBufferingReadiness()
+                    }
                 }
             }
         )
         
         observations.append(
             playerItem.observe(\.isPlaybackLikelyToKeepUp, options: [.initial, .new]) { [weak self] _, _ in
-                Task { @MainActor [weak self] in
-                    self?.evaluateBufferingReadiness()
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.evaluateBufferingReadiness()
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.evaluateBufferingReadiness()
+                    }
                 }
             }
         )
         
         observations.append(
             playerItem.observe(\.loadedTimeRanges, options: [.new]) { [weak self] _, _ in
-                Task { @MainActor [weak self] in
-                    self?.evaluateBufferingReadiness()
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.evaluateBufferingReadiness()
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.evaluateBufferingReadiness()
+                    }
                 }
             }
         )
     }
     
     private func evaluateBufferingReadiness() {
+        guard isActiveState else { return }
         guard canPlay() else { return }
         autoPlay ? startPlayingIfPossible() : changeToPreviousState()
     }
@@ -326,6 +347,7 @@ public class AKBufferingState: AKBaseState {
     /// Transitions back to the designated state prior to buffering if autoplay
     /// is not requested.
     private func changeToPreviousState() {
+        guard isActiveState else { return }
         guard let playerItem = playerController.currentMedia?.playerItem,
               !playerController.isSeeking,
               canPlay()
@@ -342,33 +364,6 @@ public class AKBufferingState: AKBaseState {
             let controller = AKPausedState(playerController: playerController)
             change(controller)
         }
-    }
-    
-    /// Determines whether the media buffer conditions are sufficient to allow playback.
-    private func canPlay() -> Bool {
-        guard let playerItem = playerController.currentMedia?.playerItem,
-              !playerController.isSeeking
-        else { return false }
-        
-        if playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp {
-            return true
-        }
-        
-        // Also allow playback if there is at least 1.5s of loaded buffer ahead of current playback time
-        let currentTime = playerItem.currentTime()
-        if currentTime.isValid && !currentTime.isIndefinite {
-            for rangeValue in playerItem.loadedTimeRanges {
-                let range = rangeValue.timeRangeValue
-                if CMTimeRangeContainsTime(range, time: currentTime) {
-                    let bufferedAhead = range.end - currentTime
-                    if bufferedAhead.seconds >= 1.5 {
-                        return true
-                    }
-                }
-            }
-        }
-        
-        return false
     }
     
     /// Checks buffer availability and transitions into `AKPlayingState` if ready.

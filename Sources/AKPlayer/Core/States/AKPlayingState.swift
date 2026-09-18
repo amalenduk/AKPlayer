@@ -51,6 +51,10 @@ public class AKPlayingState: AKBaseState {
     override public func processStateChange() {
         super.processStateChange()
         
+        if playerController.player.timeControlStatus == .playing {
+            playingStarted = true
+        }
+        
         if let rate, playerController.player.rate != rate.rate {
             play(at: rate)
         } else {
@@ -95,18 +99,17 @@ public class AKPlayingState: AKBaseState {
         case .playing:
             playingStarted = true
         case .waitingToPlayAtSpecifiedRate:
+            guard playingStarted else { return }
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
-                guard let currentItem = playerController.currentItem else { return }
-                guard currentItem.isPlaybackBufferFull || currentItem.isPlaybackLikelyToKeepUp else {
-                    let controller = AKBufferingState(
-                        playerController: playerController,
-                        autoPlay: true,
-                        rate: rate
-                    )
-                    return change(controller)
-                }
+                guard !canPlay() else { return }
+                let controller = AKBufferingState(
+                    playerController: playerController,
+                    autoPlay: true,
+                    rate: rate
+                )
+                return change(controller)
             case .noItemToPlay:
                 stop()
             default:

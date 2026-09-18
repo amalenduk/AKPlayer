@@ -17,8 +17,8 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     
     // MARK: - Properties
     
-    /// The unowned reference to the backing playable media item.
-    public unowned let media: any AKPlayable
+    /// The weak reference to the backing playable media item.
+    public weak var media: (any AKPlayable)?
     
     /// The loaded URL asset generated from the media item (Single Source of Truth).
     public private(set) var asset: AVURLAsset?
@@ -107,6 +107,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             state.isIdle || state.isFailed,
             "This function can only be called if the media is idle or has encountered an error."
         )
+        guard let media else { return }
         error = nil
         self.asset = await playerItemInitService.createAsset(for: media)
         self.state = .assetLoaded
@@ -137,7 +138,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             state.isAssetLoaded,
             "This function requires the asset to be loaded first."
         )
-        guard let asset else { return }
+        guard let asset, let media else { return }
         error = nil
         
         // Stop any existing KVO observations

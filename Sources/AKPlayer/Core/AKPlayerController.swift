@@ -465,8 +465,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         observations.append(
             player.observe(\.volume, options: [.initial, .new]) { [weak self] observedPlayer, _ in
                 let volume = observedPlayer.volume
-                Task { @MainActor [weak self] in
-                    self?.eventBroadcaster.send(.volumeDidChange(volume))
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.eventBroadcaster.send(.volumeDidChange(volume))
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.eventBroadcaster.send(.volumeDidChange(volume))
+                    }
                 }
             }
         )
@@ -475,8 +481,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         observations.append(
             player.observe(\.isMuted, options: [.initial, .new]) { [weak self] observedPlayer, _ in
                 let isMuted = observedPlayer.isMuted
-                Task { @MainActor [weak self] in
-                    self?.eventBroadcaster.send(.muteStatusDidChange(isMuted: isMuted))
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.eventBroadcaster.send(.muteStatusDidChange(isMuted: isMuted))
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.eventBroadcaster.send(.muteStatusDidChange(isMuted: isMuted))
+                    }
                 }
             }
         )
@@ -485,8 +497,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         observations.append(
             player.observe(\.status, options: [.new]) { [weak self] observedPlayer, _ in
                 let status = observedPlayer.status
-                Task { @MainActor [weak self] in
-                    self?.controller.handlePlayerStatusChange(status)
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.controller.handlePlayerStatusChange(status)
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.controller.handlePlayerStatusChange(status)
+                    }
                 }
             }
         )
@@ -495,8 +513,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         observations.append(
             player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] observedPlayer, _ in
                 let status = observedPlayer.timeControlStatus
-                Task { @MainActor [weak self] in
-                    self?.controller.handleTimeControlStatusChange(status)
+                if Thread.isMainThread {
+                    MainActor.assumeIsolated {
+                        self?.controller.handleTimeControlStatusChange(status)
+                    }
+                } else {
+                    Task { @MainActor [weak self] in
+                        self?.controller.handleTimeControlStatusChange(status)
+                    }
                 }
             }
         )

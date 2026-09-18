@@ -17,7 +17,7 @@ public protocol AKMediaManagerProtocol: AnyObject, Sendable {
     // MARK: - Properties
     
     /// The weak reference to the backing playable media item.
-    var media: any AKPlayable { get }
+    var media: (any AKPlayable)? { get }
     
     /// The loaded URL asset generated from the media item (Single Source of Truth).
     var asset: AVURLAsset? { get }

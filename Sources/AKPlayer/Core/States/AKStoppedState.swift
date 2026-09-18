@@ -72,8 +72,10 @@ public class AKStoppedState: AKBaseState {
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
         switch action {
-        case .play, .pause, .stop, .seek, .fastForward, .rewind, .step:
+        case .play, .pause, .seek, .fastForward, .rewind, .step:
             (false, .loadMediaFirst)
+        case .stop:
+            (false, .alreadyStopped)
         default:
             super.availability(for: action)
         }

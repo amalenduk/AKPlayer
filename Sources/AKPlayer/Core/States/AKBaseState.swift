@@ -227,8 +227,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         completionHandler: @Sendable @escaping (Bool) -> Void
     ) {
         performIfAllowed(
-            check: { [unowned self] in
-                availability(for: .seek(to: target))
+            check: { [weak self] in
+                guard let self else { return (false, nil) }
+                return availability(for: .seek(to: target))
             },
             action: { [weak self] in
                 guard let self else {
@@ -267,8 +268,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// negative for reverse).
     public func step(by count: Int) {
         performIfAllowed(
-            check: { [unowned self] in
-                availability(for: .step(by: count))
+            check: { [weak self] in
+                guard let self else { return (false, nil) }
+                return availability(for: .step(by: count))
             },
             action: { [weak self] in
                 guard let self else { return }
@@ -456,6 +458,33 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             position: position
         )
         change(controller)
+    }
+    
+    /// Determines whether the media buffer conditions are sufficient to allow playback.
+    public func canPlay() -> Bool {
+        guard let playerItem = playerController.currentMedia?.playerItem,
+              !playerController.isSeeking
+        else { return false }
+        
+        if playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp {
+            return true
+        }
+        
+        // Also allow playback if there is at least 1.5s of loaded buffer ahead of current playback time
+        let currentTime = playerItem.currentTime()
+        if currentTime.isValid && !currentTime.isIndefinite {
+            for rangeValue in playerItem.loadedTimeRanges {
+                let range = rangeValue.timeRangeValue
+                if CMTimeRangeContainsTime(range, time: currentTime) {
+                    let bufferedAhead = range.end - currentTime
+                    if bufferedAhead.seconds >= 1.5 {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
     }
     
     // MARK: - Lifecycle Hooks
