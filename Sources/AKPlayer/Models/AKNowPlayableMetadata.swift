@@ -83,6 +83,15 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
     /// Time ranges for advertisements.
     public var adTimeRanges: [MPAdTimeRange]?
 
+    /// Total chapter count.
+    public var chapterCount: Int?
+
+    /// Start offset for credits.
+    public var creditsStartTime: Double?
+
+    /// Unique service identifier.
+    public var serviceIdentifier: String?
+
     // MARK: - Init
 
     /// Initializes a static metadata payload container.
@@ -99,6 +108,9 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
     ///   - externalContentIdentifier: External content identifier.
     ///   - externalUserProfileIdentifier: External user profile identifier.
     ///   - adTimeRanges: Time ranges for advertisements.
+    ///   - chapterCount: Total chapter count.
+    ///   - creditsStartTime: Start offset for credits.
+    ///   - serviceIdentifier: Unique service identifier.
     public init(
         assetURL: URL,
         mediaType: MPNowPlayingInfoMediaType,
@@ -111,7 +123,10 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
         collectionIdentifier: String? = nil,
         externalContentIdentifier: String? = nil,
         externalUserProfileIdentifier: String? = nil,
-        adTimeRanges: [MPAdTimeRange]? = nil
+        adTimeRanges: [MPAdTimeRange]? = nil,
+        chapterCount: Int? = nil,
+        creditsStartTime: Double? = nil,
+        serviceIdentifier: String? = nil
     ) {
         self.assetURL = assetURL
         self.mediaType = mediaType
@@ -125,6 +140,9 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
         self.externalContentIdentifier = externalContentIdentifier
         self.externalUserProfileIdentifier = externalUserProfileIdentifier
         self.adTimeRanges = adTimeRanges
+        self.chapterCount = chapterCount
+        self.creditsStartTime = creditsStartTime
+        self.serviceIdentifier = serviceIdentifier
     }
 }
 
@@ -155,14 +173,8 @@ Sendable {
     /// Available language options.
     public var availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]?
 
-    /// Total chapter count.
-    public var chapterCount: Int?
-
     /// Current chapter index.
     public var chapterNumber: Int?
-
-    /// Start offset for credits.
-    public var creditsStartTime: Double?
 
     /// Current wall-clock playback timestamp.
     public var currentPlaybackDate: Date?
@@ -176,9 +188,6 @@ Sendable {
     /// Current index within queue.
     public var playbackQueueIndex: Int?
 
-    /// Unique service identifier.
-    public var serviceIdentifier: String?
-
     // MARK: - Init
 
     /// Initializes a dynamic metadata payload container.
@@ -189,14 +198,11 @@ Sendable {
     ///   - duration: Total duration in seconds.
     ///   - currentLanguageOptions: Active language options.
     ///   - availableLanguageOptionGroups: Available language option groups.
-    ///   - chapterCount: Total chapter count.
     ///   - chapterNumber: Current chapter index.
-    ///   - creditsStartTime: Start offset for credits.
     ///   - currentPlaybackDate: Current wall-clock playback timestamp.
     ///   - playbackProgress: Playback completion percentage.
     ///   - playbackQueueCount: Total items in queue.
     ///   - playbackQueueIndex: Current index within queue.
-    ///   - serviceIdentifier: Unique service identifier.
     public init(
         rate: Double,
         defaultRate: Double,
@@ -205,14 +211,11 @@ Sendable {
         currentLanguageOptions: [MPNowPlayingInfoLanguageOption]? = nil,
         availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]? =
             nil,
-        chapterCount: Int? = nil,
         chapterNumber: Int? = nil,
-        creditsStartTime: Double? = nil,
         currentPlaybackDate: Date? = nil,
         playbackProgress: Float? = nil,
         playbackQueueCount: Int? = nil,
-        playbackQueueIndex: Int? = nil,
-        serviceIdentifier: String? = nil
+        playbackQueueIndex: Int? = nil
     ) {
         self.rate = rate
         self.defaultRate = defaultRate
@@ -220,13 +223,10 @@ Sendable {
         self.duration = duration
         self.currentLanguageOptions = currentLanguageOptions
         self.availableLanguageOptionGroups = availableLanguageOptionGroups
-        self.chapterCount = chapterCount
         self.chapterNumber = chapterNumber
-        self.creditsStartTime = creditsStartTime
         self.currentPlaybackDate = currentPlaybackDate
         self.playbackProgress = playbackProgress
         self.playbackQueueCount = playbackQueueCount
         self.playbackQueueIndex = playbackQueueIndex
-        self.serviceIdentifier = serviceIdentifier
     }
 }

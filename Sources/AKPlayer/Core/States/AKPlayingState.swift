@@ -99,8 +99,7 @@ public class AKPlayingState: AKBaseState {
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 guard let currentItem = playerController.currentItem else { return }
-                playingStarted = true
-                guard currentItem.isPlaybackBufferFull && currentItem.isPlaybackLikelyToKeepUp else {
+                guard currentItem.isPlaybackBufferFull || currentItem.isPlaybackLikelyToKeepUp else {
                     let controller = AKBufferingState(
                         playerController: playerController,
                         autoPlay: true,

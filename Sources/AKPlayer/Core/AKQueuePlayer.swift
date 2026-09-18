@@ -62,6 +62,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
             configuration: configuration,
             audioSessionService: audioSessionService
         )
+        nowPlayingManager?.queueInfoProvider = self
         startObservingQueueEvents()
         setupQueueNowPlayingCommands()
     }
@@ -86,6 +87,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         guard activeItems.indices.contains(startIndex) else { return }
         let targetMedia = activeItems[startIndex]
         load(media: targetMedia, autoPlay: autoPlay, at: nil)
+        nowPlayingManager?.updateNowPlayingInfo()
     }
     
     public func next() {
@@ -138,6 +140,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             shuffledItems.append(item)
         }
+        nowPlayingManager?.updateNowPlayingInfo()
     }
     
     public func insert(_ item: any AKPlayable, at index: Int) {
@@ -146,6 +149,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             shuffledItems.append(item)
         }
+        nowPlayingManager?.updateNowPlayingInfo()
     }
     
     public func remove(at index: Int) {
@@ -155,6 +159,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             shuffledItems.removeAll(where: { $0.url == removedItem.url })
         }
+        nowPlayingManager?.updateNowPlayingInfo()
     }
     
     public func move(from sourceIndex: Int, to destinationIndex: Int) {
@@ -164,6 +169,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         
         let item = items.remove(at: sourceIndex)
         items.insert(item, at: destinationIndex)
+        nowPlayingManager?.updateNowPlayingInfo()
     }
     
     // MARK: - Private Helpers

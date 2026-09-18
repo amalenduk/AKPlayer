@@ -9,6 +9,9 @@ import AVFoundation
 import MediaPlayer
 import UIKit
 
+// MARK: - AKMediaStaticMetadata
+
+/// A model representing static container metadata extracted from media files or supplied by the caller.
 public struct AKMediaStaticMetadata: Equatable, @unchecked Sendable {
     
     public var title: String?
@@ -27,6 +30,15 @@ public struct AKMediaStaticMetadata: Equatable, @unchecked Sendable {
     public var isExplicit: Bool?
     public var assetURL: URL?
     public var mediaType: MPNowPlayingInfoMediaType?
+    public var descriptionText: String?
+    public var copyrights: String?
+    public var publisher: String?
+    public var creationDate: String?
+    public var language: String?
+    public var isLiveStream: Bool?
+    public var chapterCount: Int?
+    public var creditsStartTime: Double?
+    public var serviceIdentifier: String?
     
     public init(
         title: String? = nil,
@@ -44,7 +56,16 @@ public struct AKMediaStaticMetadata: Equatable, @unchecked Sendable {
         releaseDate: Date? = nil,
         isExplicit: Bool? = nil,
         assetURL: URL? = nil,
-        mediaType: MPNowPlayingInfoMediaType? = nil
+        mediaType: MPNowPlayingInfoMediaType? = nil,
+        descriptionText: String? = nil,
+        copyrights: String? = nil,
+        publisher: String? = nil,
+        creationDate: String? = nil,
+        language: String? = nil,
+        isLiveStream: Bool? = nil,
+        chapterCount: Int? = nil,
+        creditsStartTime: Double? = nil,
+        serviceIdentifier: String? = nil
     ) {
         self.title = title
         self.artist = artist
@@ -62,6 +83,48 @@ public struct AKMediaStaticMetadata: Equatable, @unchecked Sendable {
         self.isExplicit = isExplicit
         self.assetURL = assetURL
         self.mediaType = mediaType
+        self.descriptionText = descriptionText
+        self.copyrights = copyrights
+        self.publisher = publisher
+        self.creationDate = creationDate
+        self.language = language
+        self.isLiveStream = isLiveStream
+        self.chapterCount = chapterCount
+        self.creditsStartTime = creditsStartTime
+        self.serviceIdentifier = serviceIdentifier
+    }
+    
+    // MARK: - Now Playing Bridge
+    
+    /// Converts this static metadata payload into an `AKNowPlayableStaticMetadata` instance.
+    public func toNowPlayableStaticMetadata(
+        defaultURL: URL? = nil,
+        defaultMediaType: MPNowPlayingInfoMediaType = .audio,
+        isLive: Bool = false,
+        defaultChapterCount: Int? = nil,
+        defaultCreditsStartTime: Double? = nil,
+        defaultServiceIdentifier: String? = nil
+    ) -> AKNowPlayableStaticMetadata {
+        var artworkPayload: Artwork?
+        if let artworkImage {
+            artworkPayload = .image(artworkImage)
+        } else if let artwork {
+            artworkPayload = .artwork(artwork)
+        }
+        
+        return AKNowPlayableStaticMetadata(
+            assetURL: assetURL ?? defaultURL ?? URL(fileURLWithPath: ""),
+            mediaType: mediaType ?? defaultMediaType,
+            isLiveStream: isLiveStream ?? isLive,
+            title: title ?? "Unknown Title",
+            artist: artist,
+            artwork: artworkPayload,
+            albumArtist: albumArtist,
+            albumTitle: albumTitle,
+            chapterCount: chapterCount ?? defaultChapterCount,
+            creditsStartTime: creditsStartTime ?? defaultCreditsStartTime,
+            serviceIdentifier: serviceIdentifier ?? defaultServiceIdentifier
+        )
     }
     
     // MARK: - Equatable
@@ -82,6 +145,15 @@ public struct AKMediaStaticMetadata: Equatable, @unchecked Sendable {
         lhs.releaseDate == rhs.releaseDate &&
         lhs.isExplicit == rhs.isExplicit &&
         lhs.assetURL == rhs.assetURL &&
-        lhs.mediaType == rhs.mediaType
+        lhs.mediaType == rhs.mediaType &&
+        lhs.descriptionText == rhs.descriptionText &&
+        lhs.copyrights == rhs.copyrights &&
+        lhs.publisher == rhs.publisher &&
+        lhs.creationDate == rhs.creationDate &&
+        lhs.language == rhs.language &&
+        lhs.isLiveStream == rhs.isLiveStream &&
+        lhs.chapterCount == rhs.chapterCount &&
+        lhs.creditsStartTime == rhs.creditsStartTime &&
+        lhs.serviceIdentifier == rhs.serviceIdentifier
     }
 }

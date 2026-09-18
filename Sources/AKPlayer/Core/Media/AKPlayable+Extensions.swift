@@ -146,6 +146,10 @@ public extension AKPlayable {
     var metadataProvider: any AKMediaMetadataProviderProtocol {
         manager.metadataProvider
     }
+    
+    var chapterService: any AKChapterServiceProtocol {
+        manager.chapterService
+    }
 }
 
 // MARK: - Comparable Helpers

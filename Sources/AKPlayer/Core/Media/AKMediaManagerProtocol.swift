@@ -43,6 +43,9 @@ public protocol AKMediaManagerProtocol: AnyObject, Sendable {
     /// Metadata extraction service for active media assets.
     var metadataProvider: any AKMediaMetadataProviderProtocol { get }
     
+    /// Chapter extraction and navigation service.
+    var chapterService: any AKChapterServiceProtocol { get }
+    
     /// Notification observer for player item playback lifecycle events.
     var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol { get }
     

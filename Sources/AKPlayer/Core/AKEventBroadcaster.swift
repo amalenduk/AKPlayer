@@ -21,10 +21,11 @@ final class AKEventBroadcaster<Event: Sendable>: Sendable {
     }
     
     func send(_ event: Event) {
-        state.withLock { continuations in
-            for continuation in continuations.values {
-                continuation.yield(event)
-            }
+        let activeContinuations = state.withLock { continuations in
+            Array(continuations.values)
+        }
+        for continuation in activeContinuations {
+            continuation.yield(event)
         }
     }
     
@@ -42,11 +43,13 @@ final class AKEventBroadcaster<Event: Sendable>: Sendable {
     }
     
     func finish() {
-        state.withLock { continuations in
-            for continuation in continuations.values {
-                continuation.finish()
-            }
+        let activeContinuations = state.withLock { continuations -> [AsyncStream<Event>.Continuation] in
+            let values = Array(continuations.values)
             continuations.removeAll()
+            return values
+        }
+        for continuation in activeContinuations {
+            continuation.finish()
         }
     }
 }

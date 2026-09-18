@@ -233,7 +233,6 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         if !state.isAny(of: [.idle, .stopped, .failed]) {
             stop()
         }
-        
         currentMedia = media
         controller.load(media: media, autoPlay: autoPlay, at: position)
     }
@@ -397,13 +396,10 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// - Parameter newController: The target state controller conforming to
     /// `AKPlayerStateControllerProtocol`.
     public func change(_ newController: any AKPlayerStateControllerProtocol) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.controller = newController
-            self.eventBroadcaster.send(.stateDidChange(newController.state))
-            self.processStateChange()
-            newController.processStateChange()
-        }
+        self.controller = newController
+        self.eventBroadcaster.send(.stateDidChange(newController.state))
+        self.processStateChange()
+        newController.processStateChange()
     }
     
     /// Hook called whenever state changes to execute custom side effects based

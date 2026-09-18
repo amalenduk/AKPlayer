@@ -18,7 +18,7 @@ public class AKLoadingState: AKBaseState {
     // MARK: - Properties
     
     /// The media item being loaded into the player pipeline.
-    private unowned let media: any AKPlayable
+    private let media: any AKPlayable
     
     /// Indicates whether playback should automatically start once loading
     /// completes.

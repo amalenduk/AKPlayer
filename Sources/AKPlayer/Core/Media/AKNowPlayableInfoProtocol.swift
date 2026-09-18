@@ -89,6 +89,15 @@ public protocol AKNowPlayableStaticMetadataProtocol: Sendable {
     /// External user profile identifier (`MPNowPlayingInfoPropertyExternalUserProfileIdentifier`).
     var externalUserProfileIdentifier: String? { get set }
     
+    /// Total chapter count (`MPNowPlayingInfoPropertyChapterCount`).
+    var chapterCount: Int? { get set }
+    
+    /// Start offset for credits (`MPNowPlayingInfoPropertyCreditsStartTime`).
+    var creditsStartTime: Double? { get set }
+    
+    /// Unique service identifier (`MPNowPlayingInfoPropertyServiceIdentifier`).
+    var serviceIdentifier: String? { get set }
+    
     /// Time ranges for advertisements (`MPNowPlayingInfoPropertyAdTimeRanges`).
     var adTimeRanges: [MPAdTimeRange]? { get set }
 }
@@ -102,6 +111,9 @@ public extension AKNowPlayableStaticMetadataProtocol {
     var collectionIdentifier: String? { get { nil } set {} }
     var externalContentIdentifier: String? { get { nil } set {} }
     var externalUserProfileIdentifier: String? { get { nil } set {} }
+    var chapterCount: Int? { get { nil } set {} }
+    var creditsStartTime: Double? { get { nil } set {} }
+    var serviceIdentifier: String? { get { nil } set {} }
     var adTimeRanges: [MPAdTimeRange]? { get { nil } set {} }
 }
 
@@ -137,6 +149,18 @@ public extension AKNowPlayableStaticMetadataProtocol {
         nowPlayingInfo[MPNowPlayingInfoPropertyExternalContentIdentifier] = externalContentIdentifier
         nowPlayingInfo[MPNowPlayingInfoPropertyExternalUserProfileIdentifier] = externalUserProfileIdentifier
         
+        if let chapterCount {
+            nowPlayingInfo[MPNowPlayingInfoPropertyChapterCount] = chapterCount
+        }
+        
+        if let creditsStartTime {
+            nowPlayingInfo[MPNowPlayingInfoPropertyCreditsStartTime] = creditsStartTime
+        }
+        
+        if let serviceIdentifier {
+            nowPlayingInfo[MPNowPlayingInfoPropertyServiceIdentifier] = serviceIdentifier
+        }
+        
         if let adTimeRanges {
             nowPlayingInfo[MPNowPlayingInfoPropertyAdTimeRanges] = adTimeRanges
         }
@@ -171,14 +195,8 @@ public protocol AKNowPlayableDynamicMetadataProtocol: Sendable {
     /// Available language options (`MPNowPlayingInfoPropertyAvailableLanguageOptions`).
     var availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]? { get set }
     
-    /// Total chapter count (`MPNowPlayingInfoPropertyChapterCount`).
-    var chapterCount: Int? { get set }
-    
     /// Current chapter index (`MPNowPlayingInfoPropertyChapterNumber`).
     var chapterNumber: Int? { get set }
-    
-    /// Start offset for credits (`MPNowPlayingInfoPropertyCreditsStartTime`).
-    var creditsStartTime: Double? { get set }
     
     /// Current wall-clock playback timestamp (`MPNowPlayingInfoPropertyCurrentPlaybackDate`).
     var currentPlaybackDate: Date? { get set }
@@ -191,9 +209,6 @@ public protocol AKNowPlayableDynamicMetadataProtocol: Sendable {
     
     /// Current index within queue (`MPNowPlayingInfoPropertyPlaybackQueueIndex`).
     var playbackQueueIndex: Int? { get set }
-    
-    /// Unique service identifier (`MPNowPlayingInfoPropertyServiceIdentifier`).
-    var serviceIdentifier: String? { get set }
 }
 
 // Default Optional Property Stubs
@@ -202,14 +217,11 @@ public extension AKNowPlayableDynamicMetadataProtocol {
     var duration: Float? { get { nil } set {} }
     var currentLanguageOptions: [MPNowPlayingInfoLanguageOption]? { get { nil } set {} }
     var availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]? { get { nil } set {} }
-    var chapterCount: Int? { get { nil } set {} }
     var chapterNumber: Int? { get { nil } set {} }
-    var creditsStartTime: Double? { get { nil } set {} }
     var currentPlaybackDate: Date? { get { nil } set {} }
     var playbackProgress: Float? { get { nil } set {} }
     var playbackQueueCount: Int? { get { nil } set {} }
     var playbackQueueIndex: Int? { get { nil } set {} }
-    var serviceIdentifier: String? { get { nil } set {} }
 }
 
 // MARK: - Dynamic Metadata Serialization Extension
@@ -229,14 +241,11 @@ public extension AKNowPlayableDynamicMetadataProtocol {
         
         nowPlayingInfo[MPNowPlayingInfoPropertyCurrentLanguageOptions] = currentLanguageOptions
         nowPlayingInfo[MPNowPlayingInfoPropertyAvailableLanguageOptions] = availableLanguageOptionGroups
-        nowPlayingInfo[MPNowPlayingInfoPropertyChapterCount] = chapterCount
         nowPlayingInfo[MPNowPlayingInfoPropertyChapterNumber] = chapterNumber
-        nowPlayingInfo[MPNowPlayingInfoPropertyCreditsStartTime] = creditsStartTime
         nowPlayingInfo[MPNowPlayingInfoPropertyCurrentPlaybackDate] = currentPlaybackDate
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackProgress] = playbackProgress
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueCount] = playbackQueueCount
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueIndex] = playbackQueueIndex
-        nowPlayingInfo[MPNowPlayingInfoPropertyServiceIdentifier] = serviceIdentifier
         
         return nowPlayingInfo
     }

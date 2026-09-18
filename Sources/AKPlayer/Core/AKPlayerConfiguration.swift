@@ -32,11 +32,11 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     // MARK: - Buffer Management Configurations
     
     /// The maximum duration in seconds the player waits for buffering before
-    /// triggering a timeout error. Defaults to `20` seconds.
+    /// triggering a timeout error. Defaults to `30` seconds.
     public var bufferObservingTimeout: TimeInterval
     
     /// The polling time interval in seconds used to check current buffer
-    /// status. Defaults to `0.05` seconds.
+    /// status. Defaults to `0.5` seconds.
     public var bufferObservingTimeInterval: TimeInterval
     
     // MARK: - Audio Session Configurations
@@ -99,7 +99,7 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     public var maxBufferRetryCount: Int
     
     /// The initial base backoff cooldown in seconds when waiting for network reconnection.
-    /// Defaults to `2.0` seconds.
+    /// Defaults to `1.0` seconds.
     public var waitingForNetworkBaseCooldown: TimeInterval
     
     /// The exponential multiplier applied to retry delay intervals during repeated network recovery cycles.
@@ -111,7 +111,7 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     public var maxWaitingForNetworkCooldown: TimeInterval
     
     /// The consecutive threshold count of stalled buffer observation ticks required to trigger a stall state transition.
-    /// Defaults to `4`.
+    /// Defaults to `12` (12 ticks * 0.5s = 6.0 seconds).
     public var bufferStallTickLimit: Int
     
     // MARK: - Static Default Instance
@@ -127,8 +127,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         periodicTimeInterval: AKTimeEventFrequency = .everyQuarterSecond,
         preferredTimeScale: CMTimeScale = .init(NSEC_PER_SEC),
         boundaryTimeObserverMultiplier: Double = 0.10,
-        bufferObservingTimeout: TimeInterval = 20,
-        bufferObservingTimeInterval: TimeInterval = 0.05,
+        bufferObservingTimeout: TimeInterval = 30,
+        bufferObservingTimeInterval: TimeInterval = 0.5,
         audioSession: AKAudioSessionConfiguration = .init(),
         isNowPlayingEnabled: Bool = true,
         idleTimerDisabledForStates: [AKPlayerState] = [.buffering, .playing],
@@ -141,10 +141,10 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         fastForwardRate: AKPlaybackRate = .superfast,
         rewindRate: AKPlaybackRate = .slowest,
         maxBufferRetryCount: Int = 4,
-        waitingForNetworkBaseCooldown: TimeInterval = 2.0,
+        waitingForNetworkBaseCooldown: TimeInterval = 1.0,
         backoffMultiplier: Double = 1.8,
         maxWaitingForNetworkCooldown: TimeInterval = 20.0,
-        bufferStallTickLimit: Int = 4
+        bufferStallTickLimit: Int = 12
     ) {
         self.periodicTimeInterval = periodicTimeInterval
         self.preferredTimeScale = preferredTimeScale

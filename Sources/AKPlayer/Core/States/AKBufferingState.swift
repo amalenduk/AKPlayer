@@ -302,6 +302,14 @@ public class AKBufferingState: AKBaseState {
                 }
             }
         )
+        
+        observations.append(
+            playerItem.observe(\.loadedTimeRanges, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor [weak self] in
+                    self?.evaluateBufferingReadiness()
+                }
+            }
+        )
     }
     
     private func evaluateBufferingReadiness() {
@@ -320,7 +328,7 @@ public class AKBufferingState: AKBaseState {
     private func changeToPreviousState() {
         guard let playerItem = playerController.currentMedia?.playerItem,
               !playerController.isSeeking,
-              playerItem.isPlaybackBufferFull && playerItem.isPlaybackLikelyToKeepUp
+              canPlay()
         else { return }
         
         switch stateToNavigateAfterBuffering {
@@ -339,10 +347,28 @@ public class AKBufferingState: AKBaseState {
     /// Determines whether the media buffer conditions are sufficient to allow playback.
     private func canPlay() -> Bool {
         guard let playerItem = playerController.currentMedia?.playerItem,
-              !playerController.isSeeking,
-              playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp
+              !playerController.isSeeking
         else { return false }
-        return true
+        
+        if playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp {
+            return true
+        }
+        
+        // Also allow playback if there is at least 1.5s of loaded buffer ahead of current playback time
+        let currentTime = playerItem.currentTime()
+        if currentTime.isValid && !currentTime.isIndefinite {
+            for rangeValue in playerItem.loadedTimeRanges {
+                let range = rangeValue.timeRangeValue
+                if CMTimeRangeContainsTime(range, time: currentTime) {
+                    let bufferedAhead = range.end - currentTime
+                    if bufferedAhead.seconds >= 1.5 {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
     }
     
     /// Checks buffer availability and transitions into `AKPlayingState` if ready.

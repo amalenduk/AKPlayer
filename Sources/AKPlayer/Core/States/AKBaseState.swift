@@ -446,6 +446,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         autoPlay: Bool,
         at position: AKSeekTarget?
     ) {
+        if !playerController.player.timeControlStatus.isPaused {
+            playerController.performPause()
+        }
         let controller = AKLoadingState(
             playerController: playerController,
             media: media,

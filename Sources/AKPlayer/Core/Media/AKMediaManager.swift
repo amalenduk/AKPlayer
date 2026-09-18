@@ -55,6 +55,9 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     /// Service responsible for extracting asset and item metadata.
     public var metadataProvider: any AKMediaMetadataProviderProtocol { _metadataProvider }
     
+    /// Service responsible for extracting and tracking media chapters.
+    public var chapterService: any AKChapterServiceProtocol { _chapterService }
+    
     /// Notification observer for player item playback lifecycle events.
     public var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol { _playerItemNotificationsObserver }
     
@@ -66,6 +69,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
     private var _trackSelectionService: (any AKTrackSelectionServiceProtocol)!
     private var _metadataProvider: (any AKMediaMetadataProviderProtocol)!
+    private var _chapterService: (any AKChapterServiceProtocol)!
     private var _playerItemNotificationsObserver: (any AKPlayerItemNotificationsObserverProtocol)!
     
     // MARK: - Initialization & Cleanup
@@ -86,6 +90,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         _seekingThroughMediaService = AKSeekingThroughMediaService(mediaManager: self)
         _trackSelectionService = AKTrackSelectionService(mediaManager: self)
         _metadataProvider = AKMediaMetadataProvider(mediaManager: self)
+        _chapterService = AKChapterService(mediaManager: self)
         _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
     }
     
@@ -105,6 +110,13 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         error = nil
         self.asset = await playerItemInitService.createAsset(for: media)
         self.state = .assetLoaded
+        
+        // Asynchronously load container metadata and chapters in background
+        Task { [weak self] in
+            guard let self else { return }
+            await self.metadataProvider.loadMetadata()
+            await self.chapterService.loadChapters()
+        }
     }
     
     /// Asynchronously validates key asset properties (e.g., playability and DRM restrictions).
@@ -139,6 +151,14 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             await trackSelectionService.resetSession()
         }
         
+        // Attach live stream timed metadata output
+        let metadataOutput = AVPlayerItemMetadataOutput(identifiers: nil)
+        let queue = DispatchQueue(label: "com.akplayer.timedMetadataOutputQueue")
+        metadataOutput.setDelegate(self, queue: queue)
+        Task { @MainActor in
+            newItem.add(metadataOutput)
+        }
+        
         bindObservers(to: newItem)
         self.state = .playerItemLoaded
     }
@@ -149,6 +169,8 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         asset?.cancelLoading()
         asset = nil
         playerItem = nil
+        metadataProvider.resetSession()
+        chapterService.resetSession()
     }
     
     // MARK: - Preflight Capability Checks
@@ -334,5 +356,19 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     /// Emits a media event to active listeners.
     public func emit(_ event: AKMediaEvent) {
         eventBroadcaster.send(event)
+    }
+}
+
+// MARK: - AVPlayerItemMetadataOutputPushDelegate
+
+extension AKMediaManager: AVPlayerItemMetadataOutputPushDelegate {
+    public func metadataOutput(
+        _ output: AVPlayerItemMetadataOutput,
+        didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
+        from track: AVPlayerItemTrack?
+    ) {
+        let items = groups.flatMap(\.items)
+        guard !items.isEmpty else { return }
+        metadataProvider.handleTimedMetadata(items)
     }
 }

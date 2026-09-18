@@ -54,6 +54,12 @@ public protocol AKNowPlayingManagerProtocol: AnyObject, Sendable {
     /// Disables specified commands on the remote command center.
     func disable(commands: [AKRemoteCommand]) async
     
+    /// Optional provider for queue metadata (such as AKQueuePlayer).
+    var queueInfoProvider: (any AKNowPlayingQueueInfoProvider)? { get set }
+    
+    /// Optional service identifier for now playing info (MPNowPlayingInfoPropertyServiceIdentifier).
+    var serviceIdentifier: String? { get set }
+    
     /// Retrieves the current static and dynamic metadata container.
     func currentNowPlayingMetadata() -> AKNowPlayableMetadata?
     
@@ -68,10 +74,14 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     // MARK: - Properties
     
     public let session: any AKNowPlayingSessionProtocol
+    public weak var queueInfoProvider: (any AKNowPlayingQueueInfoProvider)?
+    public var serviceIdentifier: String?
     private weak var playerManager: (any AKPlayerManagerProtocol)?
     
     private var playerObservationTask: Task<Void, Never>?
     private var mediaObservationTask: Task<Void, Never>?
+    private var metadataObservationTask: Task<Void, Never>?
+    private var chaptersObservationTask: Task<Void, Never>?
     
     // Cached language options extracted when media is ready to play
     private var cachedCurrentLanguageOptions: [MPNowPlayingInfoLanguageOption]?
@@ -123,6 +133,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         playerObservationTask = nil
         mediaObservationTask?.cancel()
         mediaObservationTask = nil
+        metadataObservationTask?.cancel()
+        metadataObservationTask = nil
+        chaptersObservationTask?.cancel()
+        chaptersObservationTask = nil
         
         clearCachedLanguageOptions()
         session.clearNowPlayingPlaybackInfo()
@@ -134,6 +148,10 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         playerObservationTask = nil
         mediaObservationTask?.cancel()
         mediaObservationTask = nil
+        metadataObservationTask?.cancel()
+        metadataObservationTask = nil
+        chaptersObservationTask?.cancel()
+        chaptersObservationTask = nil
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
@@ -191,6 +209,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     
     private func observeMediaEvents(for media: any AKPlayable) {
         mediaObservationTask?.cancel()
+        metadataObservationTask?.cancel()
+        chaptersObservationTask?.cancel()
         
         mediaObservationTask = Task { @MainActor [weak self, weak media] in
             guard let stream = media?.events else { return }
@@ -214,6 +234,22 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                 }
             }
         }
+        
+        metadataObservationTask = Task { @MainActor [weak self, weak media] in
+            guard let stream = media?.manager.metadataProvider.staticMetadataUpdates else { return }
+            for await _ in stream {
+                guard !Task.isCancelled, let self else { break }
+                self.updateNowPlayingInfo()
+            }
+        }
+        
+        chaptersObservationTask = Task { @MainActor [weak self, weak media] in
+            guard let stream = media?.manager.chapterService.chaptersUpdates else { return }
+            for await _ in stream {
+                guard !Task.isCancelled, let self else { break }
+                self.updateNowPlayingInfo()
+            }
+        }
     }
     
     // MARK: - Now Playing Info Management
@@ -233,8 +269,39 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     public func currentNowPlayingMetadata() -> AKNowPlayableMetadata? {
         guard let currentMedia = playerManager?.currentMedia else { return nil }
         
+        let chapterService = currentMedia.manager.chapterService
+        let totalChapters = chapterService.chapterCount > 0 ? chapterService.chapterCount : nil
+        let resolvedCreditsStartTime: Double? = {
+            if let customCredits = (currentMedia.staticMetadata as? AKNowPlayableStaticMetadata)?.creditsStartTime ?? currentMedia.staticMetadata?.creditsStartTime {
+                return customCredits
+            }
+            if let extractedCredits = currentMedia.manager.metadataProvider.staticMetadata.creditsStartTime {
+                return extractedCredits
+            }
+            return chapterService.creditsStartTime
+        }()
+        
+        let staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = {
+            if var custom = currentMedia.staticMetadata {
+                if custom.chapterCount == nil { custom.chapterCount = totalChapters }
+                if custom.creditsStartTime == nil { custom.creditsStartTime = resolvedCreditsStartTime }
+                if custom.serviceIdentifier == nil { custom.serviceIdentifier = serviceIdentifier }
+                return custom
+            }
+            
+            let extracted = currentMedia.manager.metadataProvider.staticMetadata
+            return extracted.toNowPlayableStaticMetadata(
+                defaultURL: currentMedia.url,
+                defaultMediaType: .audio,
+                isLive: currentMedia.isLive(),
+                defaultChapterCount: totalChapters,
+                defaultCreditsStartTime: resolvedCreditsStartTime,
+                defaultServiceIdentifier: serviceIdentifier
+            )
+        }()
+        
         return AKNowPlayableMetadata(
-            staticMetadata: currentMedia.staticMetadata,
+            staticMetadata: staticMetadata,
             dynamicMetadata: getNowPlayableDynamicMetadata()
         )
     }
@@ -269,8 +336,13 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             return min(max(Float(pos / Double(dur)), 0.0), 1.0)
         }()
         
-        // Populate queue info if available
-        let queueProvider = playerManager as? (any AKNowPlayingQueueInfoProvider)
+        let chapterService = currentMedia.manager.chapterService
+        let currentTime = playerManager.currentItem?.currentTime() ?? .zero
+        let currentChapterNum = currentTime.isValid ? chapterService.currentChapterNumber(at: currentTime) : nil
+        
+        let queueProvider = queueInfoProvider ?? (playerManager as? (any AKNowPlayingQueueInfoProvider))
+        let queueCount = queueProvider?.queueCount
+        let queueIndex = queueProvider?.currentQueueIndex
         
         return AKNowPlayableDynamicMetadata(
             rate: Double(playerManager.rate.rate),
@@ -279,14 +351,11 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             duration: duration,
             currentLanguageOptions: cachedCurrentLanguageOptions,
             availableLanguageOptionGroups: cachedAvailableLanguageOptionGroups,
-            chapterCount: nil,
-            chapterNumber: nil,
-            creditsStartTime: nil,
+            chapterNumber: currentChapterNum,
             currentPlaybackDate: playerManager.currentItem?.currentDate(),
             playbackProgress: playbackProgress,
-            playbackQueueCount: queueProvider?.queueCount,
-            playbackQueueIndex: queueProvider?.currentQueueIndex,
-            serviceIdentifier: nil
+            playbackQueueCount: queueCount,
+            playbackQueueIndex: queueIndex
         )
     }
     
@@ -520,8 +589,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         on media: any AKPlayable
     ) -> MPRemoteCommandHandlerStatus {
         let types: [AKTrackType] = languageOption.languageOptionType == .legible
-            ? [.subtitle, .closedCaption]
-            : [.audio, .audioDescription]
+        ? [.subtitle, .closedCaption]
+        : [.audio, .audioDescription]
         
         guard let cachedTrackGroups else {
             return .noSuchContent
@@ -534,7 +603,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                 guard let avOption = trackOption.option else { return false }
                 
                 return avOption.extendedLanguageTag == languageOption.languageTag ||
-                    avOption.displayName == languageOption.displayName
+                avOption.displayName == languageOption.displayName
             }) {
                 Task {
                     do {
@@ -555,8 +624,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         on media: any AKPlayable
     ) -> MPRemoteCommandHandlerStatus {
         let types: [AKTrackType] = languageOption.languageOptionType == .legible
-            ? [.subtitle, .closedCaption]
-            : [.audio]
+        ? [.subtitle, .closedCaption]
+        : [.audio]
         
         guard let cachedTrackGroups else {
             return .noSuchContent
@@ -573,7 +642,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             }
             
             let matches = avOption.extendedLanguageTag == languageOption.languageTag ||
-                avOption.displayName == languageOption.displayName
+            avOption.displayName == languageOption.displayName
             
             if matches {
                 Task {
