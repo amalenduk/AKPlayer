@@ -83,13 +83,13 @@ public class AKLoadingState: AKBaseState {
         
         mediaObservationTask?.cancel()
         mediaObservationTask = Task { @MainActor [weak self] in
-            guard let initialState = self?.media.state else { return }
-            self?.hanldeChangeInMedia(initialState)
+            guard let self else { return }
+            let events = self.media.events
+            let initialState = self.media.state
+            self.hanldeChangeInMedia(initialState)
             
-            guard let events = self?.media.events else { return }
             for await event in events {
                 guard !Task.isCancelled else { break }
-                guard let self else { break }
                 if case let .stateDidChange(state) = event {
                     self.hanldeChangeInMedia(state)
                 }

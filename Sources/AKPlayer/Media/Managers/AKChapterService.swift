@@ -198,35 +198,45 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         guard !rawGroups.isEmpty, !Task.isCancelled else { return }
         
         var parsedChapters: [AKChapter] = []
-        for (index, group) in rawGroups.enumerated() {
-            guard !Task.isCancelled else { return }
-            
-            var chapterTitle: String?
-            var artworkData: Data?
-            var artworkImage: UIImage?
-            
-            for item in group.items {
-                if item.commonKey == .commonKeyTitle || item.identifier == .commonIdentifierTitle {
-                    chapterTitle = try? await item.load(.stringValue)
-                } else if item.commonKey == .commonKeyArtwork || item.identifier == .commonIdentifierArtwork {
-                    if let data = try? await item.load(.dataValue) {
-                        artworkData = data
-                        artworkImage = UIImage(data: data)
+        await withTaskGroup(of: AKChapter?.self) { group in
+            for (index, groupItem) in rawGroups.enumerated() {
+                group.addTask {
+                    guard !Task.isCancelled else { return nil }
+                    var chapterTitle: String?
+                    var artworkData: Data?
+                    var artworkImage: UIImage?
+                    
+                    for item in groupItem.items {
+                        if item.commonKey == .commonKeyTitle || item.identifier == .commonIdentifierTitle {
+                            chapterTitle = try? await item.load(.stringValue)
+                        } else if item.commonKey == .commonKeyArtwork || item.identifier == .commonIdentifierArtwork {
+                            if let data = try? await item.load(.dataValue) {
+                                artworkData = data
+                                artworkImage = UIImage(data: data)
+                            }
+                        }
                     }
+                    
+                    let finalTitle = chapterTitle ?? "Chapter \(index + 1)"
+                    return AKChapter(
+                        id: index + 1,
+                        index: index,
+                        title: finalTitle,
+                        timeRange: groupItem.timeRange,
+                        artworkImage: artworkImage,
+                        artworkData: artworkData
+                    )
                 }
             }
             
-            let finalTitle = chapterTitle ?? "Chapter \(index + 1)"
-            let chapter = AKChapter(
-                id: index + 1,
-                index: index,
-                title: finalTitle,
-                timeRange: group.timeRange,
-                artworkImage: artworkImage,
-                artworkData: artworkData
-            )
-            parsedChapters.append(chapter)
+            for await chapter in group {
+                if let chapter {
+                    parsedChapters.append(chapter)
+                }
+            }
         }
+        
+        parsedChapters.sort { $0.index < $1.index }
         
         guard !Task.isCancelled else { return }
         

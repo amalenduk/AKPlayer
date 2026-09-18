@@ -425,13 +425,12 @@ extension AKBufferingState {
         let hardDeadline = Date().addingTimeInterval(hardTimeout)
         
         timeoutTask = Task { [weak self] in
-            guard let self else { return }
             var lastLoadedDuration: CMTime = .zero
             var stalledTicks = 0
             
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, let self else { return }
                 
                 if canPlay() {
                     if autoPlay {

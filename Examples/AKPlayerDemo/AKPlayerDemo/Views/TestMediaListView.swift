@@ -14,88 +14,247 @@ public struct TestMediaListView: View {
     
     @State private var selectedMedia: TestMedia?
     @State private var playerMedia: TestMedia?
+    @State private var isQueuePlayerPresented: Bool = false
+    @State private var queueStartIndex: Int = 0
     
     public init(medias: [TestMedia] = sampleTestMedia) {
         self.medias = medias
     }
     
     public var body: some View {
-        NavigationView {
-            List(medias) { media in
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(media.name)
-                            .font(.headline)
-                        if let url = media.url {
-                            Text(url.host ?? url.absoluteString)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer()
-                    HStack(spacing: 8) {
-                        Button("Details") {
-                            selectedMedia = media
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            .navigationTitle("Test Media")
-            .navigationBarTitleDisplayMode(.large)
-            .listStyle(PlainListStyle())
-            .sheet(item: $selectedMedia) { media in
-                NavigationView {
-                    VStack(alignment: .leading) {
-                        Text(media.name)
-                            .font(.title2)
-                            .padding(.bottom, 8)
-                        
-                        ScrollView {
-                            Text(media.note ?? "No notes available.")
-                                .padding()
-                        }
-                        
-                        if let langs = media.audioLanguages, !langs.isEmpty {
-                            Text("Audio: " + langs.joined(separator: ", "))
-                                .font(.footnote)
-                                .padding(.horizontal)
+        NavigationStack {
+            List(Array(medias.enumerated()), id: \.element.id) { index, media in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(media.name)
+                                .font(.headline)
+                            
+                            if let subtitle = media.subtitle {
+                                Text(subtitle)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Spacer()
                         
-                        HStack {
-                            Button("Play") {
-                                selectedMedia = nil
-                                
-                                Task { @MainActor in
-                                    await Task.yield()
-                                    playerMedia = media
+                        Menu {
+                            Button {
+                                playerMedia = media
+                            } label: {
+                                Label("Play Single", systemImage: "play.circle")
+                            }
+                            
+                            Button {
+                                queueStartIndex = index
+                                isQueuePlayerPresented = true
+                            } label: {
+                                Label("Play in Queue", systemImage: "play.square.stack")
+                            }
+                        } label: {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                    
+                    if let capabilities = media.testCapabilities, !capabilities.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Test Focus:")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                            
+                            ForEach(capabilities.prefix(3), id: \.self) { cap in
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.green)
+                                    Text(cap)
+                                        .font(.caption)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
                                 }
                             }
-                            .buttonStyle(.borderedProminent)
-                            
-                            Spacer()
-                            
-                            Button("Close") {
-                                selectedMedia = nil
+                        }
+                        .padding(.top, 2)
+                    }
+                    
+                    HStack {
+                        if let langs = media.audioLanguages, !langs.isEmpty {
+                            Text("Audio: " + langs.joined(separator: ", ").uppercased())
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                        
+                        if let subs = media.subtitleLanguages, !subs.isEmpty {
+                            Text("Subs: " + subs.joined(separator: ", ").uppercased())
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Full Details") {
+                            selectedMedia = media
+                        }
+                        .font(.caption)
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding(.vertical, 6)
+                .contextMenu {
+                    Button {
+                        playerMedia = media
+                    } label: {
+                        Label("Play Single", systemImage: "play.circle")
+                    }
+                    
+                    Button {
+                        queueStartIndex = index
+                        isQueuePlayerPresented = true
+                    } label: {
+                        Label("Play in Queue from Here", systemImage: "play.square.stack")
+                    }
+                }
+            }
+            .navigationTitle("Apple Test Streams")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        queueStartIndex = 0
+                        isQueuePlayerPresented = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "play.square.stack")
+                            Text("Queue")
+                        }
+                    }
+                }
+            }
+            .sheet(item: $selectedMedia) { media in
+                NavigationStack {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(media.name)
+                                    .font(.title2)
+                                    .bold()
+                                
+                                if let subtitle = media.subtitle {
+                                    Text(subtitle)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
                             }
-                            .buttonStyle(.bordered)
+                            
+                            if let capabilities = media.testCapabilities, !capabilities.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("🎯 What You Can Test")
+                                        .font(.headline)
+                                    
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ForEach(capabilities, id: \.self) { item in
+                                            HStack(alignment: .top, spacing: 6) {
+                                                Image(systemName: "checkmark.seal.fill")
+                                                    .foregroundColor(.blue)
+                                                    .font(.footnote)
+                                                    .padding(.top, 2)
+                                                Text(item)
+                                                    .font(.subheadline)
+                                            }
+                                        }
+                                    }
+                                    .padding()
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(10)
+                                }
+                            }
+                            
+                            if let note = media.note {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("📋 Stream Specifications")
+                                        .font(.headline)
+                                    
+                                    Text(note)
+                                        .font(.subheadline)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(10)
+                                }
+                            }
+                            
+                            if let url = media.url {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("🔗 Stream URL")
+                                        .font(.headline)
+                                    Text(url.absoluteString)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .textSelection(.enabled)
+                                }
+                            }
                         }
                         .padding()
                     }
-                    .padding()
+                    .navigationTitle("Stream Details")
                     .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") {
+                                selectedMedia = nil
+                            }
+                        }
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Menu {
+                                Button("Play Single") {
+                                    let chosen = media
+                                    selectedMedia = nil
+                                    Task { @MainActor in
+                                        await Task.yield()
+                                        playerMedia = chosen
+                                    }
+                                }
+                                
+                                Button("Play in Queue") {
+                                    let idx = medias.firstIndex(where: { $0.id == media.id }) ?? 0
+                                    selectedMedia = nil
+                                    Task { @MainActor in
+                                        await Task.yield()
+                                        queueStartIndex = idx
+                                        isQueuePlayerPresented = true
+                                    }
+                                }
+                            } label: {
+                                Text("Play")
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
                 }
             }
             .fullScreenCover(item: $playerMedia) { media in
                 NavigationStack {
                     SimpleVideoPlayerView(
                         media: makeAKMedia(from: media),
-                        autoPlay: false
+                        autoPlay: true
                     )
                 }
+            }
+            .fullScreenCover(isPresented: $isQueuePlayerPresented) {
+                QueuePlayerView(
+                    medias: medias,
+                    startIndex: queueStartIndex
+                )
             }
         }
     }

@@ -244,16 +244,30 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
 // MARK: - Preset Configurations
 
 public extension AKNowPlayingCommandConfiguration {
-    /// Factory creating a pre-configured audio preset instance.
+    /// Factory creating a pre-configured audio preset instance (playback, skip intervals, scrubber, playback rate).
     static func audio() -> AKNowPlayingCommandConfiguration {
         let config = AKNowPlayingCommandConfiguration()
         return config.useAudioPreset()
     }
 
-    /// Factory creating a pre-configured video preset instance.
+    /// Factory creating a pre-configured video preset instance (playback, seeking, skip intervals, scrubber).
     static func video() -> AKNowPlayingCommandConfiguration {
         let config = AKNowPlayingCommandConfiguration()
         return config.useVideoPreset()
+    }
+    
+    /// Factory creating a pre-configured queue / playlist preset instance (next/previous track, repeat, shuffle, scrubbing, without skip interval buttons).
+    static func queue() -> AKNowPlayingCommandConfiguration {
+        AKNowPlayingCommandConfiguration()
+            .usePlaybackCommands()
+            .useTrackNavigationCommands()
+            .add(.changePlaybackPosition)
+            .disable(commands: [
+                .skipBackward(preferredIntervals: [15.0]),
+                .skipForward(preferredIntervals: [15.0]),
+                .seekBackward,
+                .seekForward
+            ])
     }
 
     /// Factory creating a minimal configuration with primary playback controls

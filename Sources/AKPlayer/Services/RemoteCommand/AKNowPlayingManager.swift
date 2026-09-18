@@ -389,13 +389,13 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     
     private func setupDefaultRemoteCommands() async {
         let defaultConfig = AKNowPlayingCommandConfiguration()
-            .add(.play)
-            .add(.pause)
-            .add(.stop)
-            .add(.togglePlayPause)
-            .add(.changePlaybackPosition)
-            .add(.skipForward(preferredIntervals: [15]))
-            .add(.skipBackward(preferredIntervals: [15]))
+                .add(.play)
+                .add(.pause)
+                .add(.stop)
+                .add(.togglePlayPause)
+                .add(.changePlaybackPosition)
+                .add(.skipForward(preferredIntervals: [15]))
+                .add(.skipBackward(preferredIntervals: [15]))
         
         await session.applyConfiguration(defaultConfig)
         

@@ -39,9 +39,19 @@ public enum AKNowPlayingCommandPresets: Sendable {
         AKNowPlayingCommandConfiguration.minimal()
     }
     
-    /// Preset: Standard music streaming
+    /// Preset: Standard music streaming (next/previous track instead of skip/seek)
     public static func music() -> AKNowPlayingCommandConfiguration {
-        AKNowPlayingCommandConfiguration.audio()
+        AKNowPlayingCommandConfiguration.queue()
+    }
+    
+    /// Preset: Queue playback with next/previous track, repeat, shuffle, and scrubbing
+    public static func queue() -> AKNowPlayingCommandConfiguration {
+        AKNowPlayingCommandConfiguration.queue()
+    }
+    
+    /// Preset: Playlist playback
+    public static func playlist() -> AKNowPlayingCommandConfiguration {
+        AKNowPlayingCommandConfiguration.queue()
     }
     
     /// Preset: Podcast with 15-second skip back, 30-second skip forward

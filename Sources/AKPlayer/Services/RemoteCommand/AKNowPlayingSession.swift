@@ -251,7 +251,11 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     private func setEnabled(_ enabled: Bool, for command: AKRemoteCommand) {
         registerIfNeeded(command)
         commands[command.id]?.isEnabled = enabled
-        command.metadata.getCommand(remoteCommandCenter).isEnabled = enabled
+        let remote = command.metadata.getCommand(remoteCommandCenter)
+        remote.isEnabled = enabled
+        if !enabled, let skip = remote as? MPSkipIntervalCommand {
+            skip.preferredIntervals = []
+        }
     }
     
     private func handle(_ command: AKRemoteCommand, event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {

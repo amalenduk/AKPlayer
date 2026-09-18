@@ -8,14 +8,14 @@
 
 import Foundation
 
-func getAssociatedObject<T>(_ object: Any, _ key: UnsafeRawPointer) -> T? {
+func getAssociatedObject<T>(_ object: AnyObject, _ key: UnsafeRawPointer) -> T? {
     objc_getAssociatedObject(object, key) as? T
 }
 
 func setRetainedAssociatedObject(
-    _ object: Any,
+    _ object: AnyObject,
     _ key: UnsafeRawPointer,
-    _ value: some Any
+    _ value: (some AnyObject)?
 ) {
     objc_setAssociatedObject(
         object,

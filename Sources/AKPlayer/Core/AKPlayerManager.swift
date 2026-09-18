@@ -483,9 +483,8 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             try block()
             return completion(true)
         } catch {
-            if let playerError = error as? AKPlayerError {
-                emit(.didFail(with: playerError))
-            }
+            let playerError = (error as? AKPlayerError) ?? .playerCanNoLongerPlay(error: error)
+    emit(.didFail(with: playerError))
         }
         return completion(false)
     }

@@ -112,11 +112,12 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         self.asset = await playerItemInitService.createAsset(for: media)
         self.state = .assetLoaded
         
-        // Asynchronously load container metadata and chapters in background
+        // Asynchronously load container metadata and chapters in parallel
         Task { [weak self] in
             guard let self else { return }
-            await self.metadataProvider.loadMetadata()
-            await self.chapterService.loadChapters()
+            async let meta: () = self.metadataProvider.loadMetadata()
+            async let chapters: () = self.chapterService.loadChapters()
+            _ = await (meta, chapters)
         }
     }
     
@@ -170,6 +171,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         asset?.cancelLoading()
         asset = nil
         playerItem = nil
+        state = .idle
         metadataProvider.resetSession()
         chapterService.resetSession()
     }

@@ -425,9 +425,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         }
         
         return Task { @MainActor [weak self] in
-            guard let self else { return }
-            for await status in self.playerController.networkStatusMonitor.networkStatus {
-                guard !Task.isCancelled else { break }
+            guard let monitor = self?.playerController.networkStatusMonitor else { return }
+            for await status in monitor.networkStatus {
+                guard !Task.isCancelled, let _ = self else { break }
                 handler(status)
             }
         }

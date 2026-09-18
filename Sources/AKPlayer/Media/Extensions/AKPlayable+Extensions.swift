@@ -17,9 +17,10 @@ private nonisolated(unsafe) var managerKey: UInt8 = 0
 public extension AKPlayable {
     /// The backing media manager instance associated with this playable item.
     var manager: any AKMediaManagerProtocol {
-        if let existingManager = objc_getAssociatedObject(self, &managerKey)
-            as? (any AKMediaManagerProtocol)
-        {
+        objc_sync_enter(self)
+        defer { objc_sync_exit(self) }
+        
+        if let existingManager: any AKMediaManagerProtocol = getAssociatedObject(self, &managerKey) {
             return existingManager
         }
         let newManager = AKMediaManager(media: self)

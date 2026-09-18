@@ -64,12 +64,18 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         )
         nowPlayingManager?.queueInfoProvider = self
         startObservingQueueEvents()
-        setupQueueNowPlayingCommands()
     }
     
     deinit {
         queueEventsTask?.cancel()
         queueEventsTask = nil
+    }
+    
+    // MARK: - Lifecycle Preparation
+    
+    public override func prepare() throws {
+        try super.prepare()
+        setupQueueNowPlayingCommands()
     }
     
     // MARK: - Queue Management
@@ -227,13 +233,8 @@ private extension AKQueuePlayer {
         Task { [weak self, weak nowPlayingManager] in
             guard let self, let nowPlayingManager else { return }
             
-            // Enable queue commands in session
-            await nowPlayingManager.enable(commands: [
-                .nextTrack,
-                .previousTrack,
-                .changeRepeatMode,
-                .changeShuffleMode
-            ])
+            // Apply Queue command preset (enables next/prev track, disables skip intervals/seeking)
+            await nowPlayingManager.applyConfiguration(AKNowPlayingCommandPresets.queue())
             
             // Wire Next Track
             await nowPlayingManager.setHandler(for: .nextTrack) { [weak self] _ in

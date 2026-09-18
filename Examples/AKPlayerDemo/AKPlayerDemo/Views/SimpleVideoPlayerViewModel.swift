@@ -13,50 +13,60 @@ import Foundation
 
 @MainActor
 public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
-    public let aVplayer = AVPlayer()
+    public let avPlayer = AVPlayer()
     
     public lazy var player: AKPlayer = {
         var configuration = AKPlayerConfiguration()
         configuration.isNowPlayingEnabled = true
-        let p = AKPlayer(player: aVplayer, configuration: configuration, audioSessionService: audioSession)
+        let p = AKPlayer(player: avPlayer, configuration: configuration, audioSessionService: audioSession)
         p.player.appliesMediaSelectionCriteriaAutomatically = true
         p.delegate = self
         return p
     }()
     
     public lazy var interstitialService: AKPlayerInterstitialServiceProtocol = {
-        return player.interstitialService
+        player.interstitialService
     }()
     
     static let session = AVAudioSession.sharedInstance()
     let audioSession = AKAudioSessionService(audioSession: session)
     
-    @Published public var isPipPossible: Bool = false
-    @Published public var isPipActive: Bool = false
-    
-    
-    @Published public var stateDescription: String = ""
+    // Playback State
+    @Published public var stateDescription: String = "Idle"
     @Published public var currentTime: Double = 0
     @Published public var duration: Double = 0
     @Published public var volume: Float = 1.0
     @Published public var isMuted: Bool = false
-    @Published public var canStepForward: Bool = false
-    @Published public var canStepBackward: Bool = false
-    @Published public var debugInfo: String?
     @Published public var playbackRate: AKPlaybackRate = .normal
-    @Published public var bufferedRanges: [ClosedRange<Double>] = []
     @Published public var isLoading: Bool = false
     @Published public var unavailableMessage: String?
     @Published public var lastLoadedMedia: AKMedia?
     @Published public var autoPlayEnabled: Bool = true
+    @Published public var debugInfo: String?
     
-    // Updated track selection groups backed by AKTrackSelectionService
+    // Interstitials / Ads
+    @Published public var interstitialPlaybackState: AKInterstitialPlaybackState = .idle
+    @Published public var interstitialIdentifier: String?
+    @Published public var interstitialProgress: AKPlayerInterstitialProgress?
+    @Published public var isInterstitialActive: Bool = false
+    
+    // PiP State
+    @Published public var isPipPossible: Bool = false
+    @Published public var isPipActive: Bool = false
+    public private(set) var pipController: AKPictureInPictureController?
+    
+    // Track Selection Groups backed by AKTrackSelectionService
     @Published public var selectionGroups: [SelectionGroup] = []
     
+    // Chapters backed by AKChapterService
+    @Published public var chapters: [AKChapter] = []
+    @Published public var currentChapter: AKChapter?
+    
     private nonisolated(unsafe) var timeObserverToken: Any?
-    private var cancellables = Set<AnyCancellable>()
     private var clearUnavailableWorkItem: DispatchWorkItem?
-    public private(set) var pipController: AKPictureInPictureController?
+    private nonisolated(unsafe) var interstitialTask: Task<Void, Never>?
+    private nonisolated(unsafe) var pipEventsTask: Task<Void, Never>?
+    private nonisolated(unsafe) var chaptersTask: Task<Void, Never>?
     
     // MARK: - Models for Selection Sheet
     
@@ -76,68 +86,174 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     
     override public init() {
         super.init()
+        AKLogger.logInit(self)
         try? player.prepare()
-        
-//        Task { [weak self] in
-//            guard let self else { return }
-//            for await event in interstitialService.events {
-//                switch event {
-//                case .scheduleDidChange(let events):
-//                    //print("Schedule updated: \(events.count) events")
-//                    break
-//                case .willStart(let event):
-//                    //print("Ad about to start: \(event.identifier)")
-//                    break
-//                case .didStart(let event):
-//                    // Show “Skip Ad” button, hide primary controls, etc.
-//                    //print("Printing add \(event)")
-//                    break
-//                case .progress(let progress):
-//                    //                    print("Current Time: \(progress.currentTime) Duration : \(progress.duration) Remaining: \(progress.timeRemaining)")
-//                    //                    print(interstitialService.integratedTimeline?.currentTime)
-//                    
-//                    break
-//                    
-//                case .didFinish(_, let reason):
-//                    //print("Finish Reason : \(reason)")
-//                    switch reason {
-//                    case .completed: break
-//                    case .cancelled: break
-//                    case .error(let err): print(err)
-//                    }
-//                case .integratedTimeline(let timelineevent):
-//                    switch timelineevent {
-//                    case .segmentsUpdated(pointSegments: let pointSegments, fillSegments: let fillSegments):
-////                        print(pointSegments)
-//                        break
-//                    case .timeUpdated(currentTime: let currentTime, startTime: let startTime, duration: let duration):
-//                        break
-//                    case .snapshotOutOfSync:
-//                        break
-//                    }
-//                    
-//                case .playbackStateDidChange(let state):
-//                    print("Add sate : \(state)")
-//                }
-//            }
-//        }
-        
-        // Later – schedule a mid-roll
-        
+        observeInterstitialEvents()
     }
     
     deinit {
-       
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
+        if let token = timeObserverToken {
+            avPlayer.removeTimeObserver(token)
+        }
+        interstitialTask?.cancel()
+        pipEventsTask?.cancel()
+        chaptersTask?.cancel()
     }
+    
+    // MARK: - Interstitial Observation
+    
+    private func observeInterstitialEvents() {
+        interstitialTask?.cancel()
+        interstitialTask = Task { [weak self] in
+            guard let service = self?.interstitialService else { return }
+            for await event in service.events {
+                guard !Task.isCancelled, let self else { break }
+                switch event {
+                case .scheduleDidChange:
+                    break
+                case .willStart(let event):
+                    self.interstitialIdentifier = event.identifier
+                    self.isInterstitialActive = true
+                case .didStart(let event):
+                    self.interstitialIdentifier = event.identifier
+                    self.isInterstitialActive = true
+                case .progress(let progress):
+                    self.interstitialProgress = progress
+                case .didFinish:
+                    self.isInterstitialActive = false
+                    self.interstitialIdentifier = nil
+                    self.interstitialProgress = nil
+                case .integratedTimeline:
+                    break
+                case .playbackStateDidChange(let state):
+                    self.interstitialPlaybackState = state
+                    self.isInterstitialActive = (state != .idle && state != .finished)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Chapters Observation
+    
+    private func observeChapterEvents(for media: any AKPlayable) {
+        chaptersTask?.cancel()
+        chapters = media.chapterService.chapters
+        currentChapter = media.chapterService.currentChapter
+        
+        chaptersTask = Task { [weak self] in
+            guard let self else { return }
+            for await updatedChapters in media.chapterService.chaptersUpdates {
+                guard !Task.isCancelled else { break }
+                await MainActor.run {
+                    self.chapters = updatedChapters
+                    self.currentChapter = media.chapterService.currentChapter(
+                        at: CMTime(seconds: self.currentTime, preferredTimescale: 600)
+                    )
+                }
+            }
+        }
+    }
+    
+    public func refreshChapters() {
+        guard let media = player.currentMedia else {
+            self.chapters = []
+            self.currentChapter = nil
+            return
+        }
+        self.chapters = media.chapterService.chapters
+        self.currentChapter = media.chapterService.currentChapter(
+            at: CMTime(seconds: currentTime, preferredTimescale: 600)
+        )
+    }
+    
+    public func selectChapter(_ chapter: AKChapter) {
+        seek(to: chapter.startTime)
+    }
+    
+    // MARK: - Media Loading
     
     public func load(media: AKMedia, autoPlay: Bool) {
         self.lastLoadedMedia = media
+        observeChapterEvents(for: media)
         player.load(media: media, autoPlay: autoPlay)
+        self.stateDescription = player.state.description
+        self.isLoading = (player.state == .waitingForNetwork || player.state == .buffering || player.state == .loading)
+    }
+    
+    // MARK: - Playback Controls
+    
+    public func play() { player.play() }
+    public func pause() { player.pause() }
+    public func stop() {
+        player.stop()
+        if let token = timeObserverToken {
+            avPlayer.removeTimeObserver(token)
+            timeObserverToken = nil
+        }
+        interstitialTask?.cancel()
+        interstitialTask = nil
+        pipEventsTask?.cancel()
+        pipEventsTask = nil
+        chaptersTask?.cancel()
+        chaptersTask = nil
+        chapters = []
+        currentChapter = nil
+    }
+    
+    public func setVolume(_ v: Float) { player.volume = v; volume = v }
+    public func toggleMute() { player.isMuted = !player.isMuted; isMuted = player.isMuted }
+    public func seek(to seconds: Double) {
+        Task {
+            await player.seek(to: .seconds(seconds))
+        }
+    }
+    public func step(by count: Int) { player.step(by: count) }
+    public func seekOffset(_ offset: Double) {
+        Task {
+            await player.seek(to: .offset(offset))
+        }
+    }
+    public func setRate(_ rate: AKPlaybackRate) { player.play(at: .custom(rate.rate)) }
+    
+    // MARK: - Interstitial Controls
+    
+    public func pauseInterstitial() {
+        interstitialService.interstitialPlayer?.pause()
+    }
+    
+    public func playInterstitial() {
+        interstitialService.interstitialPlayer?.play()
+    }
+    
+    public func cancelInterstitial() {
+        interstitialService.cancelCurrent(resumptionOffset: .zero)
+    }
+    
+    // MARK: - Time Observation
+    
+    public func loadAndObserveCurrentTime() {
+        if let token = timeObserverToken {
+            avPlayer.removeTimeObserver(token)
+            timeObserverToken = nil
+        }
+        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        timeObserverToken = avPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.currentTime = time.seconds
+                if let dur = self.player.currentItem?.duration.seconds, dur.isFinite {
+                    self.duration = dur
+                }
+            }
+        }
     }
     
     // MARK: - Track Selection via AKTrackSelectionService
     
-    @MainActor
     public func refreshSelectionGroups() {
         guard let media = player.currentMedia else {
             self.selectionGroups = []
@@ -158,7 +274,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
             for (type, title) in trackTypes {
                 do {
                     guard let group = try await trackService.trackGroup(for: type),
-                          !group.options.isEmpty else { return }
+                          !group.options.isEmpty else { continue }
                     
                     let options = group.options.map { trackOption in
                         SelectionOption(
@@ -177,7 +293,6 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         }
     }
     
-    @MainActor
     public func select(option: SelectionOption, in group: SelectionGroup) {
         guard let media = player.currentMedia else { return }
         
@@ -191,65 +306,30 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         }
     }
     
-    public func play() { player.play() }
-    public func pause() { player.pause() }
-    public func stop() { player.stop() }
-    public func setVolume(_ v: Float) { player.volume = v; volume = v }
-    public func toggleMute() { player.isMuted = !player.isMuted; isMuted = player.isMuted }
-    public func seek(to seconds: Double) {
-        Task {
-            await player.seek(to: .seconds(seconds))
-        }
-    }
-    public func step(by count: Int) { player.step(by: count) }
-    public func seekOffset(_ offset: Double) {
-        Task {
-            await player.seek(to: .offset(offset))
-        }
-    }
-    public func setRate(_ rate: AKPlaybackRate) { player.play(at: .custom(rate.rate)) }
-    
-    public func loadAndObserveCurrentTime() {
-        if let token = timeObserverToken {
-            player.player.removeTimeObserver(token)
-            timeObserverToken = nil
-        }
-        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        timeObserverToken = player.player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            MainActor.assumeIsolated {
-                guard let self = self else { return }
-                self.currentTime = time.seconds
-                if let dur = self.player.currentItem?.duration.seconds, dur.isFinite {
-                    self.duration = dur
-                }
-            }
-        }
-    }
-    
-    
     // MARK: - Setup PiP
     
     public func setupPip(with playerLayer: AVPlayerLayer) {
-        // Initialize AKPictureInPictureController with the player layer[cite: 3]
+        guard pipController == nil else { return }
         guard let controller = AKPictureInPictureController(playerLayer: playerLayer) else { return }
-        Task { @MainActor in
-            controller.delegate = self
-            controller.canStartAutomatically = true // Allows automatic PiP when swiping home[cite: 3]
+        controller.delegate = self
+        controller.canStartAutomatically = true
+        
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             self.pipController = controller
             self.isPipPossible = controller.isPictureInPicturePossible
         }
         
-        // Listen to AsyncStream events from AKPictureInPictureController[cite: 3]
-        Task { [weak self] in
+        pipEventsTask?.cancel()
+        pipEventsTask = Task { [weak self] in
             for await event in controller.events {
-                guard let self else { return }
+                guard !Task.isCancelled, let self else { break }
                 switch event {
                 case .willStart:
                     break
                 case .didStart:
                     self.isPipActive = true
-                case .failedToStart(let reason):
-                 
+                case .failedToStart:
                     self.isPipActive = false
                 case .willStop:
                     break
@@ -267,6 +347,8 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     }
 }
 
+// MARK: - AKPlayerDelegate
+
 extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeStateTo state: AKPlayerState) {
         DispatchQueue.main.async {
@@ -274,14 +356,25 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             self.isLoading = (state == .waitingForNetwork || state == .buffering || state == .loading)
         }
     }
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeCurrentTimeTo currentTime: CMTime, for media: any AKPlayable) {
-        DispatchQueue.main.async { self.currentTime = currentTime.seconds }
+        DispatchQueue.main.async {
+            self.currentTime = currentTime.seconds
+            self.currentChapter = media.chapterService.currentChapter(at: currentTime)
+            if self.chapters.isEmpty && !media.chapterService.chapters.isEmpty {
+                self.chapters = media.chapterService.chapters
+            }
+        }
     }
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didChangePlaybackRateTo newRate: AKPlaybackRate, from oldRate: AKPlaybackRate) {
         DispatchQueue.main.async { self.playbackRate = newRate }
     }
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didInvokeBoundaryTimeObserverAt time: CMTime, for media: any AKPlayable) {}
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didReachEndAt time: CMTime, for media: any AKPlayable) {}
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didEncounterUnavailableAction reason: AKPlayerUnavailableCommandReason) {
         DispatchQueue.main.async {
             self.clearUnavailableWorkItem?.cancel()
@@ -293,7 +386,13 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work)
         }
     }
-    nonisolated public func akPlayer(_ player: AKPlayer, didFailWith error: AKPlayerError) {}
+    
+    nonisolated public func akPlayer(_ player: AKPlayer, didFailWith error: AKPlayerError) {
+        DispatchQueue.main.async {
+            self.unavailableMessage = "Error: \(error.localizedDescription)"
+        }
+    }
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeVolumeTo volume: Float) {}
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {}
 }
@@ -305,7 +404,6 @@ extension SimpleVideoPlayerViewModel: AKPictureInPictureDelegate {
         _ controller: AKPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWith completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
-        // Handle UI restoration if necessary when user taps restore button in PiP window[cite: 1]
         completionHandler(true)
     }
 }

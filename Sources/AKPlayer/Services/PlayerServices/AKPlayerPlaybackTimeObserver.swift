@@ -44,8 +44,8 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
     private let periodicBroadcaster = AKEventBroadcaster<CMTime>()
     private let boundaryBroadcaster = AKEventBroadcaster<CMTime>()
 
-    private var periodicTimeObserverToken: Any?
-    private var boundaryTimeObserverToken: Any?
+    private nonisolated(unsafe) var periodicTimeObserverToken: Any?
+    private nonisolated(unsafe) var boundaryTimeObserverToken: Any?
 
     // MARK: - Init & Deinit
 
@@ -56,6 +56,14 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
     }
 
     deinit {
+        if let token = periodicTimeObserverToken {
+            player.removeTimeObserver(token)
+            periodicTimeObserverToken = nil
+        }
+        if let token = boundaryTimeObserverToken {
+            player.removeTimeObserver(token)
+            boundaryTimeObserverToken = nil
+        }
         periodicBroadcaster.finish()
         boundaryBroadcaster.finish()
     }

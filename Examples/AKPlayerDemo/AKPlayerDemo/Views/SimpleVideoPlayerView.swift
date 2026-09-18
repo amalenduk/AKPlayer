@@ -19,14 +19,20 @@ struct AKPlayerUIView: UIViewRepresentable {
         let v = AKPlayerView()
         v.player = viewModel.player.player
         
-        // Setup Picture-in-Picture controller using the AKPlayerView layer[cite: 3, 4]
+        // Setup Picture-in-Picture controller using the AKPlayerView layer
         viewModel.setupPip(with: v.playerLayer)
         
         return v
     }
     
     func updateUIView(_ uiView: AKPlayerView, context: Context) {
-        uiView.player = viewModel.player.player
+        if uiView.player != viewModel.player.player {
+            uiView.player = viewModel.player.player
+        }
+    }
+    
+    static func dismantleUIView(_ uiView: AKPlayerView, coordinator: ()) {
+        uiView.player = nil
     }
 }
 
@@ -39,6 +45,7 @@ public struct SimpleVideoPlayerView: View {
     
     @State private var showingRateDialog = false
     @State private var showingSelectionSheet = false
+    @State private var showingChaptersSheet = false
     
     @State private var isScrubbing: Bool = false
     @State private var scrubbingProgress: Double = 0.0
@@ -62,6 +69,11 @@ public struct SimpleVideoPlayerView: View {
             VStack(spacing: 12) {
                 playerSection()
                 statusSection()
+                
+                if viewModel.isInterstitialActive {
+                    interstitialBanner()
+                }
+                
                 progressSection()
                 playbackControlsSection()
                 volumeSection()
@@ -80,6 +92,9 @@ public struct SimpleVideoPlayerView: View {
             .onAppear {
                 setupPlayer()
             }
+            .onDisappear {
+                viewModel.stop()
+            }
             .sheet(
                 isPresented: Binding(
                     get: { viewModel.debugInfo != nil },
@@ -94,6 +109,9 @@ public struct SimpleVideoPlayerView: View {
             }
             .sheet(isPresented: $showingSelectionSheet) {
                 tracksSheet()
+            }
+            .sheet(isPresented: $showingChaptersSheet) {
+                chaptersSheet()
             }
         }
     }
@@ -124,15 +142,21 @@ public struct SimpleVideoPlayerView: View {
             
             Spacer()
             
+            if viewModel.isPipPossible {
+                Button {
+                    viewModel.togglePip()
+                } label: {
+                    Image(systemName: viewModel.isPipActive ? "pip.exit" : "pip.enter")
+                        .font(.body)
+                }
+                .buttonStyle(.bordered)
+            }
+            
             Toggle(
                 "Auto Play",
                 isOn: Binding(
-                    get: {
-                        viewModel.autoPlayEnabled
-                    },
-                    set: {
-                        viewModel.autoPlayEnabled = $0
-                    }
+                    get: { viewModel.autoPlayEnabled },
+                    set: { viewModel.autoPlayEnabled = $0 }
                 )
             )
             .toggleStyle(.switch)
@@ -142,12 +166,44 @@ public struct SimpleVideoPlayerView: View {
     }
     
     @ViewBuilder
+    private func interstitialBanner() -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "megaphone.fill")
+                .foregroundColor(.orange)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Ad: \(viewModel.interstitialIdentifier ?? "Playing") (\(viewModel.interstitialPlaybackState.description))")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                
+                if let progress = viewModel.interstitialProgress {
+                    Text("Remaining: \(String(format: "%.1fs", progress.timeRemaining)) / Total: \(String(format: "%.1fs", progress.duration))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            Button("Skip") {
+                viewModel.cancelInterstitial()
+            }
+            .font(.caption)
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.orange.opacity(0.15))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+    
+    @ViewBuilder
     private func progressSection() -> some View {
         HStack {
             currentTimeLabel()
-            
             progressSlider()
-            
             durationLabel()
         }
         .padding(.horizontal)
@@ -186,9 +242,7 @@ public struct SimpleVideoPlayerView: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 progressBackground()
-                
                 currentProgressView(width: geo.size.width)
-                
                 seekSlider()
             }
         }
@@ -229,7 +283,6 @@ public struct SimpleVideoPlayerView: View {
         Slider(
             value: Binding<Double>(
                 get: {
-                    // Display local scrubbing position while dragging; otherwise display real playback position
                     isScrubbing ? scrubbingProgress : currentFraction
                 },
                 set: { newFraction in
@@ -240,7 +293,6 @@ public struct SimpleVideoPlayerView: View {
             onEditingChanged: { editing in
                 isScrubbing = editing
                 if !editing {
-                    // User stopped scrubbing (touch released) -> trigger actual seek
                     let targetSeconds = scrubbingProgress * max(1.0, viewModel.duration)
                     viewModel.seek(to: targetSeconds)
                 }
@@ -448,7 +500,7 @@ public struct SimpleVideoPlayerView: View {
     
     @ViewBuilder
     private func loadButton() -> some View {
-        Button("Load") {
+        Button("Reload") {
             guard let initialMedia else { return }
             viewModel.load(media: initialMedia, autoPlay: viewModel.autoPlayEnabled)
         }
@@ -461,45 +513,53 @@ public struct SimpleVideoPlayerView: View {
             alignment: .center,
             spacing: 12
         ) {
+            chaptersButton()
             tracksButton()
             infoButton()
-            testButton()
-            test2Button()
         }
         .padding(.horizontal)
     }
     
     @ViewBuilder
+    private func chaptersButton() -> some View {
+        Button {
+            viewModel.refreshChapters()
+            showingChaptersSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "book.pages")
+                Text(viewModel.chapters.isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
+            }
+        }
+        .buttonStyle(.bordered)
+    }
+    
+    @ViewBuilder
     private func tracksButton() -> some View {
-        Button("Tracks") {
+        Button {
             viewModel.refreshSelectionGroups()
             showingSelectionSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "waveform.badge.magnifyingglass")
+                Text("Tracks")
+            }
         }
+        .buttonStyle(.bordered)
     }
     
     @ViewBuilder
     private func infoButton() -> some View {
-        Button("Info") {
-            let desc =
-            viewModel.player.currentMedia?.description
-            ?? "n/a"
-            
+        Button {
+            let desc = viewModel.player.currentMedia?.description ?? "n/a"
             viewModel.debugInfo = "Asset: " + desc
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "info.circle")
+                Text("Info")
+            }
         }
-    }
-    
-    @ViewBuilder
-    private func testButton() -> some View {
-        Button("Test") {
-            viewModel.interstitialService.interstitialPlayer?.pause()
-        }
-    }
-    
-    @ViewBuilder
-    private func test2Button() -> some View {
-        Button("Test") {
-            viewModel.interstitialService.cancelCurrent(resumptionOffset: .zero)
-        }
+        .buttonStyle(.bordered)
     }
     
     @ViewBuilder
@@ -562,6 +622,8 @@ extension SimpleVideoPlayerView {
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
     
     @ViewBuilder
@@ -597,6 +659,8 @@ extension SimpleVideoPlayerView {
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
     
     @ViewBuilder
@@ -629,6 +693,111 @@ extension SimpleVideoPlayerView {
                 option: option,
                 in: group
             )
+        }
+    }
+    
+    @ViewBuilder
+    func chaptersSheet() -> some View {
+        NavigationStack {
+            List {
+                if viewModel.chapters.isEmpty {
+                    ContentUnavailableView(
+                        "No Chapters Available",
+                        systemImage: "book.closed",
+                        description: Text("No embedded chapters were found in this media item.")
+                    )
+                } else {
+                    ForEach(viewModel.chapters) { chapter in
+                        chapterRow(chapter)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle(viewModel.chapters.isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") {
+                        showingChaptersSheet = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+    
+    @ViewBuilder
+    func chapterRow(_ chapter: AKChapter) -> some View {
+        let isCurrent = viewModel.currentChapter == chapter
+        HStack(spacing: 12) {
+            if let artwork = chapter.artworkImage {
+                Image(uiImage: artwork)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isCurrent ? Color.accentColor.opacity(0.15) : Color(.systemGray5))
+                        .frame(width: 40, height: 40)
+                    
+                    Text("\(chapter.id)")
+                        .font(.headline)
+                        .foregroundColor(isCurrent ? .accentColor : .secondary)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(chapter.title)
+                        .font(.body)
+                        .fontWeight(isCurrent ? .bold : .regular)
+                        .foregroundColor(isCurrent ? .accentColor : .primary)
+                        .lineLimit(2)
+                    
+                    Spacer()
+                }
+                
+                HStack(spacing: 8) {
+                    Text("\(formatTime(chapter.startTime)) - \(formatTime(chapter.endTime))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text("•")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Duration: \(formatTime(chapter.duration))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            if isCurrent {
+                Image(systemName: "waveform")
+                    .foregroundColor(.accentColor)
+                    .font(.body)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.selectChapter(chapter)
+        }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite && !seconds.isNaN else { return "00:00" }
+        let totalSec = Int(seconds)
+        let hours = totalSec / 3600
+        let minutes = (totalSec % 3600) / 60
+        let secs = totalSec % 60
+        
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%02d:%02d", minutes, secs)
         }
     }
 }
