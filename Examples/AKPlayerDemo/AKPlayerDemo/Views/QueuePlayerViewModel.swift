@@ -13,13 +13,10 @@ import Foundation
 
 @MainActor
 public class QueuePlayerViewModel: NSObject, ObservableObject {
-    public let avPlayer = AVPlayer()
-    
     public lazy var queuePlayer: AKQueuePlayer = {
         var configuration = AKPlayerConfiguration()
         configuration.isNowPlayingEnabled = true
         let p = AKQueuePlayer(
-            player: avPlayer,
             configuration: configuration,
             audioSessionService: audioSession
         )
@@ -45,9 +42,6 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
     @Published public var canPlayNext: Bool = false
     @Published public var canPlayPrevious: Bool = false
     
-    private nonisolated(unsafe) var timeObserverToken: Any?
-    private nonisolated(unsafe) var queueSyncTask: Task<Void, Never>?
-    
     override public init() {
         super.init()
         AKLogger.logInit(self)
@@ -58,7 +52,6 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
                 AKLogger.error("Failed to prepare queue player: \(error)", category: .player)
             }
         }
-        startSyncingQueueState()
     }
     
     deinit {
@@ -66,42 +59,6 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
-        if let token = timeObserverToken {
-            avPlayer.removeTimeObserver(token)
-        }
-        queueSyncTask?.cancel()
-    }
-    
-    // MARK: - Queue State Sync
-    
-    private func startSyncingQueueState() {
-        queueSyncTask?.cancel()
-        queueSyncTask = Task { [weak self] in
-            guard let self else { return }
-            for await event in queuePlayer.events {
-                guard !Task.isCancelled else { break }
-                switch event {
-                case .stateDidChange(let state):
-                    await MainActor.run {
-                        self.stateDescription = state.description
-                        self.isPlaying = (state == .playing)
-                        self.isLoading = state.isAny(of: [.loading, .buffering, .waitingForNetwork])
-                        self.updateQueueProperties()
-                    }
-                case .mediaDidChange(let media):
-                    await MainActor.run {
-                        self.currentMedia = media
-                        self.updateQueueProperties()
-                    }
-                case .didReachEnd:
-                    await MainActor.run {
-                        self.updateQueueProperties()
-                    }
-                default:
-                    break
-                }
-            }
-        }
     }
     
     private func updateQueueProperties() {
@@ -127,7 +84,6 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
         self.stateDescription = queuePlayer.state.description
         self.isLoading = queuePlayer.state.isAny(of: [.loading, .buffering, .waitingForNetwork])
         updateQueueProperties()
-        loadAndObserveCurrentTime()
     }
     
     // MARK: - Playback Controls
@@ -194,31 +150,6 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
     
     public func stop() {
         queuePlayer.stop()
-        if let token = timeObserverToken {
-            avPlayer.removeTimeObserver(token)
-            timeObserverToken = nil
-        }
-        queueSyncTask?.cancel()
-        queueSyncTask = nil
-    }
-    
-    // MARK: - Time Observation
-    
-    public func loadAndObserveCurrentTime() {
-        if let token = timeObserverToken {
-            avPlayer.removeTimeObserver(token)
-            timeObserverToken = nil
-        }
-        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        timeObserverToken = avPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.currentTime = time.seconds
-                if let dur = self.queuePlayer.currentItem?.duration.seconds, dur.isFinite {
-                    self.duration = dur
-                }
-            }
-        }
     }
 }
 
@@ -230,6 +161,20 @@ extension QueuePlayerViewModel: AKPlayerDelegate {
             self.stateDescription = state.description
             self.isPlaying = (state == .playing)
             self.isLoading = state.isAny(of: [.loading, .buffering, .waitingForNetwork])
+            let dur = player.currentItemDuration.seconds
+            if dur.isFinite && dur > 0 {
+                self.duration = dur
+            }
+            self.updateQueueProperties()
+        }
+    }
+    
+    nonisolated public func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
+        DispatchQueue.main.async {
+            self.currentMedia = media
+            self.currentTime = player.currentTime.seconds
+            let dur = player.currentItemDuration.seconds
+            self.duration = (dur.isFinite && dur > 0) ? dur : 0
             self.updateQueueProperties()
         }
     }
@@ -237,12 +182,22 @@ extension QueuePlayerViewModel: AKPlayerDelegate {
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeCurrentTimeTo currentTime: CMTime, for media: any AKPlayable) {
         DispatchQueue.main.async {
             self.currentTime = currentTime.seconds
+            let dur = player.currentItemDuration.seconds
+            if dur.isFinite && dur > 0 && self.duration != dur {
+                self.duration = dur
+            }
         }
     }
     
     nonisolated public func akPlayer(_ player: AKPlayer, didChangePlaybackRateTo newRate: AKPlaybackRate, from oldRate: AKPlaybackRate) {}
     nonisolated public func akPlayer(_ player: AKPlayer, didInvokeBoundaryTimeObserverAt time: CMTime, for media: any AKPlayable) {}
-    nonisolated public func akPlayer(_ player: AKPlayer, didReachEndAt time: CMTime, for media: any AKPlayable) {}
+    
+    nonisolated public func akPlayer(_ player: AKPlayer, didReachEndAt time: CMTime, for media: any AKPlayable) {
+        DispatchQueue.main.async {
+            self.updateQueueProperties()
+        }
+    }
+    
     nonisolated public func akPlayer(_ player: AKPlayer, didEncounterUnavailableAction reason: AKPlayerUnavailableCommandReason) {}
     nonisolated public func akPlayer(_ player: AKPlayer, didFailWith error: AKPlayerError) {}
     nonisolated public func akPlayer(_ player: AKPlayer, didChangeVolumeTo volume: Float) {}

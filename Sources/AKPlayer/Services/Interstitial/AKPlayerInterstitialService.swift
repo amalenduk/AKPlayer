@@ -26,7 +26,13 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
     
     public var scheduledEvents: [AVPlayerInterstitialEvent] {
-        monitor?.events ?? []
+        if !customEvents.isEmpty {
+            return customEvents
+        }
+        if let controllerEvents = controller?.events, !controllerEvents.isEmpty {
+            return controllerEvents
+        }
+        return monitor?.events ?? []
     }
     
     public var interstitialPlayer: AVPlayer? {
@@ -55,6 +61,21 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         !currentRestrictions.contains(.constrainsSeekingForwardInPrimaryContent) &&
         !currentRestrictions.contains(.requiresPlaybackAtPreferredRateForAdvancement)
     }
+    
+    // MARK: - Ad Markers
+    
+    public private(set) var markers: [AKInterstitialMarker] = []
+    
+    public func marker(at time: TimeInterval, tolerance: TimeInterval = 1.0) -> AKInterstitialMarker? {
+        markers.first { abs($0.time - time) <= tolerance }
+    }
+    
+    public func nextUnplayedMarker(after time: TimeInterval) -> AKInterstitialMarker? {
+        markers.first { !$0.isPlayed && $0.time > time }
+    }
+    
+    private var customEvents: [AVPlayerInterstitialEvent] = []
+    private var playedEventIDs: Set<String> = []
     
     private weak var primaryPlayer: AVPlayer?
     private weak var currentItem: AVPlayerItem?
@@ -177,6 +198,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private func handleItemChanged(_ newItem: AVPlayerItem) {
         stopObservingTimeline()
         currentItem = newItem
+        playedEventIDs.removeAll()
+        refreshMarkers()
         
         timelineObservations.append(
             newItem.observe(\.status, options: [.initial, .new]) { [weak self, weak newItem] item, _ in
@@ -212,15 +235,22 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
         
         timelineTimerTask?.cancel()
-        timelineTimerTask = Task { [weak self, weak item] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(250))
+        timelineTimerTask = Task { [weak self, weak item, weak timeline] in
+            guard let timeline else { return }
+            let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+            for await time in timeline.periodicTimes(forInterval: interval) {
                 guard !Task.isCancelled, let self, let activeItem = item, self.currentItem === activeItem else { break }
+                let timeSec = CMTimeGetSeconds(time)
+                guard !timeSec.isNaN, !timeSec.isInfinite else { continue }
                 
-                let time = activeItem.integratedTimeline.currentTime.seconds
-                guard !time.isNaN, !time.isInfinite else { continue }
+                let snapshot = activeItem.integratedTimeline.currentSnapshot
+                let snapDur = CMTimeGetSeconds(snapshot.duration)
+                if !snapDur.isNaN, !snapDur.isInfinite, snapDur > 0 {
+                    self.integratedTimelineDuration = snapDur
+                }
                 
-                self.integratedTimelineCurrentTime = time
+                self.integratedTimelineCurrentTime = timeSec
+                self.refreshMarkers()
                 self.emit(.integratedTimeline(.timeUpdated(
                     currentTime: self.integratedTimelineCurrentTime,
                     startTime: self.integratedTimelineStartTime,
@@ -236,10 +266,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         if let newEvent {
             if lastStartedEvent?.identifier != newEvent.identifier {
                 if let previous = lastStartedEvent {
+                    playedEventIDs.insert(previous.identifier)
                     emit(.didFinish(previous, reason: .completed))
                 }
                 
                 lastStartedEvent = newEvent
+                refreshMarkers()
                 emit(.willStart(newEvent))
                 emit(.didStart(newEvent))
                 startProgressObserver()
@@ -248,10 +280,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             }
         } else {
             if let finished = lastStartedEvent {
+                playedEventIDs.insert(finished.identifier)
                 emit(.didFinish(finished, reason: .completed))
                 lastStartedEvent = nil
             }
             
+            refreshMarkers()
             stopObservingInterstitialPlaybackState()
             removeProgressObserver()
             setPlaybackState(.idle)
@@ -259,6 +293,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
     
     private func handleScheduleDidChange() {
+        refreshMarkers()
         emit(.scheduleDidChange(scheduledEvents))
     }
     
@@ -305,14 +340,15 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     // MARK: - Scheduling (batch-first)
     
     public func setEvents(_ events: [AVPlayerInterstitialEvent]) {
+        customEvents = events
         controller?.events = events
+        refreshMarkers()
     }
     
     public func appendEvents(_ events: [AVPlayerInterstitialEvent]) {
-        guard let controller else { return }
-        var current = controller.events ?? []
-        current.append(contentsOf: events)
-        controller.events = current
+        customEvents.append(contentsOf: events)
+        controller?.events = customEvents
+        refreshMarkers()
     }
     
     public func schedule(_ configs: [AKInterstitialScheduleConfig], replaceExisting: Bool = false) {
@@ -336,12 +372,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
         
         if replaceExisting {
-            controller.events = newEvents
+            customEvents = newEvents
         } else {
-            var existing = controller.events ?? []
-            existing.append(contentsOf: newEvents)
-            controller.events = existing
+            customEvents.append(contentsOf: newEvents)
         }
+        controller.events = customEvents
+        refreshMarkers()
     }
     
     public func schedule(
@@ -372,12 +408,14 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     public func cancelCurrent(resumptionOffset: CMTime = .zero) {
         guard let event = currentEvent else { return }
         
+        playedEventIDs.insert(event.identifier)
         controller?.cancelCurrentEvent(withResumptionOffset: resumptionOffset)
         lastStartedEvent = nil
         
         setPlaybackState(.finished)
         stopObservingInterstitialPlaybackState()
         removeProgressObserver()
+        refreshMarkers()
         emit(.didFinish(event, reason: .cancelled(resumptionOffset: resumptionOffset)))
     }
     
@@ -424,6 +462,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             integratedTimelineCurrentTime = currentSec
         }
         
+        refreshMarkers()
+        
         emit(.integratedTimeline(.segmentsUpdated(
             pointSegments: integratedTimelinePointSegments,
             fillSegments: integratedTimelineFillSegments
@@ -434,6 +474,57 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             startTime: integratedTimelineStartTime,
             duration: integratedTimelineDuration
         )))
+    }
+    
+    // MARK: - Ad Marker Synthesis
+    
+    private func refreshMarkers() {
+        var newMarkers: [AKInterstitialMarker] = []
+        let currentEventID = currentEvent?.identifier
+        
+        // Build map of interstitial segments from integrated timeline snapshots
+        var segmentsByEventID: [String: AVPlayerItemSegment] = [:]
+        if let currentItem {
+            for segment in currentItem.integratedTimeline.currentSnapshot.segments where segment.segmentType == .interstitial {
+                if let event = segment.interstitialEvent {
+                    segmentsByEventID[event.identifier] = segment
+                }
+            }
+        }
+        
+        for segment in integratedTimelinePointSegments + integratedTimelineFillSegments {
+            if let event = segment.interstitialEvent, segmentsByEventID[event.identifier] == nil {
+                segmentsByEventID[event.identifier] = segment
+            }
+        }
+        
+        let allScheduled = scheduledEvents
+        var processedIDs = Set<String>()
+        
+        for event in allScheduled {
+            let id = event.identifier
+            let isCurrent = (id == currentEventID) && isPlayingInterstitial
+            let isPlayed = playedEventIDs.contains(id)
+            let segment = segmentsByEventID[id]
+            newMarkers.append(AKInterstitialMarker(event: event, segment: segment, isPlayed: isPlayed, isCurrent: isCurrent))
+            processedIDs.insert(id)
+        }
+        
+        // Also incorporate any interstitial segments that weren't in scheduledEvents
+        for (id, segment) in segmentsByEventID where !processedIDs.contains(id) {
+            if let event = segment.interstitialEvent {
+                let isCurrent = (id == currentEventID) && isPlayingInterstitial
+                let isPlayed = playedEventIDs.contains(id)
+                newMarkers.append(AKInterstitialMarker(event: event, segment: segment, isPlayed: isPlayed, isCurrent: isCurrent))
+                processedIDs.insert(id)
+            }
+        }
+        
+        newMarkers.sort { $0.time < $1.time }
+        
+        guard markers != newMarkers else { return }
+        markers = newMarkers
+        emit(.adMarkersDidChange(markers))
     }
     
     public func seekOnIntegratedTimeline(to time: TimeInterval, completion: @Sendable @escaping (Bool) -> Void) {

@@ -119,31 +119,33 @@ public class AKLoadedState: AKBaseState {
     /// multiplier.
     /// - Parameter rate: Target playback rate multiplier.
     override public func play(at rate: AKPlaybackRate) {
-        guard let currentMedia = playerController.currentMedia,
-              currentMedia.canPlay(at: rate)
-        else {
-            playerController
-                .emit(.commandUnavailable(reason: .canNotPlayAtSpecifiedRate))
-            return
-        }
-        
-        var controller: AKBufferingState
-        
-        if let position {
-            controller = AKBufferingState(
-                playerController: playerController,
-                autoPlay: true,
-                rate: rate,
-                targetSeek: AKSeek(target: position)
-            )
-        } else {
-            controller = AKBufferingState(
-                playerController: playerController,
-                autoPlay: true,
-                rate: rate
-            )
-        }
-        change(controller)
+        performIfAllowed(
+            check: { availability(for: .play(at: rate)) },
+            action: {
+                var controller: AKBufferingState
+                
+                if let position {
+                    controller = AKBufferingState(
+                        playerController: playerController,
+                        autoPlay: true,
+                        rate: rate,
+                        targetSeek: AKSeek(target: position)
+                    )
+                } else {
+                    controller = AKBufferingState(
+                        playerController: playerController,
+                        autoPlay: true,
+                        rate: rate
+                    )
+                }
+                change(controller)
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     /// Commands the player to pause. Disables `autoPlay` if queued, or emits an

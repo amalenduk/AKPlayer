@@ -23,6 +23,17 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     var canSeek: Bool { get }
     var canFastForward: Bool { get }
     
+    // MARK: - Ad Markers
+    
+    /// Synthesized ad markers for rendering cue points and fill segments on a progress bar.
+    var markers: [AKInterstitialMarker] { get }
+    
+    /// Finds the ad marker closest to the specified time within the given tolerance.
+    func marker(at time: TimeInterval, tolerance: TimeInterval) -> AKInterstitialMarker?
+    
+    /// Finds the next unplayed ad marker scheduled after the given time position.
+    func nextUnplayedMarker(after time: TimeInterval) -> AKInterstitialMarker?
+    
     func setEvents(_ events: [AVPlayerInterstitialEvent])
     func appendEvents(_ events: [AVPlayerInterstitialEvent])
     

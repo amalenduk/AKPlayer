@@ -67,16 +67,18 @@ public class AKPlayingState: AKBaseState {
     /// Adjusts playback rate when supported by the current media item.
     /// - Parameter rate: The targeted playback speed multiplier.
     override public func play(at rate: AKPlaybackRate) {
-        guard let currentMedia = playerController.currentMedia,
-              currentMedia.canPlay(at: rate)
-        else {
-            playerController
-                .emit(.commandUnavailable(reason: .canNotPlayAtSpecifiedRate))
-            return
-        }
-        
-        self.rate = rate
-        playerController.performPlay(at: rate)
+        performIfAllowed(
+            check: { availability(for: .play(at: rate)) },
+            action: {
+                self.rate = rate
+                playerController.performPlay(at: rate)
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     // MARK: - Player Lifecycle & Notifications
@@ -175,7 +177,7 @@ public class AKPlayingState: AKBaseState {
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
         switch action {
-        case .play:
+        case .play(at: .normal):
             (false, .alreadyPlaying)
         default:
             super.availability(for: action)

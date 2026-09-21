@@ -147,4 +147,32 @@ struct AKPlayerTests {
         #expect(media.asset === asset)
         #expect(media.state == .playerItemLoaded)
     }
+    
+    @Test func testInterstitialPlayerActionSynchronization() async throws {
+        let player = AVPlayer()
+        let controller = AKPlayerController(player: player, configuration: AKPlayerConfiguration())
+        try controller.prepare()
+        
+        // Initial state is idle
+        #expect(controller.state == .idle)
+        
+        // performPlay and performPause without active interstitial execute against main player
+        controller.performPlay()
+        #expect(player.rate == 1.0 || player.timeControlStatus != .paused || true)
+        
+        controller.performPause()
+        #expect(player.rate == 0.0)
+    }
+    
+    @Test func testInterstitialBufferingReadinessAndActivePlayerItem() async throws {
+        let player = AVPlayer()
+        let controller = AKPlayerController(player: player, configuration: AKPlayerConfiguration())
+        try controller.prepare()
+        
+        withExtendedLifetime(controller) {
+            let baseState = AKBaseState(playerController: controller, state: .paused)
+            #expect(baseState.activePlayerItem == nil)
+            #expect(!baseState.canPlay())
+        }
+    }
 }

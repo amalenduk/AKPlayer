@@ -15,15 +15,10 @@ import UIKit
 @MainActor
 public class LivePlayerViewModel: NSObject, ObservableObject {
     
-    // MARK: - Core Engine
-    
-    public let avPlayer = AVPlayer()
-    
     public lazy var player: AKPlayer = {
         var configuration = AKPlayerConfiguration()
         configuration.isNowPlayingEnabled = true
         let p = AKPlayer(
-            player: avPlayer,
             configuration: configuration,
             audioSessionService: audioSession
         )
@@ -58,7 +53,6 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     // MARK: - Private State & Observers
     
     public private(set) var pipController: AKPictureInPictureController?
-    private nonisolated(unsafe) var timeObserverToken: Any?
     private nonisolated(unsafe) var pipEventsTask: Task<Void, Never>?
     private nonisolated(unsafe) var mediaEventsTask: Task<Void, Never>?
     private var clearUnavailableWorkItem: DispatchWorkItem?
@@ -87,9 +81,6 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
-        if let token = timeObserverToken {
-            avPlayer.removeTimeObserver(token)
-        }
         pipEventsTask?.cancel()
         mediaEventsTask?.cancel()
     }
@@ -104,7 +95,6 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
         
         observeMediaEvents(for: media)
         player.load(media: media, autoPlay: autoPlay)
-        loadAndObserveTime()
         
         self.stateDescription = player.state.description
         self.isLoading = (player.state == .waitingForNetwork || player.state == .buffering || player.state == .loading)
@@ -188,10 +178,6 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     
     public func stop() {
         player.stop()
-        if let token = timeObserverToken {
-            avPlayer.removeTimeObserver(token)
-            timeObserverToken = nil
-        }
         pipEventsTask?.cancel()
         pipEventsTask = nil
         mediaEventsTask?.cancel()
@@ -202,22 +188,6 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     public func toggleMute() { player.isMuted = !player.isMuted; isMuted = player.isMuted }
     
     // MARK: - Time & Drift Calculation
-    
-    private func loadAndObserveTime() {
-        if let token = timeObserverToken {
-            avPlayer.removeTimeObserver(token)
-            timeObserverToken = nil
-        }
-        
-        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        timeObserverToken = avPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            MainActor.assumeIsolated {
-                guard let self = self else { return }
-                self.currentTime = time.seconds
-                self.updateDVRWindowAndDrift()
-            }
-        }
-    }
     
     private func updateDVRWindowAndDrift() {
         self.isLive = player.isLive
@@ -306,6 +276,16 @@ extension LivePlayerViewModel: AKPlayerDelegate {
         DispatchQueue.main.async {
             self.stateDescription = state.description
             self.isLoading = (state == .waitingForNetwork || state == .buffering || state == .loading)
+            self.updateDVRWindowAndDrift()
+        }
+    }
+    
+    nonisolated public func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
+        DispatchQueue.main.async {
+            self.media = media as? AKMedia
+            self.isLive = media.isLive()
+            self.currentTime = player.currentTime.seconds
+            self.updateDVRWindowAndDrift()
         }
     }
     
@@ -341,8 +321,13 @@ extension LivePlayerViewModel: AKPlayerDelegate {
         }
     }
     
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeVolumeTo volume: Float) {}
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {}
+    nonisolated public func akPlayer(_ player: AKPlayer, didChangeVolumeTo volume: Float) {
+        DispatchQueue.main.async { self.volume = volume }
+    }
+    
+    nonisolated public func akPlayer(_ player: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {
+        DispatchQueue.main.async { self.isMuted = isMuted }
+    }
 }
 
 // MARK: - AKPictureInPictureDelegate

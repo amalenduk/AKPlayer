@@ -112,20 +112,33 @@ public class AKWaitingForNetworkState: AKBaseState {
             playerController
                 .emit(.commandUnavailable(reason: .alreadyTryingToPlay))
         } else {
-            autoPlay = true
+            performIfAllowed(
+                check: { availability(for: .play()) },
+                action: {
+                    autoPlay = true
+                },
+                blocked: { [weak self] reason in
+                    guard let self else { return }
+                    playerController.emit(.commandUnavailable(reason: reason))
+                },
+                fallback: ()
+            )
         }
     }
     
     override public func play(at rate: AKPlaybackRate) {
-        guard let currentMedia = playerController.currentMedia,
-              currentMedia.canPlay(at: rate)
-        else {
-            playerController
-                .emit(.commandUnavailable(reason: .canNotPlayAtSpecifiedRate))
-            return
-        }
-        self.rate = rate
-        autoPlay = true
+        performIfAllowed(
+            check: { availability(for: .play(at: rate)) },
+            action: {
+                self.rate = rate
+                autoPlay = true
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     // MARK: - Seeking Through Media
@@ -179,14 +192,7 @@ public class AKWaitingForNetworkState: AKBaseState {
             guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
-                let controller = AKBufferingState(
-                    playerController: playerController,
-                    autoPlay: autoPlay,
-                    rate: rate,
-                    stateToNavigateAfterBuffering: stateToNavigateAfterBuffering ?? .paused,
-                    targetSeek: targetSeek
-                )
-                change(controller)
+                retryBuffering()
             case .noItemToPlay:
                 stop()
             default:

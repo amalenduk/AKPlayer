@@ -239,68 +239,15 @@ public struct SimpleVideoPlayerView: View {
     
     @ViewBuilder
     private func progressSlider() -> some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                progressBackground()
-                currentProgressView(width: geo.size.width)
-                seekSlider()
-            }
-        }
-        .frame(height: 30)
-    }
-    
-    @ViewBuilder
-    private func progressBackground() -> some View {
-        Capsule()
-            .fill(Color(.systemGray5))
-            .frame(height: 4)
-    }
-    
-    @ViewBuilder
-    private func currentProgressView(width: CGFloat) -> some View {
-        let progress = viewModel.duration > 0
-        ? viewModel.currentTime / viewModel.duration
-        : 0
-        
-        Rectangle()
-            .fill(Color.accentColor)
-            .frame(
-                width: width * CGFloat(min(1, progress)),
-                height: 4
-            )
-            .animation(
-                .linear,
-                value: viewModel.currentTime
-            )
-    }
-    
-    @ViewBuilder
-    private func seekSlider() -> some View {
-        let currentFraction = viewModel.duration > 0
-        ? viewModel.currentTime / viewModel.duration
-        : 0.0
-        
-        Slider(
-            value: Binding<Double>(
-                get: {
-                    isScrubbing ? scrubbingProgress : currentFraction
-                },
-                set: { newFraction in
-                    scrubbingProgress = newFraction
-                }
-            ),
-            in: 0...1,
-            onEditingChanged: { editing in
-                isScrubbing = editing
-                if !editing {
-                    let targetSeconds = scrubbingProgress * max(1.0, viewModel.duration)
-                    viewModel.seek(to: targetSeconds)
-                }
+        AKProgressBar(
+            currentTime: viewModel.currentTime,
+            duration: viewModel.duration,
+            bufferProgress: viewModel.duration > 0 ? (viewModel.currentTime + 10) / viewModel.duration : 0.0,
+            markers: viewModel.adMarkers,
+            onSeek: { targetSeconds in
+                viewModel.seek(to: targetSeconds)
             }
         )
-        .accentColor(.clear)
-        .opacity(0.99)
-        .frame(height: 30)
     }
     
     @ViewBuilder
@@ -588,8 +535,6 @@ public struct SimpleVideoPlayerView: View {
     }
     
     private func setupPlayer() {
-        viewModel.loadAndObserveCurrentTime()
-        
         if autoPlay {
             if let media = initialMedia {
                 viewModel.load(

@@ -133,16 +133,19 @@ public class AKBufferingState: AKBaseState {
     /// multiplier while buffering.
     /// - Parameter rate: The targeted playback rate.
     override public func play(at rate: AKPlaybackRate) {
-        guard let currentMedia = playerController.currentMedia,
-              currentMedia.canPlay(at: rate)
-        else {
-            playerController
-                .emit(.commandUnavailable(reason: .canNotPlayAtSpecifiedRate))
-            return
-        }
-        self.rate = rate
-        autoPlay = true
-        startPlayingIfPossible()
+        performIfAllowed(
+            check: { availability(for: .play(at: rate)) },
+            action: {
+                self.rate = rate
+                autoPlay = true
+                startPlayingIfPossible()
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     /// Seeks to a target location and executes a callback upon completion.
@@ -287,7 +290,7 @@ public class AKBufferingState: AKBaseState {
     /// Observes the current `AVPlayerItem` buffer state flags to transition out
     /// of buffering as soon as possible.
     private func startObservingPlayerItemBufferingStatus() {
-        guard let playerItem = playerController.currentMedia?.playerItem else { return }
+        guard let playerItem = activePlayerItem else { return }
         
         observations.append(
             playerItem.observe(\.isPlaybackBufferFull, options: [.initial, .new]) { [weak self] _, _ in
@@ -348,7 +351,7 @@ public class AKBufferingState: AKBaseState {
     /// is not requested.
     private func changeToPreviousState() {
         guard isActiveState else { return }
-        guard let playerItem = playerController.currentMedia?.playerItem,
+        guard activePlayerItem != nil,
               !playerController.isSeeking,
               canPlay()
         else { return }
@@ -468,7 +471,7 @@ extension AKBufferingState {
     
     /// Sums the durations of all currently loaded (buffered) time ranges for the active player item.
     private func totalLoadedDuration() -> CMTime {
-        guard let playerItem = playerController.currentMedia?.playerItem else { return .zero }
+        guard let playerItem = activePlayerItem else { return .zero }
         return playerItem.loadedTimeRanges
             .map(\.timeRangeValue.duration)
             .reduce(CMTime.zero, CMTimeAdd)

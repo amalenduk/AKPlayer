@@ -162,6 +162,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Task responsible for observing player item notification events.
     private var playerItemNotificationObservationTask: Task<Void, Never>?
     
+    /// Task responsible for observing interstitial playback state updates.
+    private var interstitialObservationTask: Task<Void, Never>?
+    
     // MARK: - Initialization & Teardown
     
     /// Initializes a new `AKPlayerController` instance with a target player
@@ -204,6 +207,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         boundaryTimeObservationTask = nil
         playerItemNotificationObservationTask?.cancel()
         playerItemNotificationObservationTask = nil
+        interstitialObservationTask?.cancel()
+        interstitialObservationTask = nil
         eventBroadcaster.finish()
     }
     
@@ -542,6 +547,32 @@ public class AKPlayerController: AKPlayerControllerProtocol {
                 }
             }
         )
+        // Interstitial playback state changes async stream observation
+        interstitialObservationTask = Task { [weak self] in
+            guard let stream = self?.interstitialService.events else { return }
+            for await event in stream {
+                guard !Task.isCancelled, let self else { break }
+                if case let .playbackStateDidChange(playbackState) = event {
+                    self.handleInterstitialPlaybackStateChange(playbackState)
+                }
+            }
+        }
+    }
+    
+    private func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
+        guard interstitialService.isPlayingInterstitial else { return }
+        switch playbackState {
+        case .paused:
+            if state.isPlaying || ((state.isBuffering || state.isWaitingForNetwork) && autoPlay) {
+                pause()
+            }
+        case .playing:
+            if state.isPaused || state.isLoaded || ((state.isBuffering || state.isWaitingForNetwork) && !autoPlay) {
+                play()
+            }
+        default:
+            break
+        }
     }
     
     private func observePlayerItemNotifications() {
@@ -566,6 +597,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         periodicTimeObservationTask = nil
         boundaryTimeObservationTask?.cancel()
         boundaryTimeObservationTask = nil
+        interstitialObservationTask?.cancel()
+        interstitialObservationTask = nil
         
         playerRateObserver.stopObserving()
         playerPlaybackTimeObserver.stopObservingPeriodicTime()
@@ -587,19 +620,28 @@ public class AKPlayerController: AKPlayerControllerProtocol {
 // MARK: - Direct Action Implementations
 
 extension AKPlayerController {
-    /// Directly issues a `play()` command to the underlying `AVPlayer`.
+    /// Directly issues a `play()` command to the underlying `AVPlayer` (and interstitial player if active).
     public func performPlay() {
+        if interstitialService.isPlayingInterstitial {
+            interstitialService.interstitialPlayer?.play()
+        }
         player.play()
     }
     
-    /// Directly sets the playback rate on the underlying `AVPlayer`.
+    /// Directly sets the playback rate on the underlying `AVPlayer` (and interstitial player if active).
     /// - Parameter rate: The target playback speed rate multiplier.
     public func performPlay(at rate: AKPlaybackRate) {
+        if interstitialService.isPlayingInterstitial {
+            interstitialService.interstitialPlayer?.play()
+        }
         player.rate = rate.rate
     }
     
-    /// Directly issues a `pause()` command to the underlying `AVPlayer`.
+    /// Directly issues a `pause()` command to the underlying `AVPlayer` (and interstitial player if active).
     public func performPause() {
+        if interstitialService.isPlayingInterstitial {
+            interstitialService.interstitialPlayer?.pause()
+        }
         player.pause()
     }
     

@@ -32,6 +32,9 @@ public enum AKInterstitialEvent: @unchecked Sendable {
     /// The interstitial finished, was skipped, or was cancelled.
     case didFinish(AVPlayerInterstitialEvent, reason: FinishReason)
     
+    /// The collection of synthesized ad markers changed.
+    case adMarkersDidChange([AKInterstitialMarker])
+    
     case integratedTimeline(_ event: AKIntegratedTimelineEvent)
     
     // MARK: - FinishReason
@@ -63,6 +66,8 @@ extension AKInterstitialEvent: Equatable {
         switch (lhs, rhs) {
         case let (.scheduleDidChange(l), .scheduleDidChange(r)):
             l.map(\.identifier) == r.map(\.identifier)
+        case let (.playbackStateDidChange(l), .playbackStateDidChange(r)):
+            l == r
         case let (.willStart(l), .willStart(r)),
             let (.didStart(l), .didStart(r)):
             l.identifier == r.identifier
@@ -70,6 +75,10 @@ extension AKInterstitialEvent: Equatable {
             l.currentTime == r.currentTime && l.duration == r.duration
         case let (.didFinish(lEvent, lReason), .didFinish(rEvent, rReason)):
             lEvent.identifier == rEvent.identifier && lReason == rReason
+        case let (.adMarkersDidChange(l), .adMarkersDidChange(r)):
+            l == r
+        case let (.integratedTimeline(l), .integratedTimeline(r)):
+            l == r
         default:
             false
         }

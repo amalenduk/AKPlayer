@@ -16,13 +16,13 @@ import Network
 /// state machine preflight checks.
 public enum AKPlayerAction: Equatable, Sendable {
     case load
-    case play
+    case play(at: AKPlaybackRate = .normal)
     case pause
     case stop
     case seek(to: AKSeekTarget)
     case step(by: Int)
-    case fastForward
-    case rewind
+    case fastForward(at: AKPlaybackRate)
+    case rewind(at: AKPlaybackRate)
 }
 
 // MARK: - AKBaseState
@@ -92,7 +92,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Commands the player to begin media playback.
     public func play() {
         performIfAllowed(
-            check: { availability(for: .play) },
+            check: { availability(for: .play()) },
             action: {
                 let controller = AKBufferingState(
                     playerController: playerController,
@@ -114,7 +114,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     public func play(at rate: AKPlaybackRate) {
         performIfAllowed(
             check: {
-                availability(for: .play)
+                availability(for: .play(at: rate))
             },
             action: {
                 let controller = AKBufferingState(
@@ -287,25 +287,45 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Fast-forwards playback using default fast-forward speed defined in
     /// player configuration.
     public func fastForward() {
-        play(at: playerController.configuration.fastForwardRate)
+        fastForward(at: playerController.configuration.fastForwardRate)
     }
     
     /// Fast-forwards playback at a custom speed multiplier.
     /// - Parameter rate: The target fast-forward playback speed rate.
     public func fastForward(at rate: AKPlaybackRate) {
-        play(at: rate)
+        performIfAllowed(
+            check: { availability(for: .fastForward(at: rate)) },
+            action: {
+                play(at: rate)
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     /// Rewinds playback using default rewind speed defined in player
     /// configuration.
     public func rewind() {
-        play(at: playerController.configuration.rewindRate)
+        rewind(at: playerController.configuration.rewindRate)
     }
     
     /// Rewinds playback at a custom speed multiplier.
     /// - Parameter rate: The target rewind playback speed rate.
     public func rewind(at rate: AKPlaybackRate) {
-        play(at: rate)
+        performIfAllowed(
+            check: { availability(for: .rewind(at: rate)) },
+            action: {
+                play(at: rate)
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     // MARK: - State Management Helpers
@@ -384,18 +404,62 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
         switch action {
+        case .play(at: let rate):
+            guard let currentMedia = playerController.currentMedia else {
+                return (false, .loadMediaFirst)
+            }
+            if rate != .normal {
+                if playerController.interstitialService.isPlayingInterstitial && rate.rate > 1.0 && !playerController.interstitialService.canFastForward {
+                    return (false, .actionNotPermitted)
+                }
+                guard currentMedia.canPlay(at: rate) else {
+                    return (false, .canNotPlayAtSpecifiedRate)
+                }
+            }
+            return (true, nil)
+            
         case let .seek(to: target):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
+            }
+            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canSeek {
+                return (false, .actionNotPermitted)
             }
             
             let (flag, reason) = currentMedia.seekingThroughMedia
                 .canSeek(to: target)
             return (allowed: flag, reason: reason)
             
+        case .fastForward(at: let rate):
+            guard let currentMedia = playerController.currentMedia else {
+                return (false, .loadMediaFirst)
+            }
+            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canFastForward {
+                return (false, .actionNotPermitted)
+            }
+            guard currentMedia.canPlay(at: rate) else {
+                return (false, .canNotPlayAtSpecifiedRate)
+            }
+            return (true, nil)
+            
+        case .rewind(at: let rate):
+            guard let currentMedia = playerController.currentMedia else {
+                return (false, .loadMediaFirst)
+            }
+            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canSeek {
+                return (false, .actionNotPermitted)
+            }
+            guard currentMedia.canPlay(at: rate) else {
+                return (false, .canNotPlayAtSpecifiedRate)
+            }
+            return (true, nil)
+            
         case let .step(by: count):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
+            }
+            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canSeek {
+                return (false, .actionNotPermitted)
             }
             
             let result = currentMedia.canStep(by: count)
@@ -460,11 +524,42 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         change(controller)
     }
     
+    /// The active player item currently being rendered / buffered (interstitial item if active, otherwise primary media item).
+    public var activePlayerItem: AVPlayerItem? {
+        if playerController.interstitialService.isPlayingInterstitial,
+           let adItem = playerController.interstitialService.interstitialPlayer?.currentItem {
+            return adItem
+        }
+        return playerController.currentMedia?.playerItem
+    }
+    
     /// Determines whether the media buffer conditions are sufficient to allow playback.
     public func canPlay() -> Bool {
-        guard let playerItem = playerController.currentMedia?.playerItem,
-              !playerController.isSeeking
-        else { return false }
+        guard !playerController.isSeeking else { return false }
+        
+        if playerController.interstitialService.isPlayingInterstitial {
+            guard let adItem = playerController.interstitialService.interstitialPlayer?.currentItem else {
+                return playerController.interstitialService.playbackState == .playing
+            }
+            if adItem.isPlaybackBufferFull || adItem.isPlaybackLikelyToKeepUp {
+                return true
+            }
+            let currentTime = adItem.currentTime()
+            if currentTime.isValid && !currentTime.isIndefinite {
+                for rangeValue in adItem.loadedTimeRanges {
+                    let range = rangeValue.timeRangeValue
+                    if CMTimeRangeContainsTime(range, time: currentTime) {
+                        let bufferedAhead = range.end - currentTime
+                        if bufferedAhead.seconds >= 0.5 {
+                            return true
+                        }
+                    }
+                }
+            }
+            return false
+        }
+        
+        guard let playerItem = playerController.currentMedia?.playerItem else { return false }
         
         if playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp {
             return true

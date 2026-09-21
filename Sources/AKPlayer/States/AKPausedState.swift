@@ -94,37 +94,41 @@ public class AKPausedState: AKBaseState {
     /// loading if unready.
     /// - Parameter rate: The target playback speed.
     override public func play(at rate: AKPlaybackRate) {
-        guard let currentMedia = playerController.currentMedia,
-              currentMedia.state.isReadyToPlay
-        else {
-            if let media = playerController.currentMedia {
-                let controller = AKLoadingState(
+        performIfAllowed(
+            check: { availability(for: .play(at: rate)) },
+            action: {
+                guard let currentMedia = playerController.currentMedia,
+                      currentMedia.state.isReadyToPlay
+                else {
+                    if let media = playerController.currentMedia {
+                        let controller = AKLoadingState(
+                            playerController: playerController,
+                            media: media,
+                            autoPlay: true,
+                            rate: rate
+                        )
+                        change(controller)
+                    }
+                    return
+                }
+                
+                let initialSeek: AKSeek? = playerItemDidPlayToEndTime
+                ? AKSeek(target: .time(.zero)) : nil
+                
+                let controller = AKBufferingState(
                     playerController: playerController,
-                    media: media,
                     autoPlay: true,
-                    rate: rate
+                    rate: rate,
+                    targetSeek: initialSeek
                 )
                 change(controller)
-            }
-            return
-        }
-        
-        guard currentMedia.canPlay(at: rate) else {
-            playerController
-                .emit(.commandUnavailable(reason: .canNotPlayAtSpecifiedRate))
-            return
-        }
-        
-        let initialSeek: AKSeek? = playerItemDidPlayToEndTime
-        ? AKSeek(target: .time(.zero)) : nil
-        
-        let controller = AKBufferingState(
-            playerController: playerController,
-            autoPlay: true,
-            rate: rate,
-            targetSeek: initialSeek
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
         )
-        change(controller)
     }
     
     // MARK: - Additional Helper Functions
