@@ -33,9 +33,10 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     
     public func createAsset(for media: any AKPlayable) async -> AVURLAsset {
         var asset: AVURLAsset
-        if let custom = media.asset {
+        if let custom = media.customAsset {
             asset = custom
-        } else if let itemAsset = await MainActor.run(body: { media.playerItem?.asset as? AVURLAsset }) {
+        } else if let customItem = media.customPlayerItem,
+                  let itemAsset = await MainActor.run(body: { customItem.asset as? AVURLAsset }) {
             asset = itemAsset
         } else if media.cachePolicy == .useCacheIfAvailable,
                   let cache = media.cacheManager,
@@ -82,7 +83,7 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     }
     
     public func createPlayerItem(from asset: AVURLAsset, for media: any AKPlayable) -> AVPlayerItem {
-        let item: AVPlayerItem = if let customItem = media.playerItem {
+        let item: AVPlayerItem = if let customItem = media.customPlayerItem {
             customItem
         } else if let keys = media.automaticallyLoadedAssetKeys {
             AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: keys)

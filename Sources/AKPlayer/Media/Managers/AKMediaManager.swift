@@ -82,8 +82,13 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         media: any AKPlayable,
         playerItemInitService: any AKPlayerItemInitServiceProtocol = AKPlayerItemInitService()
     ) {
+        defer {
+            AKLogger.logInit(self)
+        }
         self.media = media
         self.playerItemInitService = playerItemInitService
+        self.asset = media.customAsset
+        self.playerItem = media.customPlayerItem
         super.init()
         
         // Direct initialization of child services
@@ -92,11 +97,36 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         _metadataProvider = AKMediaMetadataProvider(mediaManager: self)
         _chapterService = AKChapterService(mediaManager: self)
         _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
+        
+        // Configure initial lifecycle state for pre-configured media items (playerItem or asset)
+        if let customItem = media.customPlayerItem {
+            self.state = .playerItemLoaded
+            
+            // 1. Bind item KVO observers (duration, status, tracks, timebase)
+            bindObservers(to: customItem)
+            
+            // 2. Attach live timed metadata output
+            attachMetadataOutput(to: customItem)
+            
+            // 3. Load metadata and chapters in parallel (extracting asset if not explicitly provided)
+            loadMetadataAndChapters(extractAssetFrom: customItem)
+        } else if media.customAsset != nil {
+            self.state = .assetLoaded
+            
+            // Load metadata and chapters in parallel
+            loadMetadataAndChapters()
+        } else {
+            self.state = .idle
+        }
     }
     
     deinit {
         observations.removeAll()
         eventBroadcaster.finish()
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - Asset Lifecycle Operations
@@ -113,12 +143,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         self.state = .assetLoaded
         
         // Asynchronously load container metadata and chapters in parallel
-        Task { [weak self] in
-            guard let self else { return }
-            async let meta: () = self.metadataProvider.loadMetadata()
-            async let chapters: () = self.chapterService.loadChapters()
-            _ = await (meta, chapters)
-        }
+        loadMetadataAndChapters()
     }
     
     /// Asynchronously validates key asset properties (e.g., playability and DRM restrictions).
@@ -154,12 +179,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         }
         
         // Attach live stream timed metadata output
-        let metadataOutput = AVPlayerItemMetadataOutput(identifiers: nil)
-        let queue = DispatchQueue(label: "com.akplayer.timedMetadataOutputQueue")
-        metadataOutput.setDelegate(self, queue: queue)
-        Task { @MainActor in
-            newItem.add(metadataOutput)
-        }
+        attachMetadataOutput(to: newItem)
         
         bindObservers(to: newItem)
         self.state = .playerItemLoaded
@@ -352,6 +372,31 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
                 self.emit(.capabilityDidChange(capability, isSupported: isSupported))
             }
         )
+    }
+    
+    // MARK: - Metadata & Chapter Loading
+    
+    private func loadMetadataAndChapters(extractAssetFrom customItem: AVPlayerItem? = nil) {
+        Task { [weak self] in
+            guard let self else { return }
+            if self.asset == nil, let customItem {
+                self.asset = await MainActor.run { customItem.asset as? AVURLAsset }
+            }
+            async let meta: () = self.metadataProvider.loadMetadata()
+            async let chapters: () = self.chapterService.loadChapters()
+            _ = await (meta, chapters)
+        }
+    }
+    
+    // MARK: - Timed Metadata Output Attachment
+    
+    private func attachMetadataOutput(to item: AVPlayerItem) {
+        let metadataOutput = AVPlayerItemMetadataOutput(identifiers: nil)
+        let queue = DispatchQueue(label: "com.akplayer.timedMetadataOutputQueue")
+        metadataOutput.setDelegate(self, queue: queue)
+        Task { @MainActor in
+            item.add(metadataOutput)
+        }
     }
     
     // MARK: - Event Dispatch

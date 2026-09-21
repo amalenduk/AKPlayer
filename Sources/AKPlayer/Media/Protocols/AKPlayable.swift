@@ -25,9 +25,15 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
     var type: AKMediaType { get }
 
     /// Optional custom pre-configured asset (e.g., for FairPlay DRM or custom ResourceLoader).
-    var asset: AVURLAsset? { get }
+    var customAsset: AVURLAsset? { get }
 
     /// Optional custom pre-configured player item (e.g., for custom Video Composition).
+    var customPlayerItem: AVPlayerItem? { get }
+
+    /// The loaded URL asset generated from the media item.
+    var asset: AVURLAsset? { get }
+
+    /// The instantiated player item constructed from the asset.
     var playerItem: AVPlayerItem? { get }
 
     /// Optional dictionary options used when initializing the underlying `AVURLAsset`.
@@ -58,6 +64,8 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 // MARK: - Default Property Implementations
 
 public extension AKPlayable {
+    var customAsset: AVURLAsset? { nil }
+    var customPlayerItem: AVPlayerItem? { nil }
     var assetInitializationOptions: [String: Any]? { nil }
     var automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? { nil }
     var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? { nil }

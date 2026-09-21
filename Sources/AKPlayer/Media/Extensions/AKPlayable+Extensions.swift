@@ -54,12 +54,12 @@ extension AKPlayable {
 public extension AKPlayable {
     /// The loaded URL asset generated from the media item.
     var asset: AVURLAsset? {
-        manager.asset
+        manager.asset ?? customAsset
     }
     
     /// The instantiated player item constructed from the asset.
     var playerItem: AVPlayerItem? {
-        manager.playerItem 
+        manager.playerItem ?? customPlayerItem
     }
     
     /// The current state of the playable media item.

@@ -45,20 +45,13 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         set { _liveEdgeThreshold = newValue }
     }
     
-    // MARK: - Initial Seed Properties
+    // MARK: - Custom Seed Properties
     
-    private let initialAsset: AVURLAsset?
-    private let initialPlayerItem: AVPlayerItem?
+    /// Optional custom pre-configured asset (e.g., for FairPlay DRM or custom ResourceLoader).
+    public let customAsset: AVURLAsset?
     
-    /// The loaded URL asset, or the initial pre-configured asset if assigned.
-    public var asset: AVURLAsset? {
-        manager.asset ?? initialAsset
-    }
-    
-    /// The instantiated player item, or the initial pre-configured player item if assigned.
-    public var playerItem: AVPlayerItem? {
-        manager.playerItem ?? initialPlayerItem
-    }
+    /// Optional custom pre-configured player item (e.g., for custom Video Composition).
+    public let customPlayerItem: AVPlayerItem?
     
     // MARK: - Initialization
     
@@ -66,6 +59,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// - Parameters:
     ///   - url: The media URL destination.
     ///   - type: The media type classification.
+    ///   - customAsset: Optional custom pre-configured asset.
+    ///   - customPlayerItem: Optional custom pre-configured player item.
     ///   - assetInitializationOptions: Options dictionary for initializing `AVURLAsset`.
     ///   - automaticallyLoadedAssetKeys: Asset property keys to pre-load.
     ///   - staticMetadata: Static Now Playing metadata.
@@ -75,6 +70,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     public init(
         url: URL,
         type: AKMediaType,
+        customAsset: AVURLAsset? = nil,
+        customPlayerItem: AVPlayerItem? = nil,
         assetInitializationOptions: [String: Any]? = nil,
         automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? = nil,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
@@ -84,14 +81,14 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ) {
         self.url = url
         self.type = type
+        self.customAsset = customAsset
+        self.customPlayerItem = customPlayerItem
         self.assetInitializationOptions = assetInitializationOptions
         self.automaticallyLoadedAssetKeys = automaticallyLoadedAssetKeys
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
         self._liveEdgeThreshold = liveEdgeThreshold
-        self.initialAsset = nil
-        self.initialPlayerItem = nil
     }
     
     /// Custom Asset Initializer (For FairPlay DRM / Custom Headers / ResourceLoader)
@@ -106,14 +103,14 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ) {
         self.url = asset.url
         self.type = type
+        self.customAsset = asset
+        self.customPlayerItem = nil
         self.assetInitializationOptions = nil
         self.automaticallyLoadedAssetKeys = automaticallyLoadedAssetKeys
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
         self._liveEdgeThreshold = liveEdgeThreshold
-        self.initialAsset = asset
-        self.initialPlayerItem = nil
     }
     
     /// Pre-configured Player Item Initializer (For Video Compositions / Custom Audio Mix)
@@ -131,14 +128,14 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         let asset = playerItem.asset as? AVURLAsset
         self.url = asset?.url ?? URL(fileURLWithPath: "")
         self.type = type
+        self.customAsset = asset
+        self.customPlayerItem = playerItem
         self.assetInitializationOptions = nil
         self.automaticallyLoadedAssetKeys = nil
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
         self._liveEdgeThreshold = liveEdgeThreshold
-        self.initialAsset = asset
-        self.initialPlayerItem = playerItem
     }
     
     deinit {

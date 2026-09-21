@@ -68,6 +68,9 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     // MARK: - Initialization
     
     public init(mediaManager: any AKMediaManagerProtocol) {
+        defer {
+            AKLogger.logInit(self)
+        }
         self.mediaManager = mediaManager
     }
     
@@ -75,6 +78,10 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         state.withLock { $0.loadTask?.cancel() }
         chaptersBroadcaster.finish()
         currentChapterBroadcaster.finish()
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - Chapter Queries

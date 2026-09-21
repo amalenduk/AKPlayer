@@ -94,6 +94,9 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
     // MARK: - Initialization
     
     public init(mediaManager: any AKMediaManagerProtocol) {
+        defer {
+            AKLogger.logInit(self)
+        }
         self.mediaManager = mediaManager
     }
     
@@ -101,6 +104,10 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
         state.withLock { $0.loadTask?.cancel() }
         staticMetadataBroadcaster.finish()
         timedMetadataBroadcaster.finish()
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
     
     // MARK: - Public API

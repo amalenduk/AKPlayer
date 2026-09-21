@@ -124,4 +124,27 @@ struct AKPlayerTests {
         media.createPlayerItemFromAsset()
         #expect(media.playerItem != nil)
     }
+    
+    @Test func testCustomAssetMediaInitialization() async throws {
+        let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8")!
+        let asset = AVURLAsset(url: url)
+        let media = AKMedia(asset: asset, type: .stream(isLive: false))
+        
+        #expect(media.customAsset === asset)
+        #expect(media.customPlayerItem == nil)
+        #expect(media.asset === asset)
+        #expect(media.state == .assetLoaded)
+    }
+    
+    @Test func testCustomPlayerItemMediaInitialization() async throws {
+        let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8")!
+        let asset = AVURLAsset(url: url)
+        let playerItem = AVPlayerItem(asset: asset)
+        let media = AKMedia(playerItem: playerItem, type: .stream(isLive: false))
+        
+        #expect(media.customPlayerItem === playerItem)
+        #expect(media.playerItem === playerItem)
+        #expect(media.asset === asset)
+        #expect(media.state == .playerItemLoaded)
+    }
 }
