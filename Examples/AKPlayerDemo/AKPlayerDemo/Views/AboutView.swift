@@ -78,7 +78,7 @@ public struct AboutView: View {
 
                 // GitHub & Open Source Section
                 Section("Open Source & Repository") {
-                    Link(destination: URL(string: "https://github.com/amalenduk/AKPlayerSPM")!) {
+                    Link(destination: URL(string: "https://github.com/amalenduk/AKPlayer")!) {
                         HStack(spacing: 12) {
                             Image(systemName: "link")
                                 .foregroundColor(.primary)
@@ -87,7 +87,7 @@ public struct AboutView: View {
                                 Text("GitHub Repository")
                                     .font(.body)
                                     .foregroundColor(.primary)
-                                Text("github.com/amalenduk/AKPlayerSPM")
+                                Text("github.com/amalenduk/AKPlayer")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -99,7 +99,7 @@ public struct AboutView: View {
                     }
 
                     Link(
-                        destination: URL(string: "https://github.com/amalenduk/AKPlayerSPM/issues")!
+                        destination: URL(string: "https://github.com/amalenduk/AKPlayer/issues")!
                     ) {
                         HStack(spacing: 12) {
                             Image(systemName: "exclamationmark.bubble")
@@ -117,7 +117,7 @@ public struct AboutView: View {
 
                     Link(
                         destination: URL(
-                            string: "https://github.com/amalenduk/AKPlayerSPM/blob/main/README.md"
+                            string: "https://github.com/amalenduk/AKPlayer/blob/main/README.md"
                         )!
                     ) {
                         HStack(spacing: 12) {

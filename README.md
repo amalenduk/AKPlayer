@@ -1,6 +1,6 @@
 # AKPlayer
 
-[![CI](https://github.com/amalenduk/AKPlayerSPM/actions/workflows/ci.yml/badge.svg)](https://github.com/amalenduk/AKPlayerSPM/actions/workflows/ci.yml)
+[![CI](https://github.com/amalenduk/AKPlayer/actions/workflows/ci.yml/badge.svg)](https://github.com/amalenduk/AKPlayer/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/Documentation-DocC-blue.svg?style=flat)](https://amalenduk.github.io/AKPlayer/documentation/akplayer)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-iOS%2018.0%2B-blue.svg?style=flat)](https://developer.apple.com/ios/)
@@ -51,9 +51,11 @@
 - 🎛️ **Now Playing & Remote Commands**: Zero-boilerplate Control Center, Lock Screen, Dynamic Island, and Apple Watch media control integration.
 - 💬 **Subtitles & Multi-Audio**: Discovery and selection of audio tracks, subtitles (CC / SDH), and accessibility descriptions matching system preferences.
 - 🏷️ **Chapters & Metadata Provider**: Async extraction of ID3/HLS static and timed metadata along with chapter timelines.
-- 🎧 **Smart Audio Session**: Automatic headphone disconnect pause, audio interruption recovery (calls, Siri), and spatial audio observers.
-- 🖼️ **Picture-in-Picture (PiP)**: Full lifecycle control with UI restoration callbacks.
-- 🎨 **SwiftUI & UIKit Ready**: Drop-in `AKPlayerView` and customizable `AKProgressBar`.
+- 🎨 **Modular UI Components**: Drop-in progress bars (`AKProgressBar`) with live edge indicators, chapter ticks, and interstitial overlays.
+- 🍿 **AirPlay & PiP**: Effortless Picture-in-Picture with automatic background restoration and full AirPlay support.
+- 📻 **FairPlay Streaming (DRM)**: Integrated `AKFairPlayHandler` for SPC/CKC license key exchange with persistable offline key support.
+- 👥 **Apple SharePlay**: Seamless synchronized playback across FaceTime using `GroupActivities` and `AVPlayerPlaybackCoordinator`.
+- 🎙️ **Voice Pitch Preservation**: Configurable `AVAudioTimePitchAlgorithm` (.spectral, .timeDomain, .varispeed) for natural 2x/3x speed podcast playback.
 
 ---
 
@@ -61,7 +63,7 @@
 
 | Platform | Minimum Deployment Target | Swift Version | Xcode Version |
 | :--- | :--- | :--- | :--- |
-| **iOS** | **iOS 18.0+** | **Swift 6.0+** | **Xcode 16.0+** |
+| **iOS** | 18.0+ | 6.0+ | 16.0+ |
 
 ---
 
@@ -72,14 +74,14 @@
 Add AKPlayer directly to your project in Xcode:
 
 1. Go to **File** > **Add Package Dependencies...**
-2. Enter the repository URL: `https://github.com/amalenduk/AKPlayerSPM.git`
+2. Enter the repository URL: `https://github.com/amalenduk/AKPlayer.git`
 3. Select **Up to Next Major Version** with `1.0.0` or your desired branch.
 
 Or add it to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/amalenduk/AKPlayerSPM.git", from: "1.0.0")
+    .package(url: "https://github.com/amalenduk/AKPlayer.git", from: "1.0.0")
 ]
 ```
 
