@@ -325,6 +325,11 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                 guard let self else { return }
                 if success {
                     self.integratedTimelineCurrentTime = CMTimeGetSeconds(timeline.currentTime)
+                    self.emit(.integratedTimeline(.timeUpdated(
+                        currentTime: self.integratedTimelineCurrentTime,
+                        startTime: self.integratedTimelineStartTime,
+                        duration: self.integratedTimelineDuration
+                    )))
                 }
                 completion(success)
             }

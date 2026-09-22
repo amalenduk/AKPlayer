@@ -423,20 +423,23 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
             delegate?.akPlayer(self, didChangeMediaTo: media)
 
         case let .timeDidChange(time):
+            guard let currentMedia else { return }
             delegate?.akPlayer(
                 self,
                 didChangeCurrentTimeTo: time,
-                for: currentMedia!
+                for: currentMedia
             )
 
         case let .didReachEnd(time):
-            delegate?.akPlayer(self, didReachEndAt: time, for: currentMedia!)
+            guard let currentMedia else { return }
+            delegate?.akPlayer(self, didReachEndAt: time, for: currentMedia)
 
         case let .boundaryReached(time):
+            guard let currentMedia else { return }
             delegate?.akPlayer(
                 self,
                 didInvokeBoundaryTimeObserverAt: time,
-                for: currentMedia!
+                for: currentMedia
             )
 
         case let .playbackRateDidChange(newRate, previousRate):

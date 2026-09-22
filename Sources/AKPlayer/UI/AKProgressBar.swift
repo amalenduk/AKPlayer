@@ -371,9 +371,10 @@
 
                 if targetSec > currentSec {
                     // Moving forward: Find first unplayed constrained marker between currentSec and
-                    // targetSec
+                    // targetSec (excluding the currently active ad)
                     let blockingMarker = markers.first { marker in
                         !marker.isPlayed &&
+                            !marker.isCurrent &&
                             !marker.canSeek &&
                             marker.time > currentSec &&
                             marker.time <= targetSec
@@ -388,9 +389,9 @@
                 }
             }
 
-            // 2. Snapping: Snap to nearby ad markers within threshold
+            // 2. Snapping: Snap to nearby discrete single-point ad markers within threshold
             if configuration.enableSnapping, !restricted {
-                for marker in markers {
+                for marker in markers where marker.isSinglePoint {
                     let markerFraction = marker.time / duration
                     if abs(rawFraction - markerFraction) <= configuration.snapThresholdFraction {
                         rawFraction = markerFraction

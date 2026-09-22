@@ -246,9 +246,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
 
     public func seek(to seconds: Double) {
         Task {
-            if interstitialService.integratedTimeline != nil,
-               !interstitialService.integratedTimelineFillSegments.isEmpty
-            {
+            if interstitialService.integratedTimeline != nil {
                 await player.seek(to: .seconds(seconds), scope: .integrated)
             } else {
                 await player.seek(to: .seconds(seconds))
@@ -262,9 +260,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
 
     public func seekOffset(_ offset: Double) {
         Task {
-            if interstitialService.integratedTimeline != nil,
-               !interstitialService.integratedTimelineFillSegments.isEmpty
-            {
+            if interstitialService.integratedTimeline != nil {
                 await player.seek(to: .offset(offset), scope: .integrated)
             } else {
                 await player.seek(to: .offset(offset))
@@ -488,9 +484,10 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
         for media: any AKPlayable
     ) {
         DispatchQueue.main.async {
-            let hasIntegratedFill = (self.interstitialService.integratedTimeline != nil && !self
-                .interstitialService.integratedTimelineFillSegments.isEmpty)
-            if !hasIntegratedFill, !self.isInterstitialActive {
+            let hasIntegratedTimeline = (self.interstitialService.integratedTimeline != nil)
+            if !hasIntegratedTimeline, !self.isInterstitialActive,
+               !self.interstitialService.isPlayingInterstitial
+            {
                 self.currentTime = currentTime.seconds
                 let dur = player.currentItemDuration.seconds
                 if dur.isFinite, dur > 0, self.duration != dur {
