@@ -166,7 +166,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         guard let asset else {
             throw AKPlayerError.assetLoadingFailed(reason: .notPlayable)
         }
-        try await playerItemInitService.validatePlayability(of: asset)
+        try await playerItemInitService.validatePlayability(of: asset, for: media)
     }
 
     /// Constructs an `AVPlayerItem` from the initialized `AVURLAsset` and binds observers.

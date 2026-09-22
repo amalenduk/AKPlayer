@@ -39,6 +39,9 @@ public enum AKPlayerError: Error, Equatable, @unchecked Sendable {
     case nowPlayingSessionFailure
     /// Indicates that selecting or inspecting audio/subtitle/closed-caption tracks failed.
     case trackSelectionFailure(reason: TrackSelectionFailureReason)
+    /// Indicates that FairPlay DRM certificate loading, SPC generation, or license key exchange
+    /// failed.
+    case fairPlay(reason: AKFairPlayError)
 
     // MARK: - Sub-Reason Enumerations
 
@@ -287,6 +290,8 @@ extension AKPlayerError: LocalizedError {
             )
         case let .trackSelectionFailure(reason):
             return reason.localizedDescription
+        case let .fairPlay(reason):
+            return reason.localizedDescription
         }
     }
 
@@ -368,7 +373,7 @@ public extension AKPlayerError {
     var underlyingError: Error? {
         switch self {
         case .noItemToPlay, .playerItemNotReady, .itemFailedToPlayToEndTime,
-             .nowPlayingSessionFailure:
+             .nowPlayingSessionFailure, .fairPlay:
             nil
         case let .playerCanNoLongerPlay(error):
             error
@@ -419,6 +424,9 @@ public func == (lhs: AKPlayerError, rhs: AKPlayerError) -> Bool {
         lReason == rReason
 
     case let (.trackSelectionFailure(lReason), .trackSelectionFailure(rReason)):
+        lReason == rReason
+
+    case let (.fairPlay(lReason), .fairPlay(rReason)):
         lReason == rReason
 
     default:

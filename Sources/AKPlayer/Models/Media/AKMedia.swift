@@ -36,6 +36,12 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// Optional static Now Playing metadata associated with the media.
     public private(set) var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)?
 
+    /// Optional FairPlay Streaming DRM configuration settings.
+    public let fairPlayConfiguration: AKFairPlayConfiguration?
+
+    /// Optional FairPlay DRM key session handler.
+    public let fairPlayHandler: (any AKFairPlayHandlerProtocol)?
+
     /// The cache policy for this media item.
     public var cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable
 
@@ -59,6 +65,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ///   - type: The media type classification.
     ///   - customAsset: Optional custom pre-configured asset.
     ///   - customPlayerItem: Optional custom pre-configured player item.
+    ///   - fairPlay: Optional FairPlay DRM configuration.
+    ///   - fairPlayHandler: Optional FairPlay DRM handler instance.
     ///   - assetInitializationOptions: Options dictionary for initializing `AVURLAsset`.
     ///   - automaticallyLoadedAssetKeys: Asset property keys to pre-load.
     ///   - staticMetadata: Static Now Playing metadata.
@@ -70,6 +78,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         type: AKMediaType,
         customAsset: AVURLAsset? = nil,
         customPlayerItem: AVPlayerItem? = nil,
+        fairPlay: AKFairPlayConfiguration? = nil,
+        fairPlayHandler: (any AKFairPlayHandlerProtocol)? = nil,
         assetInitializationOptions: [String: Any]? = nil,
         automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? = nil,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
@@ -81,6 +91,10 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.type = type
         self.customAsset = customAsset
         self.customPlayerItem = customPlayerItem
+        self.fairPlayConfiguration = fairPlay
+        self
+            .fairPlayHandler = fairPlayHandler ??
+            (fairPlay.map { AKFairPlayHandler(configuration: $0) })
         self.assetInitializationOptions = assetInitializationOptions
         self.automaticallyLoadedAssetKeys = automaticallyLoadedAssetKeys
         self.staticMetadata = staticMetadata
@@ -94,6 +108,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// - Parameters:
     ///   - asset: The custom pre-configured `AVURLAsset`.
     ///   - type: The media type classification. Defaults to `.clip`.
+    ///   - fairPlay: Optional FairPlay DRM configuration.
+    ///   - fairPlayHandler: Optional FairPlay DRM handler instance.
     ///   - automaticallyLoadedAssetKeys: Optional asset property keys to pre-load. Defaults to
     /// `nil`.
     ///   - staticMetadata: Optional static Now Playing metadata. Defaults to `nil`.
@@ -103,6 +119,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     public init(
         asset: AVURLAsset,
         type: AKMediaType = .clip,
+        fairPlay: AKFairPlayConfiguration? = nil,
+        fairPlayHandler: (any AKFairPlayHandlerProtocol)? = nil,
         automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? = nil,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
@@ -113,6 +131,10 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.type = type
         customAsset = asset
         customPlayerItem = nil
+        self.fairPlayConfiguration = fairPlay
+        self
+            .fairPlayHandler = fairPlayHandler ??
+            (fairPlay.map { AKFairPlayHandler(configuration: $0) })
         assetInitializationOptions = nil
         self.automaticallyLoadedAssetKeys = automaticallyLoadedAssetKeys
         self.staticMetadata = staticMetadata
@@ -129,6 +151,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// - Parameters:
     ///   - playerItem: The custom pre-configured `AVPlayerItem`.
     ///   - type: The media type classification. Defaults to `.clip`.
+    ///   - fairPlay: Optional FairPlay DRM configuration.
+    ///   - fairPlayHandler: Optional FairPlay DRM handler instance.
     ///   - staticMetadata: Optional static Now Playing metadata. Defaults to `nil`.
     ///   - cachePolicy: Cache policy for this media item. Defaults to `.useCacheIfAvailable`.
     ///   - cacheManager: Optional custom cache manager instance. Defaults to `nil`.
@@ -137,6 +161,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     public init(
         playerItem: AVPlayerItem,
         type: AKMediaType = .clip,
+        fairPlay: AKFairPlayConfiguration? = nil,
+        fairPlayHandler: (any AKFairPlayHandlerProtocol)? = nil,
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
         cacheManager: (any AKMediaCacheProtocol)? = nil,
@@ -147,6 +173,10 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.type = type
         customAsset = asset
         customPlayerItem = playerItem
+        self.fairPlayConfiguration = fairPlay
+        self
+            .fairPlayHandler = fairPlayHandler ??
+            (fairPlay.map { AKFairPlayHandler(configuration: $0) })
         assetInitializationOptions = nil
         automaticallyLoadedAssetKeys = nil
         self.staticMetadata = staticMetadata

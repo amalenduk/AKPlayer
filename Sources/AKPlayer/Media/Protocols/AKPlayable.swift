@@ -55,6 +55,12 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
     /// for non-live media.
     var liveEdgeThreshold: TimeInterval? { get }
 
+    /// Optional FairPlay Streaming (FPS) DRM configuration settings.
+    var fairPlayConfiguration: AKFairPlayConfiguration? { get }
+
+    /// Optional FairPlay DRM key session handler.
+    var fairPlayHandler: (any AKFairPlayHandlerProtocol)? { get }
+
     /// Indicates whether the media item is a live stream.
     func isLive() -> Bool
 
@@ -65,6 +71,16 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 // MARK: - Default Property Implementations
 
 public extension AKPlayable {
+    /// Default FairPlay configuration (returns `nil`).
+    var fairPlayConfiguration: AKFairPlayConfiguration? {
+        nil
+    }
+
+    /// Default FairPlay handler (returns `nil`).
+    var fairPlayHandler: (any AKFairPlayHandlerProtocol)? {
+        nil
+    }
+
     /// Default custom AVURLAsset instance (returns `nil`).
     var customAsset: AVURLAsset? {
         nil

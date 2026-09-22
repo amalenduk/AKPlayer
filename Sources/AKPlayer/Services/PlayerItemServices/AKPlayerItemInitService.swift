@@ -22,10 +22,17 @@ public protocol AKPlayerItemInitServiceProtocol: Sendable {
     func createAsset(for media: any AKPlayable) async -> AVURLAsset
 
     /// Validates asynchronous playability and DRM protection keys
-    func validatePlayability(of asset: AVURLAsset) async throws
+    func validatePlayability(of asset: AVURLAsset, for media: (any AKPlayable)?) async throws
 
     /// Constructs and returns an AVPlayerItem configured with automatically loaded keys
     func createPlayerItem(from asset: AVURLAsset, for media: any AKPlayable) -> AVPlayerItem
+}
+
+public extension AKPlayerItemInitServiceProtocol {
+    /// Backward-compatible overload for playability validation without media reference.
+    func validatePlayability(of asset: AVURLAsset) async throws {
+        try await validatePlayability(of: asset, for: nil)
+    }
 }
 
 /// Service managing the creation, validation, and initialization of `AVURLAsset` and `AVPlayerItem`
@@ -38,7 +45,7 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     /// - Parameter media: The media item for which to create the asset.
     /// - Returns: A configured `AVURLAsset`.
     public func createAsset(for media: any AKPlayable) async -> AVURLAsset {
-        if let custom = media.customAsset {
+        let asset: AVURLAsset = if let custom = media.customAsset {
             custom
         } else if let customItem = media.customPlayerItem,
                   let itemAsset = await MainActor.run(body: { customItem.asset as? AVURLAsset })
@@ -55,11 +62,22 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
                 options: media.assetInitializationOptions
             )
         }
+
+        if let fairPlay = media.fairPlayHandler {
+            fairPlay.attach(to: asset)
+        }
+
+        return asset
     }
 
     /// Validates asynchronous playability and DRM protection keys on the given asset.
-    /// - Parameter asset: The `AVURLAsset` to validate.
-    public func validatePlayability(of asset: AVURLAsset) async throws {
+    /// - Parameters:
+    ///   - asset: The `AVURLAsset` to validate.
+    ///   - media: Optional reference to the playable item to check for FairPlay DRM configuration.
+    public func validatePlayability(
+        of asset: AVURLAsset,
+        for media: (any AKPlayable)? = nil
+    ) async throws {
         do {
             let (isPlayable, hasProtectedContent) = try await asset.load(
                 .isPlayable,
@@ -71,8 +89,13 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
             guard isPlayable else {
                 throw AKPlayerError.assetLoadingFailed(reason: .notPlayable)
             }
-            guard !hasProtectedContent else {
-                throw AKPlayerError.assetLoadingFailed(reason: .protectedContent)
+
+            if hasProtectedContent {
+                let isDrmConfigured = (media?.fairPlayHandler != nil || media?
+                    .fairPlayConfiguration != nil)
+                if !isDrmConfigured {
+                    throw AKPlayerError.assetLoadingFailed(reason: .protectedContent)
+                }
             }
 
         } catch is CancellationError {

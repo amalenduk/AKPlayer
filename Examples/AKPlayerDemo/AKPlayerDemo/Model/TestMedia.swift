@@ -223,7 +223,35 @@ public let sampleTestMedia: [TestMedia] = [
         subtitleLanguages: ["en"]
     ),
 
-    // 4. iReplay 24/7 Live Stream
+    // 4. FairPlay Streaming DRM Stream
+    TestMedia(
+        name: "FairPlay DRM Stream (Sample)",
+        subtitle: "HLS FairPlay Streaming (FPS) • AVContentKeySession DRM",
+        url: URL(
+            string: "https://fps.example.com/protected/master.m3u8"
+        ),
+        kind: .clip,
+        isPlayable: true,
+        note: """
+        FairPlay Streaming DRM protected HLS stream managed by AKFairPlayHandler.
+
+        🔐 DRM Specifications:
+        • Scheme: FairPlay Streaming (FPS)
+        • Session: AVContentKeySession with .fairPlayStreaming
+        • Key Exchange: Automated SPC generation & KSM license exchange
+        • Key Types: Online streaming & persistable offline keys
+        """,
+        testCapabilities: [
+            "AVContentKeySessionDelegate lifecycle handling",
+            "Automatic Application Certificate fetch & caching",
+            "SPC generation & KSM license request/response",
+            "Persistable offline content key storage",
+        ],
+        audioLanguages: ["en"],
+        subtitleLanguages: ["en"]
+    ),
+
+    // 5. iReplay 24/7 Live Stream
     TestMedia(
         name: "iReplay 24/7 Live Stream",
         subtitle: "Continuous Live Broadcast + fMP4 + Sliding Window DVR",
