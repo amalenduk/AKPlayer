@@ -67,6 +67,11 @@ public class AKLoadingState: AKBaseState {
     }
 
     deinit {
+        task?.cancel()
+        task = nil
+        mediaObservationTask?.cancel()
+        mediaObservationTask = nil
+        isCancelled = true
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)

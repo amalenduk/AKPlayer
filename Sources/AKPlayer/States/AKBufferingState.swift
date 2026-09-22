@@ -76,6 +76,11 @@ public class AKBufferingState: AKBaseState {
     }
 
     deinit {
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        networkObservationTask?.cancel()
+        networkObservationTask = nil
+        observations.removeAll()
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)

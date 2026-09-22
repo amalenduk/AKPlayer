@@ -250,6 +250,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
                 pointer: Unmanaged.passUnretained(self)
             )
         }
+        networkStatusMonitor.stopObserving()
         observations.removeAll()
         rateObservationTask?.cancel()
         rateObservationTask = nil

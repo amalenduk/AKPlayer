@@ -1,6 +1,6 @@
 # ``AKPlayer``
 
-A modern, highly modular, Swift 6 concurrency-ready audio/video playback framework for iOS and Apple platforms.
+A modern, highly modular, Swift 6 concurrency-ready audio/video playback framework for iOS.
 
 @Metadata {
     @TechnologyRoot

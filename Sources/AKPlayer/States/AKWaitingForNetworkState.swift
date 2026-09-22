@@ -90,6 +90,10 @@ public class AKWaitingForNetworkState: AKBaseState {
     }
 
     deinit {
+        retryTask?.cancel()
+        retryTask = nil
+        networkObservationTask?.cancel()
+        networkObservationTask = nil
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)

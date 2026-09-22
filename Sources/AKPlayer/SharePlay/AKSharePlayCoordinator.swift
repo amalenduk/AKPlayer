@@ -21,7 +21,7 @@ public final class AKSharePlayCoordinator: NSObject, AKSharePlayCoordinatorProto
     // MARK: - Properties
 
     /// The underlying `AVPlayer` driving playback.
-    private unowned let player: AVPlayer
+    private weak var player: AVPlayer?
 
     /// Optional weak reference to the player controller for event dispatching.
     private weak var playerController: (any AKPlayerControllerProtocol)?
@@ -86,8 +86,12 @@ public final class AKSharePlayCoordinator: NSObject, AKSharePlayCoordinatorProto
 
     deinit {
         sessionObservationTask?.cancel()
+        sessionObservationTask = nil
         sessionStateTask?.cancel()
+        sessionStateTask = nil
         participantsTask?.cancel()
+        participantsTask = nil
+        player?.playbackCoordinator.delegate = nil
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
@@ -177,7 +181,7 @@ public final class AKSharePlayCoordinator: NSObject, AKSharePlayCoordinatorProto
         state = .connecting
 
         // Connect AVPlayer to the group activity session
-        player.playbackCoordinator.coordinateWithSession(session)
+        player?.playbackCoordinator.coordinateWithSession(session)
 
         // Observe session state transitions
         sessionStateTask = Task { [weak self, weak session] in
