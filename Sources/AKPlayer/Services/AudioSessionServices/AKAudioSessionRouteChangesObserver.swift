@@ -172,4 +172,22 @@ public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChange
         audioSession.currentRoute.outputs
             .contains(where: { $0.portType == .headphones })
     }
+
+    /// Determines whether an AirPlay destination is currently connected as an audio output route.
+    /// - Returns: `true` if an AirPlay output port is active; otherwise, `false`.
+    public func isAirPlayConnected() -> Bool {
+        audioSession.currentRoute.outputs
+            .contains(where: { $0.portType == .airPlay })
+    }
+
+    /// Determines whether a Bluetooth device (A2DP, LE, HFP) is currently connected as an audio output route.
+    /// - Returns: `true` if a Bluetooth output port is active; otherwise, `false`.
+    public func isBluetoothConnected() -> Bool {
+        audioSession.currentRoute.outputs
+            .contains(where: {
+                $0.portType == .bluetoothA2DP ||
+                $0.portType == .bluetoothLE ||
+                $0.portType == .bluetoothHFP
+            })
+    }
 }

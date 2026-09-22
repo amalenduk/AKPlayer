@@ -15,6 +15,7 @@ public struct TestMediaListView: View {
     @State private var selectedMedia: TestMedia?
     @State private var playerMedia: TestMedia?
     @State private var livePlayerMedia: TestMedia?
+    @State private var audiobookPlayerMedia: TestMedia?
     @State private var isQueuePlayerPresented: Bool = false
     @State private var queueStartIndex: Int = 0
     
@@ -64,7 +65,13 @@ public struct TestMediaListView: View {
                             Button {
                                 playerMedia = media
                             } label: {
-                                Label("Play Single", systemImage: "play.circle")
+                                Label("Play Video", systemImage: "play.circle")
+                            }
+                            
+                            Button {
+                                audiobookPlayerMedia = media
+                            } label: {
+                                Label("Play as Audiobook / Podcast", systemImage: "book.fill")
                             }
                             
                             Button {
@@ -143,7 +150,13 @@ public struct TestMediaListView: View {
                     Button {
                         playerMedia = media
                     } label: {
-                        Label("Play Single", systemImage: "play.circle")
+                        Label("Play Video", systemImage: "play.circle")
+                    }
+                    
+                    Button {
+                        audiobookPlayerMedia = media
+                    } label: {
+                        Label("Play as Audiobook / Podcast", systemImage: "book.fill")
                     }
                     
                     Button {
@@ -228,13 +241,15 @@ public struct TestMediaListView: View {
                                         .font(.headline)
                                     
                                     Text(note)
-                                        .font(.subheadline)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                         .padding()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .background(Color(.secondarySystemBackground))
                                         .cornerRadius(10)
                                 }
                             }
+                            
+                            Spacer(minLength: 20)
                             
                             if let url = media.url {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -261,21 +276,30 @@ public struct TestMediaListView: View {
                             Menu {
                                 if media.kind == .live {
                                     Button("Play in Live Player (Jump to Live)") {
-                                        let chosen = media
+                                        let live = media
                                         selectedMedia = nil
                                         Task { @MainActor in
                                             await Task.yield()
-                                            livePlayerMedia = chosen
+                                            livePlayerMedia = live
                                         }
                                     }
                                 }
                                 
-                                Button("Play Single") {
-                                    let chosen = media
+                                Button("Play Video") {
+                                    let single = media
                                     selectedMedia = nil
                                     Task { @MainActor in
                                         await Task.yield()
-                                        playerMedia = chosen
+                                        playerMedia = single
+                                    }
+                                }
+                                
+                                Button("Play as Audiobook / Podcast") {
+                                    let audio = media
+                                    selectedMedia = nil
+                                    Task { @MainActor in
+                                        await Task.yield()
+                                        audiobookPlayerMedia = audio
                                     }
                                 }
                                 
@@ -303,6 +327,12 @@ public struct TestMediaListView: View {
                         autoPlay: true
                     )
                 }
+            }
+            .fullScreenCover(item: $audiobookPlayerMedia) { media in
+                AudiobookPlayerView(
+                    media: makeAKMedia(from: media),
+                    autoPlay: true
+                )
             }
             .fullScreenCover(item: $livePlayerMedia) { media in
                 NavigationStack {

@@ -32,6 +32,10 @@ public struct AKAudioSessionConfiguration: Sendable {
     /// Defaults to empty set `[]`.
     public var categoryOptions: AVAudioSession.CategoryOptions = []
     
+    /// The route sharing policy for AirPlay and multi-route audio routing.
+    /// Defaults to `.default`.
+    public var routeSharingPolicy: AVAudioSession.RouteSharingPolicy = .default
+    
     // MARK: - Initialization
     
     /// Initializes a new audio session configuration with customizable options.
@@ -40,16 +44,19 @@ public struct AKAudioSessionConfiguration: Sendable {
     ///   - activeOptions: Options applied during session activation/deactivation. Defaults to `[]`.
     ///   - mode: The intended operational audio session mode. Defaults to `.default`.
     ///   - categoryOptions: Options refining audio category behavior. Defaults to `[]`.
+    ///   - routeSharingPolicy: Route sharing policy for AirPlay/multi-room audio. Defaults to `.default`.
     public init(
         category: AVAudioSession.Category = .playback,
         activeOptions: AVAudioSession.SetActiveOptions = [],
         mode: AVAudioSession.Mode = .default,
-        categoryOptions: AVAudioSession.CategoryOptions = []
+        categoryOptions: AVAudioSession.CategoryOptions = [],
+        routeSharingPolicy: AVAudioSession.RouteSharingPolicy = .default
     ) {
         self.category = category
         self.activeOptions = activeOptions
         self.mode = mode
         self.categoryOptions = categoryOptions
+        self.routeSharingPolicy = routeSharingPolicy
     }
 }
 
@@ -61,7 +68,8 @@ extension AKAudioSessionConfiguration: Equatable {
         lhs.category == rhs.category &&
         lhs.activeOptions.rawValue == rhs.activeOptions.rawValue &&
         lhs.mode == rhs.mode &&
-        lhs.categoryOptions.rawValue == rhs.categoryOptions.rawValue
+        lhs.categoryOptions.rawValue == rhs.categoryOptions.rawValue &&
+        lhs.routeSharingPolicy == rhs.routeSharingPolicy
     }
 }
 
@@ -72,6 +80,7 @@ extension AKAudioSessionConfiguration: Hashable {
         hasher.combine(activeOptions.rawValue)
         hasher.combine(mode)
         hasher.combine(categoryOptions.rawValue)
+        hasher.combine(routeSharingPolicy)
     }
 }
 

@@ -18,6 +18,7 @@ struct AKPlayerUIView: UIViewRepresentable {
     func makeUIView(context: Context) -> AKPlayerView {
         let v = AKPlayerView()
         v.player = viewModel.player.player
+        v.playerLayer.videoGravity = viewModel.videoGravity
         
         // Setup Picture-in-Picture controller using the AKPlayerView layer
         viewModel.setupPip(with: v.playerLayer)
@@ -28,6 +29,9 @@ struct AKPlayerUIView: UIViewRepresentable {
     func updateUIView(_ uiView: AKPlayerView, context: Context) {
         if uiView.player != viewModel.player.player {
             uiView.player = viewModel.player.player
+        }
+        if uiView.playerLayer.videoGravity != viewModel.videoGravity {
+            uiView.playerLayer.videoGravity = viewModel.videoGravity
         }
     }
     
@@ -141,6 +145,28 @@ public struct SimpleVideoPlayerView: View {
                 )
             
             Spacer()
+            
+            // Quick Subtitle CC Button
+            Button {
+                viewModel.toggleQuickSubtitles()
+            } label: {
+                Image(systemName: viewModel.isSubtitleEnabled ? "captions.bubble.fill" : "captions.bubble")
+                    .font(.body)
+                    .foregroundColor(viewModel.isSubtitleEnabled ? .yellow : .primary)
+            }
+            .buttonStyle(.bordered)
+            
+            // Video Aspect Ratio Toggle (Fit / Fill / Stretch)
+            Button {
+                viewModel.toggleVideoGravity()
+            } label: {
+                HStack(spacing: 2) {
+                    Image(systemName: viewModel.videoGravity == .resizeAspect ? "aspectratio" : (viewModel.videoGravity == .resizeAspectFill ? "arrow.up.left.and.arrow.down.right" : "arrow.left.and.right"))
+                    Text(viewModel.videoGravity == .resizeAspect ? "Fit" : (viewModel.videoGravity == .resizeAspectFill ? "Fill" : "Stretch"))
+                        .font(.caption2)
+                }
+            }
+            .buttonStyle(.bordered)
             
             if viewModel.isPipPossible {
                 Button {

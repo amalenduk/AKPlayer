@@ -57,9 +57,16 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     // Track Selection Groups backed by AKTrackSelectionService
     @Published public var selectionGroups: [SelectionGroup] = []
     
+    // Video Aspect Ratio & Fill Mode
+    @Published public var videoGravity: AVLayerVideoGravity = .resizeAspect
+    
     // Chapters backed by AKChapterService
     @Published public var chapters: [AKChapter] = []
     @Published public var currentChapter: AKChapter?
+    
+    // Quick Subtitles
+    @Published public var isSubtitleEnabled: Bool = false
+    @Published public var activeSubtitleLanguage: String?
     
     private var clearUnavailableWorkItem: DispatchWorkItem?
     private nonisolated(unsafe) var interstitialTask: Task<Void, Never>?
@@ -301,6 +308,50 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 self.refreshSelectionGroups()
             } catch {
                 print("Failed to select track: \(error)")
+            }
+        }
+    }
+    
+    public func toggleVideoGravity() {
+        if videoGravity == .resizeAspect {
+            videoGravity = .resizeAspectFill
+        } else if videoGravity == .resizeAspectFill {
+            videoGravity = .resize
+        } else {
+            videoGravity = .resizeAspect
+        }
+    }
+    
+    public func toggleQuickSubtitles() {
+        guard let media = player.currentMedia else { return }
+        Task {
+            do {
+                if isSubtitleEnabled {
+                    try await media.trackSelection.select(.off, for: .subtitle)
+                    await MainActor.run {
+                        self.isSubtitleEnabled = false
+                        self.activeSubtitleLanguage = nil
+                    }
+                } else {
+                    let subtitles = try await media.trackSelection.availableTracks(for: .subtitle)
+                    if let firstOption = subtitles.first(where: { $0 != .off }) {
+                        try await media.trackSelection.select(firstOption, for: .subtitle)
+                        await MainActor.run {
+                            self.isSubtitleEnabled = true
+                            self.activeSubtitleLanguage = firstOption.title
+                        }
+                    } else {
+                        try await media.trackSelection.selectPreferredTrack(for: .subtitle)
+                        let current = try await media.trackSelection.selectedTrack(for: .subtitle)
+                        await MainActor.run {
+                            self.isSubtitleEnabled = (current != nil && current != .off)
+                            self.activeSubtitleLanguage = current?.title
+                        }
+                    }
+                }
+                self.refreshSelectionGroups()
+            } catch {
+                print("Failed to toggle quick subtitles: \(error)")
             }
         }
     }

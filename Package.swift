@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "AKPlayer",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v18)
     ],
@@ -16,7 +17,10 @@ let package = Package(
         .target(
             name: "AKPlayer",
             dependencies: [],
-            path: "Sources/AKPlayer"
+            path: "Sources/AKPlayer",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "AKPlayerTests",
@@ -26,3 +30,4 @@ let package = Package(
     ],
     swiftLanguageModes: [.v6]
 )
+

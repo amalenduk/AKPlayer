@@ -506,6 +506,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         try audioSessionService.setCategory(
             configuration.audioSession.category,
             mode: configuration.audioSession.mode,
+            policy: configuration.audioSession.routeSharingPolicy,
             options: configuration.audioSession.categoryOptions
         )
         try audioSessionService.activate(
