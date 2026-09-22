@@ -196,8 +196,10 @@ You can inspect the state at any time via `player.state` or subscribe to asynchr
 
 ```swift
 Task {
-    for await state in player.stateEvents {
-        print("Player transitioned to: \(state)")
+    for await event in player.events {
+        if case .stateDidChange(let state) = event {
+            print("Player transitioned to: \(state)")
+        }
     }
 }
 ```
@@ -274,10 +276,15 @@ if player.isLive {
     player.jumpToLive()
 }
 
-// Observe live offset updates
+// Observe player events for live status & time updates
 Task {
-    for await isAtLiveEdge in player.isLiveBroadcastHeadStream {
-        print("User is watching live edge: \(isAtLiveEdge)")
+    for await event in player.events {
+        switch event {
+        case .timeDidChange(let time):
+            print("Current playback time: \(time.seconds), isAtLiveEdge: \(player.isAtLiveEdge)")
+        default:
+            break
+        }
     }
 }
 ```
@@ -452,27 +459,44 @@ let player = AKPlayer(configuration: config)
 
 AKPlayer supports both **Swift Modern Concurrency (`AsyncStream`)** and the **Delegate Pattern (`AKPlayerDelegate`)**.
 
-### Using AsyncStream
+### Using AsyncStream (`player.events`)
+
+Subscribe to the unified `player.events` stream:
 
 ```swift
-// State Changes
 Task {
-    for await state in player.stateEvents {
-        print("State: \(state)")
-    }
-}
-
-// Playback Time
-Task {
-    for await time in player.playbackTimeObserver.periodicTimes {
-        print("Current time: \(time.seconds)")
-    }
-}
-
-// Rate Changes
-Task {
-    for await rateChange in player.rateObserver.rateChanges {
-        print("Rate changed to: \(rateChange.currentRate.rate)")
+    for await event in player.events {
+        switch event {
+        case .stateDidChange(let state):
+            print("State: \(state)")
+            
+        case .timeDidChange(let time):
+            print("Current time: \(time.seconds)")
+            
+        case .playbackRateDidChange(let newRate, let previousRate):
+            print("Playback rate changed from \(previousRate) to \(newRate)")
+            
+        case .mediaDidChange(let newMedia):
+            print("Active media updated: \(newMedia)")
+            
+        case .didReachEnd(let time):
+            print("Media played to end at: \(time.seconds)")
+            
+        case .boundaryReached(let time):
+            print("Boundary time crossed at: \(time.seconds)")
+            
+        case .volumeDidChange(let volume):
+            print("Volume changed: \(volume)")
+            
+        case .muteStatusDidChange(let isMuted):
+            print("Mute status changed: \(isMuted)")
+            
+        case .commandUnavailable(let reason):
+            print("Command unavailable: \(reason)")
+            
+        case .didFail(let error):
+            print("Playback error: \(error)")
+        }
     }
 }
 ```
