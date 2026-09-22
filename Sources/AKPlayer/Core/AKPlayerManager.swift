@@ -115,6 +115,13 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.events
     }
 
+    // MARK: - SharePlay
+
+    /// Coordinator managing Apple SharePlay (`GroupActivities`) synchronization.
+    public var sharePlay: (any AKSharePlayCoordinatorProtocol)? {
+        playerController.sharePlay
+    }
+
     // MARK: - Live Stream Properties
 
     /// Indicates whether the active media is a live broadcast stream.

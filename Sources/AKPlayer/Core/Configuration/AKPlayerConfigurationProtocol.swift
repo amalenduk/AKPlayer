@@ -159,6 +159,13 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     /// `MPNowPlayingInfoCenter` and remote commands is enabled.
     var isNowPlayingEnabled: Bool { get set }
 
+    /// Indicates whether Apple SharePlay (`GroupActivities`) integration is enabled.
+    /// Defaults to `true`.
+    var isSharePlayEnabled: Bool { get set }
+
+    /// The configuration parameters applied to Apple SharePlay (`GroupActivities`) coordination.
+    var sharePlay: AKSharePlayConfiguration { get set }
+
     /// The list of player states during which the system idle timer (screen
     /// sleep) is disabled.
     var idleTimerDisabledForStates: [AKPlayerState] { get set }

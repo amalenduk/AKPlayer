@@ -8,6 +8,7 @@
 
 import AVFoundation
 import Foundation
+import GroupActivities
 
 // MARK: - AKPlayerProtocol
 
@@ -78,6 +79,11 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
     /// An asynchronous sequence of player lifecycle and playback events.
     var events: AsyncStream<AKPlayerEvent> { get }
 
+    // MARK: - SharePlay
+
+    /// Coordinator managing Apple SharePlay (`GroupActivities`) synchronization and sessions.
+    var sharePlay: (any AKSharePlayCoordinatorProtocol)? { get }
+
     // MARK: - Live Stream Properties
 
     /// Indicates whether the active media is a live broadcast stream.
@@ -130,5 +136,44 @@ public extension AKPlayerProtocol {
     /// Indicates whether playback has encountered a fatal error.
     var isFailed: Bool {
         state.isFailed
+    }
+}
+
+// MARK: - SharePlay Actions Extension
+
+public extension AKPlayerProtocol {
+    /// Initiates a SharePlay group session for the currently active media (or explicit media item).
+    /// - Parameter media: The media item to share. Defaults to `currentMedia`.
+    /// - Returns: A boolean indicating whether activation was initiated.
+    @discardableResult
+    func startSharePlay(for media: (any AKPlayable)? = nil) async throws -> Bool {
+        guard let targetMedia = media ?? currentMedia else {
+            throw AKPlayerError.noItemToPlay
+        }
+        guard let coordinator = sharePlay else {
+            throw AKPlayerError.sharePlay(reason: .notEligibleForSharePlay)
+        }
+        return try await coordinator.activate(for: targetMedia)
+    }
+
+    /// Prepares the group activity for activation, displaying system SharePlay confirmation if
+    /// required.
+    /// - Parameter media: The media item to prepare. Defaults to `currentMedia`.
+    /// - Returns: The system activation result.
+    func prepareSharePlay(for media: (any AKPlayable)? = nil) async
+        -> GroupActivityActivationResult?
+    {
+        guard let targetMedia = media ?? currentMedia else { return nil }
+        return await sharePlay?.prepareForActivation(for: targetMedia)
+    }
+
+    /// Leaves the active SharePlay session for the local user.
+    func leaveSharePlay() {
+        sharePlay?.leave()
+    }
+
+    /// Terminates the active SharePlay session for all participants in the group.
+    func endSharePlay() {
+        sharePlay?.end()
     }
 }

@@ -84,6 +84,13 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// `true`.
     public var isNowPlayingEnabled: Bool
 
+    /// Indicates whether Apple SharePlay (`GroupActivities`) integration is enabled. Defaults to
+    /// `true`.
+    public var isSharePlayEnabled: Bool
+
+    /// The configuration parameters applied to Apple SharePlay (`GroupActivities`) coordination.
+    public var sharePlay: AKSharePlayConfiguration
+
     /// The list of player states during which the system idle timer (screen
     /// sleep) is disabled. Defaults to `[.buffering, .playing]`.
     public var idleTimerDisabledForStates: [AKPlayerState]
@@ -190,6 +197,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         playbackResumesWhenAudioSessionInterruptionEnded: Bool = true,
         playbackFreezesAtEnd: Bool = true,
         isNowPlayingEnabled: Bool = true,
+        isSharePlayEnabled: Bool = true,
+        sharePlay: AKSharePlayConfiguration = .default,
         idleTimerDisabledForStates: [AKPlayerState] = [.buffering, .playing],
         fastForwardRate: AKPlaybackRate = .superfast,
         rewindRate: AKPlaybackRate = .slowest,
@@ -216,6 +225,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
             playbackResumesWhenAudioSessionInterruptionEnded
         self.playbackFreezesAtEnd = playbackFreezesAtEnd
         self.isNowPlayingEnabled = isNowPlayingEnabled
+        self.isSharePlayEnabled = isSharePlayEnabled
+        self.sharePlay = sharePlay
         self.idleTimerDisabledForStates = idleTimerDisabledForStates
         self.fastForwardRate = fastForwardRate
         self.rewindRate = rewindRate

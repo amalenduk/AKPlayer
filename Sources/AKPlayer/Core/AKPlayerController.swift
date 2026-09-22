@@ -153,6 +153,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Service monitoring network availability and reachability changes.
     public let networkStatusMonitor: any AKNetworkStatusMonitorProtocol
 
+    /// Coordinator managing Apple SharePlay (`GroupActivities`) media playback synchronization.
+    public let sharePlayCoordinator: (any AKSharePlayCoordinatorProtocol)?
+
+    /// Coordinator managing Apple SharePlay (`GroupActivities`) synchronization.
+    public var sharePlay: (any AKSharePlayCoordinatorProtocol)? {
+        sharePlayCoordinator
+    }
+
     // MARK: - Internal Properties
 
     /// The active state controller instance representing current player state
@@ -214,7 +222,25 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             interstitialService: interstitial
         )
         networkStatusMonitor = AKNetworkStatusMonitor()
+
+        if configuration.isSharePlayEnabled {
+            let coordinator = AKSharePlayCoordinator(
+                player: player,
+                configuration: configuration.sharePlay
+            )
+            sharePlayCoordinator = coordinator
+        } else {
+            sharePlayCoordinator = nil
+        }
+
         controller = AKIdleState(playerController: self)
+
+        if let coordinator = sharePlayCoordinator as? AKSharePlayCoordinator {
+            coordinator.attach(playerController: self)
+            if configuration.sharePlay.autoCoordinateIncomingSessions {
+                coordinator.startObservingSessions()
+            }
+        }
     }
 
     deinit {

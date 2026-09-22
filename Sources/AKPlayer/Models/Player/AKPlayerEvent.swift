@@ -46,6 +46,11 @@ public enum AKPlayerEvent: Sendable {
     /// Audio mute toggle state changed.
     case muteStatusDidChange(isMuted: Bool)
 
+    // MARK: - SharePlay
+
+    /// The SharePlay group activity synchronization state changed.
+    case sharePlayStateDidChange(AKSharePlayState)
+
     // MARK: - Warnings & Errors
 
     /// A requested action was blocked because current state preconditions were
@@ -80,6 +85,8 @@ extension AKPlayerEvent: Equatable {
         case let (.volumeDidChange(l), .volumeDidChange(r)):
             l == r
         case let (.muteStatusDidChange(l), .muteStatusDidChange(r)):
+            l == r
+        case let (.sharePlayStateDidChange(l), .sharePlayStateDidChange(r)):
             l == r
         case let (.commandUnavailable(l), .commandUnavailable(r)):
             l == r

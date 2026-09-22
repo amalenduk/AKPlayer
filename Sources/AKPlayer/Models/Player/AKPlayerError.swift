@@ -42,6 +42,9 @@ public enum AKPlayerError: Error, Equatable, @unchecked Sendable {
     /// Indicates that FairPlay DRM certificate loading, SPC generation, or license key exchange
     /// failed.
     case fairPlay(reason: AKFairPlayError)
+    /// Indicates that an Apple SharePlay (GroupActivities) session activation or coordination
+    /// failed.
+    case sharePlay(reason: AKSharePlayError)
 
     // MARK: - Sub-Reason Enumerations
 
@@ -292,6 +295,8 @@ extension AKPlayerError: LocalizedError {
             return reason.localizedDescription
         case let .fairPlay(reason):
             return reason.localizedDescription
+        case let .sharePlay(reason):
+            return reason.localizedDescription
         }
     }
 
@@ -373,7 +378,7 @@ public extension AKPlayerError {
     var underlyingError: Error? {
         switch self {
         case .noItemToPlay, .playerItemNotReady, .itemFailedToPlayToEndTime,
-             .nowPlayingSessionFailure, .fairPlay:
+             .nowPlayingSessionFailure, .fairPlay(_), .sharePlay:
             nil
         case let .playerCanNoLongerPlay(error):
             error
@@ -427,6 +432,9 @@ public func == (lhs: AKPlayerError, rhs: AKPlayerError) -> Bool {
         lReason == rReason
 
     case let (.fairPlay(lReason), .fairPlay(rReason)):
+        lReason == rReason
+
+    case let (.sharePlay(lReason), .sharePlay(rReason)):
         lReason == rReason
 
     default:

@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import GroupActivities
 
 // MARK: - AKPlayer
 
@@ -114,6 +115,13 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     /// Asynchronous stream of player events for Swift Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
         manager.events
+    }
+
+    // MARK: - SharePlay
+
+    /// Coordinator managing Apple SharePlay (`GroupActivities`) synchronization.
+    public var sharePlay: (any AKSharePlayCoordinatorProtocol)? {
+        manager.sharePlay
     }
 
     // MARK: - Live Stream Properties
@@ -460,6 +468,9 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
 
         case let .muteStatusDidChange(isMuted):
             delegate?.akPlayer(self, didChangeMutedStatusTo: isMuted)
+
+        case let .sharePlayStateDidChange:
+            break
 
         case let .commandUnavailable(reason):
             delegate?.akPlayer(self, didEncounterUnavailableAction: reason)
