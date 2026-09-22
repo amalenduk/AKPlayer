@@ -143,7 +143,7 @@ public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleE
                         .notifications(named: UIApplication.willResignActiveNotification)
                     {
                         guard !Task.isCancelled, let self else { break }
-                        handleApplicationWillResignActive()
+                        self.handleApplicationWillResignActive()
                     }
                 }
 
@@ -153,7 +153,7 @@ public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleE
                         .notifications(named: UIApplication.didBecomeActiveNotification)
                     {
                         guard !Task.isCancelled, let self else { break }
-                        handleApplicationDidBecomeActive()
+                        self.handleApplicationDidBecomeActive()
                     }
                 }
 
@@ -163,7 +163,7 @@ public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleE
                         .notifications(named: UIApplication.didEnterBackgroundNotification)
                     {
                         guard !Task.isCancelled, let self else { break }
-                        handleApplicationDidEnterBackground()
+                        self.handleApplicationDidEnterBackground()
                     }
                 }
 
@@ -173,7 +173,7 @@ public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleE
                         .notifications(named: UIApplication.willEnterForegroundNotification)
                     {
                         guard !Task.isCancelled, let self else { break }
-                        handleApplicationWillEnterForeground()
+                        self.handleApplicationWillEnterForeground()
                     }
                 }
             }

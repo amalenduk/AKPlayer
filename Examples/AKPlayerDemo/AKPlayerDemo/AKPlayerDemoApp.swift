@@ -12,7 +12,7 @@ import SwiftUI
 struct AKPlayerDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            TestMediaListView()
+            MainTabView()
         }
     }
 }

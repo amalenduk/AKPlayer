@@ -324,7 +324,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 if success {
-                    integratedTimelineCurrentTime = CMTimeGetSeconds(timeline.currentTime)
+                    self.integratedTimelineCurrentTime = CMTimeGetSeconds(timeline.currentTime)
                 }
                 completion(success)
             }
@@ -369,11 +369,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                 let newItem = player.currentItem
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    currentItem = newItem
+
+                    self.currentItem = newItem
                     if let newItem {
-                        observeTimeline(for: newItem)
+                        self.observeTimeline(for: newItem)
                     } else {
-                        stopObservingTimeline()
+                        self.stopObservingTimeline()
                     }
                 }
             }
@@ -716,8 +717,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                 let newItem = observedPlayer.currentItem
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    observeItemBufferFlags(newItem)
-                    updatePlaybackState()
+                    self.observeItemBufferFlags(newItem)
+                    self.updatePlaybackState()
                 }
             }
         )

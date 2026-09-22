@@ -10,9 +10,15 @@ import AKPlayer
 import Foundation
 import UIKit
 
-public func makeAKMedia(from test: TestMedia) -> AKMedia? {
+public func makeAKMedia(
+    from test: TestMedia,
+    customHeaders: [String: String]? = nil
+) -> AKMedia? {
     guard let url = test.url else { return nil }
-    let headers = ["User-Agent": "AKPlayerDemo/1.0"]
+    var headers = ["User-Agent": "AKPlayerDemo/1.0"]
+    if let customHeaders {
+        headers.merge(customHeaders) { _, new in new }
+    }
     let isAudioOnly = test.name.localizedCaseInsensitiveContains("Audio")
         || (test.subtitle?.localizedCaseInsensitiveContains("Audio") ?? false)
     let staticMetadata = AKNowPlayableStaticMetadata(

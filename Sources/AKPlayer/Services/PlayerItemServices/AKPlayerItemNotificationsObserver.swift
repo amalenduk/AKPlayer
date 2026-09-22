@@ -131,7 +131,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                         object: playerItem
                     ) {
                         guard !Task.isCancelled, let self, let playerItem else { break }
-                        broadcaster.send(.didPlayToEndTime(playerItem.currentTime()))
+                        self.broadcaster.send(.didPlayToEndTime(playerItem.currentTime()))
                     }
                 }
 
@@ -144,7 +144,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                         guard !Task.isCancelled, let self else { break }
                         let nsError = notif
                             .userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? NSError
-                        broadcaster
+                        self.broadcaster
                             .send(
                                 .failedToPlayToEndTime(
                                     .playerItemFailedToPlay(
@@ -164,7 +164,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                         object: playerItem
                     ) {
                         guard !Task.isCancelled, let self else { break }
-                        broadcaster.send(.playbackStalled)
+                        self.broadcaster.send(.playbackStalled)
                     }
                 }
 
@@ -175,7 +175,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                         object: playerItem
                     ) {
                         guard !Task.isCancelled, let self else { break }
-                        broadcaster.send(.timeJumped)
+                        self.broadcaster.send(.timeJumped)
                     }
                 }
 
@@ -186,7 +186,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                         object: playerItem
                     ) {
                         guard !Task.isCancelled, let self else { break }
-                        broadcaster.send(.mediaSelectionDidChange)
+                        self.broadcaster.send(.mediaSelectionDidChange)
                     }
                 }
 
@@ -197,7 +197,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
                         object: playerItem
                     ) {
                         guard !Task.isCancelled, let self, let playerItem else { break }
-                        broadcaster
+                        self.broadcaster
                             .send(.recommendedTimeOffsetFromLiveDidChange(playerItem
                                     .recommendedTimeOffsetFromLive))
                     }

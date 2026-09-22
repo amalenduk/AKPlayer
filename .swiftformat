@@ -17,6 +17,7 @@
 # Clean redundant code
 --redundanttype inferred
 --stripunusedargs always
+--disable redundantSelf
 
 # Modern 4-line Open Source License Header
 --header "\n  {file}\n  AKPlayer\n\n  Copyright (c) 2020 Amalendu Kar. All rights reserved.\n  Licensed under the MIT license. See LICENSE file in the project root.\n"

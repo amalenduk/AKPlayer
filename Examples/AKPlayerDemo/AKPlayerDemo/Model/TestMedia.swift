@@ -69,6 +69,36 @@ public extension TestMediaKind {
 // MARK: - Sample Test Media Catalog
 
 @MainActor
+public var sampleVideoMedia: [TestMedia] {
+    sampleTestMedia.filter { media in
+        media
+            .kind == .clip &&
+            !(media.name.localizedCaseInsensitiveContains("Audiobook") || media.name
+                .localizedCaseInsensitiveContains("SoundHelix") || media.name
+                .localizedCaseInsensitiveContains("Audio-Only"))
+    }
+}
+
+@MainActor
+public var sampleLiveMedia: [TestMedia] {
+    sampleTestMedia.filter { $0.kind == .live }
+}
+
+@MainActor
+public var sampleAudiobookMedia: [TestMedia] {
+    sampleTestMedia.filter { media in
+        media.name.localizedCaseInsensitiveContains("Audiobook") || media.name
+            .localizedCaseInsensitiveContains("SoundHelix") || media.name
+            .localizedCaseInsensitiveContains("Audio-Only")
+    }
+}
+
+@MainActor
+public var sampleQueueMedia: [TestMedia] {
+    sampleTestMedia
+}
+
+@MainActor
 public let sampleTestMedia: [TestMedia] = [
     // 1. Apple TV Trailer Advanced Stream
     TestMedia(
