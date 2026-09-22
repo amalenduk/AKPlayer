@@ -12,12 +12,18 @@ import AVFoundation
 
 /// Defines the supported media track types within the player.
 public enum AKTrackType: String, Sendable, Hashable, CaseIterable, Codable {
+    /// Audible audio soundtrack or language channel.
     case audio
+    /// Legible subtitle text track.
     case subtitle
+    /// Legible closed-captioning track.
     case closedCaption
+    /// Visual alternative video track (e.g., multi-angle video).
     case videoAlternative
+    /// Audible descriptive audio track for visual assistance.
     case audioDescription
     
+    /// The underlying AVMediaCharacteristic corresponding to this track type.
     var mediaCharacteristic: AVMediaCharacteristic {
         switch self {
         case .audio:
@@ -39,6 +45,7 @@ public enum AKTrackType: String, Sendable, Hashable, CaseIterable, Codable {
 /// An internal, thread-safe wrapper box for AVFoundation's non-Sendable
 /// `AVMediaSelectionOption`.
 struct AKMediaOptionBox: @unchecked Sendable {
+    /// The wrapped AVMediaSelectionOption.
     let option: AVMediaSelectionOption?
 }
 
@@ -70,6 +77,7 @@ public struct AKMediaTrackOption: Identifiable, Hashable, Sendable {
     
     private let optionBox: AKMediaOptionBox
     
+    /// The underlying AVMediaSelectionOption representation.
     var option: AVMediaSelectionOption? {
         optionBox.option
     }
@@ -77,6 +85,9 @@ public struct AKMediaTrackOption: Identifiable, Hashable, Sendable {
     // MARK: - Initializers
     
     /// Initializes a track option wrapper from an `AVMediaSelectionOption`.
+    /// - Parameters:
+    ///   - option: The underlying AVFoundation media selection option.
+    ///   - isDefault: Whether this option is the default selection in the media asset.
     public init(option: AVMediaSelectionOption, isDefault: Bool) {
         self.optionBox = AKMediaOptionBox(option: option)
         self.title = option.displayName
@@ -90,6 +101,11 @@ public struct AKMediaTrackOption: Identifiable, Hashable, Sendable {
     }
     
     /// Initializer for custom/mock options or static `.off` state.
+    /// - Parameters:
+    ///   - title: Display title for the track.
+    ///   - id: Unique identifier string for the track option.
+    ///   - languageCode: Language code string (e.g. "en", "es").
+    ///   - isDefault: Whether this option represents the default option.
     public init(title: String, id: String = UUID().uuidString, languageCode: String = "", isDefault: Bool = false) {
         self.optionBox = AKMediaOptionBox(option: nil)
         self.title = title
@@ -105,15 +121,18 @@ public struct AKMediaTrackOption: Identifiable, Hashable, Sendable {
     
     // MARK: - Hashable & Equatable
     
+    /// Returns a boolean value indicating whether two track options are equal based on unique identifiers.
     public static func == (lhs: AKMediaTrackOption, rhs: AKMediaTrackOption) -> Bool {
         lhs.id == rhs.id
     }
     
+    /// Hashes the essential components of this track option into the given hasher.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
 
+/// Represents an available group of selectable media options for a specific track type.
 public struct AKMediaTrackGroup: Identifiable, Hashable, Sendable {
     
     // MARK: - Public Properties
@@ -156,6 +175,12 @@ public struct AKMediaTrackGroup: Identifiable, Hashable, Sendable {
     // MARK: - Initializers
     
     /// Primary initializer for domain use and SwiftUI previews/testing.
+    /// - Parameters:
+    ///   - type: The media track type.
+    ///   - options: The list of available track options in this group.
+    ///   - selectedOption: The currently selected option, if any.
+    ///   - defaultOption: The default option specified by the asset, if any.
+    ///   - allowsEmptySelection: Whether empty selection (e.g. Subtitles Off) is permitted.
     public init(
         type: AKTrackType,
         options: [AKMediaTrackOption],
@@ -172,6 +197,13 @@ public struct AKMediaTrackGroup: Identifiable, Hashable, Sendable {
     }
     
     /// Internal initializer attaching the underlying system `AVMediaSelectionGroup`.
+    /// - Parameters:
+    ///   - type: The media track type.
+    ///   - group: The underlying AVFoundation selection group.
+    ///   - options: The list of track options available.
+    ///   - selectedOption: The currently selected option.
+    ///   - defaultOption: The default option specified by the media.
+    ///   - allowsEmptySelection: Whether deselecting options is permitted.
     init(
         type: AKTrackType,
         group: AVMediaSelectionGroup,
@@ -190,6 +222,7 @@ public struct AKMediaTrackGroup: Identifiable, Hashable, Sendable {
     
     // MARK: - Hashable & Equatable
     
+    /// Returns a boolean value indicating whether two track groups are identical in configuration and selection.
     public static func == (lhs: AKMediaTrackGroup, rhs: AKMediaTrackGroup) -> Bool {
         lhs.type == rhs.type &&
         lhs.options == rhs.options &&
@@ -198,6 +231,7 @@ public struct AKMediaTrackGroup: Identifiable, Hashable, Sendable {
         lhs.allowsEmptySelection == rhs.allowsEmptySelection
     }
     
+    /// Hashes the essential components of this track group into the given hasher.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(type)
         hasher.combine(options)
@@ -209,8 +243,11 @@ public struct AKMediaTrackGroup: Identifiable, Hashable, Sendable {
 
 /// Thread-safe Sendable wrapper for `AVMediaSelectionGroup`.
 final class AKMediaGroupBox: @unchecked Sendable {
+    /// The wrapped media selection group.
     let group: AVMediaSelectionGroup?
     
+    /// Initializes a new media group box.
+    /// - Parameter group: The optional selection group to wrap.
     init(group: AVMediaSelectionGroup?) {
         self.group = group
     }

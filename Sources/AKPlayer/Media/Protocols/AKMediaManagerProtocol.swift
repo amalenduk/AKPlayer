@@ -54,12 +54,12 @@ public protocol AKMediaManagerProtocol: AnyObject, Sendable {
     /// Instantiates the underlying `AVURLAsset` for the media item.
     func createAsset() async
     
-    /// Constructs the `AVPlayerItem` from the initialized `AVURLAsset`.
-    func createPlayerItemFromAsset()
-    
     /// Asynchronously validates key asset properties (e.g., playability and DRM restrictions).
     /// - Throws: `AKPlayerError` or `CancellationError` if validation fails or is cancelled.
     func validateAssetPlayability() async throws
+    
+    /// Constructs the `AVPlayerItem` from the initialized `AVURLAsset`.
+    func createPlayerItemFromAsset()
     
     /// Aborts active asset property loading and cancels pending asynchronous operations.
     func abortAssetInitialization()
@@ -85,6 +85,13 @@ public protocol AKMediaManagerProtocol: AnyObject, Sendable {
     /// - Parameter target: The target seek target position.
     /// - Returns: A tuple containing a boolean flag indicating permission and an optional unavailability reason.
     func canSeek(to target: AKSeekTarget) -> (flag: Bool, reason: AKPlayerUnavailableCommandReason?)
+    
+    /// Evaluates whether the media item supports a specific playback capability.
+    /// - Parameter capability: The playback capability to evaluate.
+    /// - Returns: `true` if the capability is supported.
+    func isSupported(_ capability: AKMediaCapability) -> Bool
+    
+    // MARK: - Event Dispatch
     
     /// Emits a media event to active listeners.
     func emit(_ event: AKMediaEvent)

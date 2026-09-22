@@ -18,6 +18,7 @@ public enum AKInterstitialEvent: @unchecked Sendable {
     /// The full schedule of interstitial events changed (server-side or client-side).
     case scheduleDidChange([AVPlayerInterstitialEvent])
     
+    /// The playback state of the active interstitial ad changed.
     case playbackStateDidChange(AKInterstitialPlaybackState)
     
     /// An interstitial is about to begin (currentEvent became non-nil).
@@ -35,15 +36,21 @@ public enum AKInterstitialEvent: @unchecked Sendable {
     /// The collection of synthesized ad markers changed.
     case adMarkersDidChange([AKInterstitialMarker])
     
+    /// Stitched integrated timeline event emitted during synchronized playback.
     case integratedTimeline(_ event: AKIntegratedTimelineEvent)
     
     // MARK: - FinishReason
     
+    /// The reason why an interstitial completed or terminated.
     public enum FinishReason: Sendable, Equatable {
+        /// The interstitial played to natural completion.
         case completed
+        /// The interstitial was cancelled or skipped with the specified resumption offset.
         case cancelled(resumptionOffset: CMTime)
+        /// The interstitial terminated due to a playback error.
         case error(Error)
         
+        /// Returns a boolean value indicating whether two finish reasons are equal.
         public static func == (lhs: FinishReason, rhs: FinishReason) -> Bool {
             switch (lhs, rhs) {
             case (.completed, .completed):
@@ -62,6 +69,7 @@ public enum AKInterstitialEvent: @unchecked Sendable {
 // MARK: - Equatable
 
 extension AKInterstitialEvent: Equatable {
+    /// Returns a boolean value indicating whether two interstitial events are equal.
     public static func == (lhs: AKInterstitialEvent, rhs: AKInterstitialEvent) -> Bool {
         switch (lhs, rhs) {
         case let (.scheduleDidChange(l), .scheduleDidChange(r)):
@@ -85,9 +93,12 @@ extension AKInterstitialEvent: Equatable {
     }
 }
 
-
+/// Represents events emitted by the integrated timeline coordinator.
 public enum AKIntegratedTimelineEvent: Sendable, Equatable {
+    /// Integrated timeline segments updated with point and fill segments.
     case segmentsUpdated(pointSegments: [AVPlayerItemSegment], fillSegments: [AVPlayerItemSegment])
+    /// Integrated timeline position and duration metrics updated.
     case timeUpdated(currentTime: Double, startTime: Double, duration: Double)
+    /// The integrated timeline snapshot fell out of sync with underlying player item.
     case snapshotOutOfSync
 }

@@ -260,6 +260,9 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         return seekingThroughMediaService.canSeek(to: target)
     }
     
+    /// Checks if a specific playback capability is currently supported by the active player item.
+    /// - Parameter capability: The playback capability to evaluate.
+    /// - Returns: `true` if supported, `false` otherwise.
     public func isSupported(_ capability: AKMediaCapability) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
@@ -274,6 +277,13 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         case .stepForward: return playerItem.canStepForward
         case .stepBackward: return playerItem.canStepBackward
         }
+    }
+    
+    // MARK: - Event Dispatch
+    
+    /// Emits a media event to active listeners.
+    public func emit(_ event: AKMediaEvent) {
+        eventBroadcaster.send(event)
     }
     
     // MARK: - Player Item Property Observation (Foundation KVO)
@@ -398,18 +408,17 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             item.add(metadataOutput)
         }
     }
-    
-    // MARK: - Event Dispatch
-    
-    /// Emits a media event to active listeners.
-    public func emit(_ event: AKMediaEvent) {
-        eventBroadcaster.send(event)
-    }
 }
 
 // MARK: - AVPlayerItemMetadataOutputPushDelegate
 
 extension AKMediaManager: AVPlayerItemMetadataOutputPushDelegate {
+    /// Receives timed metadata groups pushed from the media stream and forwards them to the metadata provider.
+    ///
+    /// - Parameters:
+    ///   - output: The metadata output pushing new timed metadata groups.
+    ///   - groups: The list of timed metadata groups encountered in playback.
+    ///   - track: The player item track from which metadata was read, if applicable.
     public func metadataOutput(
         _ output: AVPlayerItemMetadataOutput,
         didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],

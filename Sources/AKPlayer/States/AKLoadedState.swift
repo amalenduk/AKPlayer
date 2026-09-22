@@ -60,7 +60,7 @@ public class AKLoadedState: AKBaseState {
         )
     }
     
-    // MARK: - Lifecycle Hooks
+    // MARK: - State Lifecycle & Event Handlers
     
     /// Processes state updates, sets up KVO observations, and handles automatic
     /// seek or playback triggers.
@@ -90,6 +90,53 @@ public class AKLoadedState: AKBaseState {
             change(controller)
         }
     }
+    
+    /// Responds to changes in the underlying `AVPlayer.Status`.
+    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+        guard isActiveState else { return }
+        guard status == .failed else { return }
+        let controller = AKFailedState(
+            playerController: playerController,
+            error: .playerCanNoLongerPlay(
+                error: playerController.player.error
+            )
+        )
+        change(controller)
+    }
+    
+    /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
+    override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
+        guard isActiveState else { return }
+        guard !playerController.interstitialService.isPlayingInterstitial else { return }
+        switch status {
+        case .playing:
+            play()
+        case .waitingToPlayAtSpecifiedRate:
+            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
+            switch reasonForWaitingToPlay {
+            case .noItemToPlay:
+                stop()
+            default:
+                break
+            }
+        default:
+            break
+        }
+    }
+    
+    /// Responds to interstitial ad playback state changes to resume or buffer content accordingly.
+    override public func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
+        guard isActiveState else { return }
+        switch playbackState {
+        case .playing:
+            play()
+        case .buffering:
+            play()
+        default:
+            break
+        }
+    }
+
     
     // MARK: - Commands
     
@@ -155,40 +202,6 @@ public class AKLoadedState: AKBaseState {
             autoPlay = false
         } else {
             playerController.emit(.commandUnavailable(reason: .alreadyPaused))
-        }
-    }
-    
-    // MARK: - Private Pipeline Helpers
-    
-    /// Responds to changes in the underlying `AVPlayer.Status`.
-    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard isActiveState else { return }
-        guard status == .failed else { return }
-        let controller = AKFailedState(
-            playerController: playerController,
-            error: .playerCanNoLongerPlay(
-                error: playerController.player.error
-            )
-        )
-        change(controller)
-    }
-    
-    /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
-    override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        guard isActiveState else { return }
-        switch status {
-        case .playing:
-            play()
-        case .waitingToPlayAtSpecifiedRate:
-            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
-            switch reasonForWaitingToPlay {
-            case .noItemToPlay:
-                stop()
-            default:
-                break
-            }
-        default:
-            break
         }
     }
 }

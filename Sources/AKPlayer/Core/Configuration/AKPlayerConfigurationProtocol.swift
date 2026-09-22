@@ -56,6 +56,7 @@ public struct AKAudioSessionConfiguration: Sendable {
 // MARK: - Equatable & Hashable Conformance
 
 extension AKAudioSessionConfiguration: Equatable {
+    /// Returns a boolean value indicating whether two audio session configurations are equal.
     public static func == (lhs: AKAudioSessionConfiguration, rhs: AKAudioSessionConfiguration) -> Bool {
         lhs.category == rhs.category &&
         lhs.activeOptions.rawValue == rhs.activeOptions.rawValue &&
@@ -65,6 +66,7 @@ extension AKAudioSessionConfiguration: Equatable {
 }
 
 extension AKAudioSessionConfiguration: Hashable {
+    /// Hashes the essential components of this configuration into the given hasher.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(category)
         hasher.combine(activeOptions.rawValue)

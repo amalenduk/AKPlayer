@@ -73,7 +73,7 @@ public class AKLoadingState: AKBaseState {
         )
     }
     
-    // MARK: - Lifecycle Hooks
+    // MARK: - State Lifecycle & Event Handlers
     
     /// Entry point for state setup. Cleans up prior item observers, emits
     /// initial media change events, and monitors media load state transitions.
@@ -96,6 +96,20 @@ public class AKLoadingState: AKBaseState {
             }
         }
     }
+    
+    /// Responds to changes in the underlying `AVPlayer.Status` to transition into loaded or failed states.
+    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
+        guard isActiveState else { return }
+        switch status {
+        case .readyToPlay:
+            becameReadyToPlay()
+        case .failed:
+            transitionToFailed()
+        default:
+            break
+        }
+    }
+
     
     // MARK: - Commands
     
@@ -205,18 +219,7 @@ public class AKLoadingState: AKBaseState {
         transitionToLoaded()
     }
     
-    override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard isActiveState else { return }
-        switch status {
-        case .readyToPlay:
-            becameReadyToPlay()
-        case .failed:
-            transitionToFailed()
-        default:
-            break
-        }
-    }
-    
+    /// Transitions state machine to `AKLoadedState` upon successful item readiness.
     private func transitionToLoaded() {
         change(
             AKLoadedState(
@@ -228,6 +231,7 @@ public class AKLoadingState: AKBaseState {
         )
     }
     
+    /// Transitions state machine to `AKFailedState` upon item or player loading failure.
     private func transitionToFailed() {
         let controller = AKFailedState(
             playerController: playerController,

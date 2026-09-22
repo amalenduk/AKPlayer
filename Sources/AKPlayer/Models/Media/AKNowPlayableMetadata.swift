@@ -78,9 +78,6 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
     /// External user profile identifier.
     public var externalUserProfileIdentifier: String?
 
-    /// Time ranges for advertisements.
-    public var adTimeRanges: [MPAdTimeRange]?
-
     /// Total chapter count.
     public var chapterCount: Int?
 
@@ -89,6 +86,9 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
 
     /// Unique service identifier.
     public var serviceIdentifier: String?
+
+    /// Time ranges for advertisements.
+    public var adTimeRanges: [MPAdTimeRange]?
     
     /// Music / item genre.
     public var genre: String?
@@ -132,10 +132,10 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
     ///   - collectionIdentifier: Collection identifier.
     ///   - externalContentIdentifier: External content identifier.
     ///   - externalUserProfileIdentifier: External user profile identifier.
-    ///   - adTimeRanges: Time ranges for advertisements.
     ///   - chapterCount: Total chapter count.
     ///   - creditsStartTime: Start offset for credits.
     ///   - serviceIdentifier: Unique service identifier.
+    ///   - adTimeRanges: Time ranges for advertisements.
     ///   - genre: Music / item genre.
     ///   - composer: Composer name.
     ///   - trackNumber: Track number in album.
@@ -157,10 +157,10 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
         collectionIdentifier: String? = nil,
         externalContentIdentifier: String? = nil,
         externalUserProfileIdentifier: String? = nil,
-        adTimeRanges: [MPAdTimeRange]? = nil,
         chapterCount: Int? = nil,
         creditsStartTime: Double? = nil,
         serviceIdentifier: String? = nil,
+        adTimeRanges: [MPAdTimeRange]? = nil,
         genre: String? = nil,
         composer: String? = nil,
         trackNumber: Int? = nil,
@@ -182,10 +182,10 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
         self.collectionIdentifier = collectionIdentifier
         self.externalContentIdentifier = externalContentIdentifier
         self.externalUserProfileIdentifier = externalUserProfileIdentifier
-        self.adTimeRanges = adTimeRanges
         self.chapterCount = chapterCount
         self.creditsStartTime = creditsStartTime
         self.serviceIdentifier = serviceIdentifier
+        self.adTimeRanges = adTimeRanges
         self.genre = genre
         self.composer = composer
         self.trackNumber = trackNumber

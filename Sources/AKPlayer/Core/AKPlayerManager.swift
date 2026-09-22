@@ -98,6 +98,12 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.error
     }
     
+    /// Configuration options governing player behavior, audio session settings,
+    /// and remote controls.
+    public var configuration: AKPlayerConfigurationProtocol {
+        playerController.configuration
+    }
+    
     /// Asynchronous stream of player events for Swift Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
         playerController.events
@@ -115,19 +121,25 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.isAtLiveEdge
     }
     
+    // MARK: - Manager & Services
+    
     /// Controller managing underlying AVPlayer actions and state machine
     /// transitions.
     public let playerController: AKPlayerControllerProtocol
     
-    /// Configuration options governing player behavior, audio session settings,
-    /// and remote controls.
-    public var configuration: AKPlayerConfigurationProtocol {
-        playerController.configuration
-    }
-    
     /// Snapshot storing playback and app states during interruptions for
     /// resumption logic.
     public private(set) var playerStateSnapshot: AKPlayerStateSnapshot?
+    
+    /// Audio session service managing system category, modes, and activation
+    /// state.
+    public let audioSessionService: AKAudioSessionServiceProtocol
+    
+    /// Session handling integration with system Now Playing info and lock
+    /// screen controls.
+    public var nowPlayingManager: (any AKNowPlayingManagerProtocol)?
+    
+    // MARK: - Internal Observers & Tasks
     
     private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
     
@@ -137,14 +149,6 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     /// Tracks connection status of external audio devices (e.g., Bluetooth,
     /// headphones).
     private var isExternalAudioPlaybackDeviceConnected = false
-    
-    /// Audio session service managing system category, modes, and activation
-    /// state.
-    public let audioSessionService: AKAudioSessionServiceProtocol
-    
-    /// Session handling integration with system Now Playing info and lock
-    /// screen controls.
-    public var nowPlayingManager: (any AKNowPlayingManagerProtocol)?
     
     /// Observer responsible for audio interruption notifications (e.g.,
     /// incoming phone calls).
@@ -329,17 +333,20 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     }
     
     /// Asynchronously seeks to a specific time target.
-    /// - Parameter target: The position target defined as an `AKSeekTarget`.
+    /// - Parameters:
+    ///   - target: The position target defined as an `AKSeekTarget`.
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     /// - Returns: `true` if the seek completed successfully; otherwise `false`.
     @discardableResult
-    public func seek(to target: AKSeekTarget) async -> Bool {
-        await playerController.seek(to: target)
+    public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
+        await playerController.seek(to: target, scope: scope)
     }
     
     /// Asynchronously seeks to a specific target within specified exact
     /// tolerance windows.
     /// - Parameters:
     ///   - target: The position target defined as an `AKSeekTarget`.
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - toleranceBefore: Maximum allowed time delta before the target
     /// position.
     ///   - toleranceAfter: Maximum allowed time delta after the target
@@ -348,32 +355,51 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     @discardableResult
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime
-    ) async
-    -> Bool
-    {
+    ) async -> Bool {
         await playerController.seek(
             to: target,
+            scope: scope,
             toleranceBefore: toleranceBefore,
             toleranceAfter: toleranceAfter
         )
     }
     
+    /// Seeks to the specified target position using completion handler.
+    ///
+    /// - Parameters:
+    ///   - target: The target time or position to seek to.
+    ///   - scope: The scope constraint for seeking within playback bounds.
+    ///   - completionHandler: Closure invoked upon seek completion with success indicator.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
-        playerController.seek(to: target, completionHandler: completionHandler)
+        playerController.seek(to: target, scope: scope, completionHandler: completionHandler)
     }
     
+    /// Seeks to the specified target position with precise tolerances using completion handler.
+    ///
+    /// - Parameters:
+    ///   - target: The target time or position to seek to.
+    ///   - scope: The scope constraint for seeking within playback bounds.
+    ///   - toleranceBefore: The tolerance allowed before the target time.
+    ///   - toleranceAfter: The tolerance allowed after the target time.
+    ///   - completionHandler: Closure invoked upon seek completion with success indicator.
     public func seek(
-        to target: AKSeekTarget, toleranceBefore: CMTime,
+        to target: AKSeekTarget,
+        scope: AKSeekScope,
+        toleranceBefore: CMTime,
         toleranceAfter: CMTime,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
         playerController.seek(
-            to: target, toleranceBefore: toleranceBefore,
+            to: target,
+            scope: scope,
+            toleranceBefore: toleranceBefore,
             toleranceAfter: toleranceAfter,
             completionHandler: completionHandler
         )

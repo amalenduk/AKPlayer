@@ -19,21 +19,13 @@ extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
 /// Protocol defining static container metadata extraction, live stream timed metadata, and updates.
 public protocol AKMediaMetadataProviderProtocol: AnyObject, Sendable {
     
-    // MARK: - Static Metadata
+    // MARK: - Properties
     
     /// The currently loaded static container metadata.
     var staticMetadata: AKMediaStaticMetadata { get }
     
-    /// Manually updates / merges static metadata (e.g. from backend API or custom models).
-    func updateStaticMetadata(_ metadata: AKMediaStaticMetadata)
-    
-    // MARK: - Timed Stream Metadata
-    
     /// The latest timed metadata items received from live streams or HLS broadcasts.
     var timedMetadata: [AVMetadataItem] { get }
-    
-    /// Ingests dynamic timed metadata groups received from player item outputs.
-    func handleTimedMetadata(_ items: [AVMetadataItem])
     
     // MARK: - Async Streams
     
@@ -42,6 +34,14 @@ public protocol AKMediaMetadataProviderProtocol: AnyObject, Sendable {
     
     /// Stream emitting dynamic timed metadata updates from live streams (e.g. radio song changes).
     var timedMetadataUpdates: AsyncStream<[AVMetadataItem]> { get }
+    
+    // MARK: - Metadata Operations
+    
+    /// Manually updates / merges static metadata (e.g. from backend API or custom models).
+    func updateStaticMetadata(_ metadata: AKMediaStaticMetadata)
+    
+    /// Ingests dynamic timed metadata groups received from player item outputs.
+    func handleTimedMetadata(_ items: [AVMetadataItem])
     
     // MARK: - Lifecycle
     
@@ -63,25 +63,32 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
     private weak var mediaManager: (any AKMediaManagerProtocol)?
     
     private struct State {
+        /// Cached static metadata extracted or provided for the media.
         var staticMetadata = AKMediaStaticMetadata()
+        /// Cached timed metadata items currently emitted.
         var timedMetadata: [AVMetadataItem] = []
+        /// Asynchronous task loading asset metadata.
         var loadTask: Task<Void, Never>?
     }
     
     private let state = Mutex(State())
     
+    /// The currently active static metadata (title, artist, artwork, etc.).
     public var staticMetadata: AKMediaStaticMetadata {
         state.withLock { $0.staticMetadata }
     }
     
+    /// The most recently pushed timed metadata items.
     public var timedMetadata: [AVMetadataItem] {
         state.withLock { $0.timedMetadata }
     }
     
+    /// Asynchronous stream yielding static metadata updates whenever modified or parsed.
     public var staticMetadataUpdates: AsyncStream<AKMediaStaticMetadata> {
         staticMetadataBroadcaster.makeStream()
     }
     
+    /// Asynchronous stream yielding newly arrived timed metadata items during live playback.
     public var timedMetadataUpdates: AsyncStream<[AVMetadataItem]> {
         timedMetadataBroadcaster.makeStream()
     }
@@ -93,6 +100,8 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
     
     // MARK: - Initialization
     
+    /// Initializes a new media metadata provider with a reference to the media manager.
+    /// - Parameter mediaManager: The media manager instance providing asset access.
     public init(mediaManager: any AKMediaManagerProtocol) {
         defer {
             AKLogger.logInit(self)
@@ -112,6 +121,8 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
     
     // MARK: - Public API
     
+    /// Merges and updates the static metadata with new non-nil values.
+    /// - Parameter metadata: The metadata structure containing updated fields.
     public func updateStaticMetadata(_ metadata: AKMediaStaticMetadata) {
         let merged = state.withLock { s -> AKMediaStaticMetadata in
             var updated = s.staticMetadata
@@ -147,6 +158,8 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
         staticMetadataBroadcaster.send(merged)
     }
     
+    /// Processes timed metadata items emitted by the media stream and broadcasts them.
+    /// - Parameter items: The newly arrived timed metadata items.
     public func handleTimedMetadata(_ items: [AVMetadataItem]) {
         state.withLock { $0.timedMetadata = items }
         timedMetadataBroadcaster.send(items)
@@ -182,6 +195,7 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
     
     // MARK: - Lifecycle
     
+    /// Asynchronously extracts and parses static metadata from the underlying media asset.
     public func loadMetadata() async {
         guard let asset = mediaManager?.asset else { return }
         
@@ -199,6 +213,7 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
         await task.value
     }
     
+    /// Resets cached metadata and broadcasts empty metadata state.
     public func resetSession() {
         state.withLock {
             $0.loadTask?.cancel()

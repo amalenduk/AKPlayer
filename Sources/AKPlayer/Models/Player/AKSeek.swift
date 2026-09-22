@@ -15,6 +15,9 @@ public final class AKSeek: Equatable, Hashable, Identifiable, @unchecked Sendabl
     /// The target playback position.
     public let target: AKSeekTarget
 
+    /// The timeline coordinate space targeted by this seek operation.
+    public let scope: AKSeekScope
+
     /// The maximum allowable time before the target time that the player may seek.
     public let toleranceBefore: CMTime
 
@@ -30,18 +33,21 @@ public final class AKSeek: Equatable, Hashable, Identifiable, @unchecked Sendabl
     /// - Parameters:
     ///   - id: Unique identifier for this request. Defaults to a new `UUID()`.
     ///   - target: The target position to seek to.
+    ///   - scope: The timeline scope targeted by this seek. Defaults to `.primary`.
     ///   - toleranceBefore: Tolerance before the target position. Defaults to `.positiveInfinity`.
     ///   - toleranceAfter: Tolerance after the target position. Defaults to `.positiveInfinity`.
     ///   - completionHandler: Callback executed when seeking completes or is canceled.
     public init(
         id: UUID = UUID(),
         target: AKSeekTarget,
+        scope: AKSeekScope = .primary,
         toleranceBefore: CMTime = .positiveInfinity,
         toleranceAfter: CMTime = .positiveInfinity,
         completionHandler: (@Sendable (Bool) -> Void)? = nil
     ) {
         self.id = id
         self.target = target
+        self.scope = scope
         self.toleranceBefore = toleranceBefore
         self.toleranceAfter = toleranceAfter
         self.completionStorage = Mutex(completionHandler)
@@ -62,10 +68,12 @@ public final class AKSeek: Equatable, Hashable, Identifiable, @unchecked Sendabl
 
     // MARK: - Equatable & Hashable
 
+    /// Returns a boolean value indicating whether two seek objects are equal based on unique identifiers.
     public static func == (lhs: AKSeek, rhs: AKSeek) -> Bool {
         lhs.id == rhs.id
     }
 
+    /// Hashes the essential components of this seek request into the given hasher.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

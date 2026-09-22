@@ -6,16 +6,23 @@ import Synchronization
 
 /// Events emitted by AVPlayerItem during playback.
 public enum AKPlayerItemNotificationEvent: Sendable {
+    /// Playback reached the end timestamp of the media item.
     case didPlayToEndTime(CMTime)
+    /// Playback failed to reach end time due to an error.
     case failedToPlayToEndTime(AKPlayerError)
+    /// Playback stalled due to insufficient buffered media data.
     case playbackStalled
+    /// The media timeline jumped discontinuously.
     case timeJumped
+    /// Active media selection (audio track, subtitles) changed.
     case mediaSelectionDidChange
+    /// Recommended time offset from live edge changed for live streams.
     case recommendedTimeOffsetFromLiveDidChange(CMTime)
 }
 
 // MARK: - Protocol
 
+/// Protocol defining the interface for observing AVPlayerItem system notifications.
 public protocol AKPlayerItemNotificationsObserverProtocol: AnyObject, Sendable {
     /// Multi-subscriber stream emitting AVPlayerItem lifecycle events.
     var events: AsyncStream<AKPlayerItemNotificationEvent> { get }
@@ -23,22 +30,28 @@ public protocol AKPlayerItemNotificationsObserverProtocol: AnyObject, Sendable {
 
 // MARK: - Implementation
 
+/// Thread-safe observer managing system notifications for AVPlayerItem instances.
 public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsObserverProtocol, Sendable {
     
     // MARK: - Properties
     
+    /// Internal broadcaster dispatching player item notification events to subscribers.
     private let broadcaster = AKEventBroadcaster<AKPlayerItemNotificationEvent>()
     
-    // Swift 6 native Mutex (iOS 18+) to hold the Task references thread-safely
+    /// Mutex protecting the active notification observation task group for the current player item.
     private let activeTask = Mutex<Task<Void, Never>?>(nil)
+    /// Mutex protecting the media manager state observation task.
     private let stateTask = Mutex<Task<Void, Never>?>(nil)
     
+    /// Multi-subscriber stream emitting AVPlayerItem lifecycle events.
     public var events: AsyncStream<AKPlayerItemNotificationEvent> {
         broadcaster.makeStream()
     }
     
     // MARK: - Init & Deinit
     
+    /// Initializes an observer monitoring notifications for player items loaded in the media manager.
+    /// - Parameter mediaManager: The media manager instance providing the active player item.
     public init(mediaManager: any AKMediaManagerProtocol) {
         startMonitoringMediaEvents(for: mediaManager)
     }
@@ -51,6 +64,8 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
     
     // MARK: - Media State Monitoring
     
+    /// Begins monitoring media manager state transitions to dynamically attach or detach item observation.
+    /// - Parameter mediaManager: The media manager providing player item updates.
     private func startMonitoringMediaEvents(for mediaManager: any AKMediaManagerProtocol) {
         let task = Task { [weak self, weak mediaManager] in
             guard let mediaManager else { return }
@@ -76,6 +91,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
         stateTask.withLock { $0 = task }
     }
     
+    /// Cancels and releases the active media manager state observation task.
     private func stopMonitoringMediaEvents() {
         stateTask.withLock {
             $0?.cancel()
@@ -85,6 +101,8 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
     
     // MARK: - AVPlayerItem Observation
     
+    /// Attaches NotificationCenter observers for the given player item and forwards events through the broadcaster.
+    /// - Parameter playerItem: The `AVPlayerItem` to observe.
     private func startObserving(playerItem: AVPlayerItem) {
         stopObserving()
         
@@ -147,6 +165,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
         activeTask.withLock { $0 = newTask }
     }
     
+    /// Stops observing the current player item and cancels active notification tasks.
     private func stopObserving() {
         activeTask.withLock {
             $0?.cancel()

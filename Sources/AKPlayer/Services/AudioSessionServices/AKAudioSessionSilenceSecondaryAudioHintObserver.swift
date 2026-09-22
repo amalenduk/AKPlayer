@@ -16,7 +16,9 @@ import Synchronization
 
 /// Events emitted when system secondary audio silence hints begin or end.
 public enum AKAudioSessionSilenceSecondaryAudioHintEvent: Sendable, Equatable {
+    /// Another application with a non-mixable audio session started playing audio.
     case began
+    /// Another application with a non-mixable audio session finished playing audio.
     case ended
 }
 

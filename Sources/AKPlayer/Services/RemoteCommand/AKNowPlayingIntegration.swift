@@ -27,6 +27,7 @@ public extension AKPlayer {
 /// Protocol to be added to AKPlayerManager for Now Playing session integration.
 @MainActor
 public protocol AKNowPlayingSessionProvider: AnyObject, Sendable {
+    /// The active Now Playing session instance.
     var nowPlayingSession: AKNowPlayingSession? { get }
 }
 

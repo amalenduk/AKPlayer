@@ -216,21 +216,20 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     public func setVolume(_ v: Float) { player.volume = v; volume = v }
     public func toggleMute() { player.isMuted = !player.isMuted; isMuted = player.isMuted }
     public func seek(to seconds: Double) {
-        if interstitialService.integratedTimeline != nil && !interstitialService.integratedTimelineFillSegments.isEmpty {
-            interstitialService.seekOnIntegratedTimeline(to: seconds) { _ in }
-        } else {
-            Task {
+        Task {
+            if interstitialService.integratedTimeline != nil && !interstitialService.integratedTimelineFillSegments.isEmpty {
+                await player.seek(to: .seconds(seconds), scope: .integrated)
+            } else {
                 await player.seek(to: .seconds(seconds))
             }
         }
     }
     public func step(by count: Int) { player.step(by: count) }
     public func seekOffset(_ offset: Double) {
-        if interstitialService.integratedTimeline != nil && !interstitialService.integratedTimelineFillSegments.isEmpty {
-            let target = interstitialService.integratedTimelineCurrentTime + offset
-            interstitialService.seekOnIntegratedTimeline(to: target) { _ in }
-        } else {
-            Task {
+        Task {
+            if interstitialService.integratedTimeline != nil && !interstitialService.integratedTimelineFillSegments.isEmpty {
+                await player.seek(to: .offset(offset), scope: .integrated)
+            } else {
                 await player.seek(to: .offset(offset))
             }
         }
@@ -362,6 +361,7 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
                 self.duration = dur
             }
             self.adMarkers = self.interstitialService.markers
+            print(self.interstitialService.markers)
         }
     }
     

@@ -72,6 +72,7 @@ public extension AKPlayable {
         manager.error
     }
     
+    /// Asynchronous stream of media item lifecycle and observation events.
     var events: AsyncStream<AKMediaEvent> {
         get { manager.events }
     }
@@ -154,14 +155,17 @@ public extension AKPlayable {
         manager.playerItemNotificationsObserver
     }
     
+    /// Metadata extraction service for active media assets.
     var metadataProvider: any AKMediaMetadataProviderProtocol {
         manager.metadataProvider
     }
     
+    /// Chapter extraction and navigation service.
     var chapterService: any AKChapterServiceProtocol {
         manager.chapterService
     }
 }
+
 
 // MARK: - Live Stream & DVR Extensions
 

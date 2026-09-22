@@ -37,7 +37,7 @@ public class AKStoppedState: AKBaseState {
         )
     }
     
-    // MARK: - Lifecycle Hooks
+    // MARK: - State Lifecycle & Event Handlers
     
     /// Entry point for stopped state processing. Halts playback, cancels
     /// pending seeks, and replaces current item with nil.
@@ -47,8 +47,7 @@ public class AKStoppedState: AKBaseState {
         playerController.performStop()
     }
     
-    // MARK: - Private Helper Functions
-    
+    /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
         guard isActiveState else { return }
         guard status == .failed else { return }
@@ -60,6 +59,7 @@ public class AKStoppedState: AKBaseState {
         )
         change(controller)
     }
+
     
     // MARK: - Availability Overrides
     

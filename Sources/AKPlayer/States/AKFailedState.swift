@@ -47,7 +47,7 @@ public class AKFailedState: AKBaseState {
         
     }
 
-    // MARK: - Lifecycle Hooks
+    // MARK: - State Lifecycle & Event Handlers
 
     /// Notifies the delegate that the player has encountered an error and
     /// transitioned into the failed state.
@@ -57,7 +57,7 @@ public class AKFailedState: AKBaseState {
         AKLogger.error(error.localizedDescription, category: .player)
     }
 
-    // MARK: - Preflight Checks
+    // MARK: - Availability Overrides
 
     /// Evaluates preflight permission and unavailable reasons for a given
     /// player action when in the failed state.

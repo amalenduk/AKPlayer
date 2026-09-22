@@ -131,25 +131,45 @@ public protocol AKNowPlayableStaticMetadataProtocol: Sendable {
 
 // Default Optional Property Stubs
 public extension AKNowPlayableStaticMetadataProtocol {
+    /// The default artist name (returns `nil`).
     var artist: String? { get { nil } set {} }
+    /// The default artwork representation (returns `nil`).
     var artwork: Artwork? { get { nil } set {} }
+    /// The default album artist name (returns `nil`).
     var albumArtist: String? { get { nil } set {} }
+    /// The default album title (returns `nil`).
     var albumTitle: String? { get { nil } set {} }
+    /// The default collection identifier (returns `nil`).
     var collectionIdentifier: String? { get { nil } set {} }
+    /// The default external content identifier (returns `nil`).
     var externalContentIdentifier: String? { get { nil } set {} }
+    /// The default external user profile identifier (returns `nil`).
     var externalUserProfileIdentifier: String? { get { nil } set {} }
+    /// The default total chapter count (returns `nil`).
     var chapterCount: Int? { get { nil } set {} }
+    /// The default credits start time (returns `nil`).
     var creditsStartTime: Double? { get { nil } set {} }
+    /// The default service identifier (returns `nil`).
     var serviceIdentifier: String? { get { nil } set {} }
+    /// The default ad time ranges (returns `nil`).
     var adTimeRanges: [MPAdTimeRange]? { get { nil } set {} }
+    /// The default genre name (returns `nil`).
     var genre: String? { get { nil } set {} }
+    /// The default composer name (returns `nil`).
     var composer: String? { get { nil } set {} }
+    /// The default track number (returns `nil`).
     var trackNumber: Int? { get { nil } set {} }
+    /// The default total track count (returns `nil`).
     var trackCount: Int? { get { nil } set {} }
+    /// The default disc number (returns `nil`).
     var discNumber: Int? { get { nil } set {} }
+    /// The default total disc count (returns `nil`).
     var discCount: Int? { get { nil } set {} }
+    /// The default explicit content flag (returns `nil`).
     var isExplicit: Bool? { get { nil } set {} }
+    /// The default original release date (returns `nil`).
     var releaseDate: Date? { get { nil } set {} }
+    /// The default description text (returns `nil`).
     var descriptionText: String? { get { nil } set {} }
 }
 
@@ -285,14 +305,23 @@ public protocol AKNowPlayableDynamicMetadataProtocol: Sendable {
 
 // Default Optional Property Stubs
 public extension AKNowPlayableDynamicMetadataProtocol {
+    /// The default elapsed playback position in seconds (returns `nil`).
     var position: Double? { get { nil } set {} }
+    /// The default media duration in seconds (returns `nil`).
     var duration: Float? { get { nil } set {} }
+    /// The default active language options (returns `nil`).
     var currentLanguageOptions: [MPNowPlayingInfoLanguageOption]? { get { nil } set {} }
+    /// The default available language option groups (returns `nil`).
     var availableLanguageOptionGroups: [MPNowPlayingInfoLanguageOptionGroup]? { get { nil } set {} }
+    /// The default active chapter index number (returns `nil`).
     var chapterNumber: Int? { get { nil } set {} }
+    /// The default live playback reference date (returns `nil`).
     var currentPlaybackDate: Date? { get { nil } set {} }
+    /// The default playback progress fraction (returns `nil`).
     var playbackProgress: Float? { get { nil } set {} }
+    /// The default playback queue count (returns `nil`).
     var playbackQueueCount: Int? { get { nil } set {} }
+    /// The default playback queue index (returns `nil`).
     var playbackQueueIndex: Int? { get { nil } set {} }
 }
 

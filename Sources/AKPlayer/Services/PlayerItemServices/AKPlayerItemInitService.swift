@@ -15,6 +15,7 @@
 
 import AVFoundation
 
+/// Protocol defining requirements for creating and validating AVPlayerItem and AVURLAsset instances.
 public protocol AKPlayerItemInitServiceProtocol: Sendable {
     /// Creates and returns an AVURLAsset based on media configuration / cache / custom asset
     func createAsset(for media: any AKPlayable) async -> AVURLAsset
@@ -26,11 +27,15 @@ public protocol AKPlayerItemInitServiceProtocol: Sendable {
     func createPlayerItem(from asset: AVURLAsset, for media: any AKPlayable) -> AVPlayerItem
 }
 
+/// Service managing the creation, validation, and initialization of `AVURLAsset` and `AVPlayerItem` instances.
 public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
     
-    // Explicit public initializer for framework accessibility
+    /// Initializes a new instance of the player item initialization service.
     public init() {}
     
+    /// Creates and returns an `AVURLAsset` based on media configuration, cache, or custom asset.
+    /// - Parameter media: The media item for which to create the asset.
+    /// - Returns: A configured `AVURLAsset`.
     public func createAsset(for media: any AKPlayable) async -> AVURLAsset {
         var asset: AVURLAsset
         if let custom = media.customAsset {
@@ -51,6 +56,8 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
         return asset
     }
     
+    /// Validates asynchronous playability and DRM protection keys on the given asset.
+    /// - Parameter asset: The `AVURLAsset` to validate.
     public func validatePlayability(of asset: AVURLAsset) async throws {
         do {
             let (isPlayable, hasProtectedContent) = try await asset.load(.isPlayable, .hasProtectedContent)
@@ -82,6 +89,11 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
         }
     }
     
+    /// Constructs and returns an `AVPlayerItem` configured with automatically loaded keys for the playable item.
+    /// - Parameters:
+    ///   - asset: The underlying `AVURLAsset`.
+    ///   - media: The playable media item.
+    /// - Returns: An instantiated `AVPlayerItem`.
     public func createPlayerItem(from asset: AVURLAsset, for media: any AKPlayable) -> AVPlayerItem {
         let item: AVPlayerItem = if let customItem = media.customPlayerItem {
             customItem

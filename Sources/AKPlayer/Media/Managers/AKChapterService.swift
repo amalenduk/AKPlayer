@@ -24,25 +24,32 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     private weak var mediaManager: (any AKMediaManagerProtocol)?
     
     private struct State {
+        /// Cached list of extracted chapters.
         var chapters: [AKChapter] = []
+        /// The currently active chapter matching playback position.
         var currentChapter: AKChapter?
+        /// The asynchronous task loading chapter metadata.
         var loadTask: Task<Void, Never>?
     }
     
     private let state = Mutex(State())
     
+    /// The complete ordered collection of chapters extracted from the media item.
     public var chapters: [AKChapter] {
         state.withLock { $0.chapters }
     }
     
+    /// The total number of chapters currently available.
     public var chapterCount: Int {
         state.withLock { $0.chapters.count }
     }
     
+    /// The chapter corresponding to the current playback position, if any.
     public var currentChapter: AKChapter? {
         state.withLock { $0.currentChapter }
     }
     
+    /// The start time in seconds of the end credits or outro chapter if present, or `nil`.
     public var creditsStartTime: Double? {
         chapters.first(where: {
             let title = $0.title.lowercased()
@@ -52,10 +59,12 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     
     // MARK: - Async Streams
     
+    /// An asynchronous stream emitting updates whenever the collection of chapters changes.
     public var chaptersUpdates: AsyncStream<[AKChapter]> {
         chaptersBroadcaster.makeStream()
     }
     
+    /// An asynchronous stream emitting updates whenever the active playback chapter changes.
     public var currentChapterUpdates: AsyncStream<AKChapter?> {
         currentChapterBroadcaster.makeStream()
     }
@@ -67,6 +76,8 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     
     // MARK: - Initialization
     
+    /// Initializes a chapter service instance for extracting and tracking chapters for the given media manager.
+    /// - Parameter mediaManager: The media manager managing the active asset.
     public init(mediaManager: any AKMediaManagerProtocol) {
         defer {
             AKLogger.logInit(self)
@@ -86,31 +97,49 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     
     // MARK: - Chapter Queries
     
+    /// Finds the chapter encompassing the specified playback timestamp.
+    /// - Parameter time: The playback timestamp to inspect.
+    /// - Returns: The matching `AKChapter`, or `nil` if not found.
     public func currentChapter(at time: CMTime) -> AKChapter? {
         let currentChapters = chapters
         guard !currentChapters.isEmpty, time.isValid, !time.isIndefinite else { return nil }
         return currentChapters.first { $0.contains(time: time) }
     }
     
+    /// Returns the 1-based chapter number at the specified playback timestamp.
+    /// - Parameter time: The playback timestamp to inspect.
+    /// - Returns: The 1-based chapter number, or `nil` if not found.
     public func currentChapterNumber(at time: CMTime) -> Int? {
         currentChapter(at: time)?.id
     }
     
+    /// Returns the title of the chapter at the specified playback timestamp.
+    /// - Parameter time: The playback timestamp to inspect.
+    /// - Returns: The chapter title, or `nil` if not found.
     public func chapterTitle(at time: CMTime) -> String? {
         currentChapter(at: time)?.title
     }
     
+    /// Returns the chapter at the specified zero-based index.
+    /// - Parameter index: The zero-based chapter index.
+    /// - Returns: The `AKChapter` at the index, or `nil` if out of bounds.
     public func chapter(at index: Int) -> AKChapter? {
         let currentChapters = chapters
         guard index >= 0, index < currentChapters.count else { return nil }
         return currentChapters[index]
     }
     
+    /// Returns the chapter matching the specified 1-based chapter number.
+    /// - Parameter number: The 1-based chapter number.
+    /// - Returns: The matching `AKChapter`, or `nil` if not found.
     public func chapter(byNumber number: Int) -> AKChapter? {
         let currentChapters = chapters
         return currentChapters.first { $0.id == number }
     }
     
+    /// Returns the chapter immediately following the one at the specified timestamp.
+    /// - Parameter time: The reference playback timestamp.
+    /// - Returns: The next sequential `AKChapter`, or `nil` if at the last chapter.
     public func nextChapter(from time: CMTime) -> AKChapter? {
         let currentChapters = chapters
         guard !currentChapters.isEmpty,
@@ -120,6 +149,9 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         return currentChapters[active.index + 1]
     }
     
+    /// Returns the chapter immediately preceding the one at the specified timestamp.
+    /// - Parameter time: The reference playback timestamp.
+    /// - Returns: The previous sequential `AKChapter`, or `nil` if at the first chapter.
     public func previousChapter(from time: CMTime) -> AKChapter? {
         let currentChapters = chapters
         guard !currentChapters.isEmpty,
@@ -131,6 +163,8 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     
     // MARK: - Playback Tracking
     
+    /// Updates the active chapter state for the specified playback timestamp and notifies observers if it changed.
+    /// - Parameter time: The current playback timestamp.
     public func updateCurrentTime(_ time: CMTime) {
         let matchingChapter = currentChapter(at: time)
         
@@ -149,6 +183,7 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     
     // MARK: - Lifecycle
     
+    /// Asynchronously extracts chapter metadata groups from the media asset.
     public func loadChapters() async {
         guard let asset = mediaManager?.asset else { return }
         
@@ -165,6 +200,7 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         await task.value
     }
     
+    /// Clears all loaded chapters and active tracking state.
     public func resetSession() {
         state.withLock {
             $0.loadTask?.cancel()
@@ -179,6 +215,8 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     
     // MARK: - Private Extraction
     
+    /// Asynchronously loads timed metadata groups from an `AVAsset` and builds `AKChapter` models.
+    /// - Parameter asset: The `AVAsset` containing timed metadata tracks.
     private func extractChapters(from asset: AVAsset) async {
         guard let languages = try? await asset.load(.availableChapterLocales) else { return }
         guard !Task.isCancelled else { return }

@@ -52,6 +52,7 @@ public protocol AKPlayerControllerProtocol: AnyObject, Sendable, AKPlayerProtoco
     /// Internal service handling media seek calculations and boundaries.
     var playerSeekingThroughMediaService: any AKPlayerSeekingThroughMediaServiceProtocol { get }
     
+    /// Service managing interstitial ad events and schedule progress.
     var interstitialService: any AKPlayerInterstitialServiceProtocol { get }
     
     /// Network monitor monitoring active connectivity status for media

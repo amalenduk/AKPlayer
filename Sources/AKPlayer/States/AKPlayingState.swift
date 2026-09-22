@@ -19,6 +19,7 @@ public class AKPlayingState: AKBaseState {
     /// The target playback speed multiplier requested when entering the playing state.
     private var rate: AKPlaybackRate?
     
+    /// Tracks whether playback has officially commenced and timeControlStatus reached playing.
     private var playingStarted: Bool = false
     
     // MARK: - Initialization & Deinitialization
@@ -45,7 +46,7 @@ public class AKPlayingState: AKBaseState {
         )
     }
     
-    // MARK: - Lifecycle Hooks
+    // MARK: - State Lifecycle & Event Handlers
     
     /// Entry point for playing state setup. Begins playback and applies targeted playback rate.
     override public func processStateChange() {
@@ -62,27 +63,7 @@ public class AKPlayingState: AKBaseState {
         }
     }
     
-    // MARK: - Commands
-    
-    /// Adjusts playback rate when supported by the current media item.
-    /// - Parameter rate: The targeted playback speed multiplier.
-    override public func play(at rate: AKPlaybackRate) {
-        performIfAllowed(
-            check: { availability(for: .play(at: rate)) },
-            action: {
-                self.rate = rate
-                playerController.performPlay(at: rate)
-            },
-            blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
-            },
-            fallback: ()
-        )
-    }
-    
-    // MARK: - Player Lifecycle & Notifications
-    
+    /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
         guard isActiveState else { return }
         guard status == .failed else { return }
@@ -95,8 +76,10 @@ public class AKPlayingState: AKBaseState {
         change(controller)
     }
     
+    /// Responds to changes in `AVPlayer.TimeControlStatus` to detect stalls, pause, or buffering needs.
     override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
         guard isActiveState else { return }
+        guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch playerController.player.timeControlStatus {
         case .playing:
             playingStarted = true
@@ -125,11 +108,13 @@ public class AKPlayingState: AKBaseState {
         }
     }
     
+    /// Handles media player item notification events such as stall, completion, and playback failures.
     override public func handle(_ event: AKPlayerItemNotificationEvent) {
         guard isActiveState else { return }
+        guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch event {
         case let .failedToPlayToEndTime(error):
-            if error is URLError {
+            if error.underlyingError is URLError {
                 let controller = AKBufferingState(
                     playerController: playerController,
                     autoPlay: true,
@@ -168,6 +153,44 @@ public class AKPlayingState: AKBaseState {
         default:
             break
         }
+    }
+    
+    /// Responds to interstitial ad playback state changes to pause or buffer content when ads interrupt.
+    override public func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
+        guard isActiveState else { return }
+        switch playbackState {
+        case .paused:
+            pause()
+        case .buffering:
+            let buffering = AKBufferingState(
+                playerController: playerController,
+                autoPlay: true,
+                rate: rate
+            )
+            change(buffering)
+        default:
+            break
+        }
+    }
+
+    
+    // MARK: - Commands
+    
+    /// Adjusts playback rate when supported by the current media item.
+    /// - Parameter rate: The targeted playback speed multiplier.
+    override public func play(at rate: AKPlaybackRate) {
+        performIfAllowed(
+            check: { availability(for: .play(at: rate)) },
+            action: {
+                self.rate = rate
+                playerController.performPlay(at: rate)
+            },
+            blocked: { [weak self] reason in
+                guard let self else { return }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
     }
     
     // MARK: - Availability Overrides

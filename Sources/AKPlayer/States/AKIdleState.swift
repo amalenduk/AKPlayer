@@ -33,7 +33,7 @@ public class AKIdleState: AKBaseState {
         
     }
 
-    // MARK: - Preflight Checks
+    // MARK: - Availability Overrides
 
     /// Evaluates preflight permission and unavailable reasons for a given
     /// player action when in the idle state.

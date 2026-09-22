@@ -15,13 +15,21 @@ import Network
 /// Enumeration representing actionable playback intents evaluated by player
 /// state machine preflight checks.
 public enum AKPlayerAction: Equatable, Sendable {
+    /// Action requesting media asset loading.
     case load
+    /// Action requesting playback to start or resume at a given rate.
     case play(at: AKPlaybackRate = .normal)
+    /// Action requesting playback to pause.
     case pause
+    /// Action requesting playback to stop.
     case stop
+    /// Action requesting a seek to a specified target position.
     case seek(to: AKSeekTarget)
+    /// Action requesting a frame step by the given offset count.
     case step(by: Int)
+    /// Action requesting fast forward at a specified rate.
     case fastForward(at: AKPlaybackRate)
+    /// Action requesting rewind at a specified rate.
     case rewind(at: AKPlaybackRate)
 }
 
@@ -40,9 +48,12 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// The explicit player state represented by this class instance.
     public let state: AKPlayerState
     
+    /// Flag indicating whether the state controller has initiated transition to a subsequent state.
     public private(set) var hasTransitioned = false
     
+    /// Flag indicating whether this state instance is currently active on the player controller.
     public private(set) var isActiveState = false
+
     
     // MARK: - Initialization
     
@@ -63,13 +74,27 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     
     deinit { }
     
+    // MARK: - State Lifecycle & Event Handlers
+    
     /// Called when the player transitions into this state. Concrete state
     /// subclasses override to perform setup.
     public func processStateChange() {
         isActiveState = true
     }
     
-    // MARK: - Commands
+    /// Responds to changes in the underlying `AVPlayer.Status`.
+    public func handlePlayerStatusChange(_ status: AVPlayer.Status) {}
+    
+    /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
+    public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {}
+    
+    /// Handles lifecycle and progress events forwarded from `AVPlayerItem`.
+    public func handle(_ event: AKPlayerItemNotificationEvent) {}
+    
+    /// Responds to playback state transitions forwarded from the interstitial service.
+    open func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {}
+    
+    // MARK: - Actions (AKPlayerActionsProtocol)
     
     // MARK: 1. Loading Media
     
@@ -178,11 +203,11 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     
     // MARK: 3. Seeking Through Media
     
-    /// Asynchronously seeks to a given target position within current media.
+    /// Asynchronously seeks to a given target position within current media or integrated timeline.
     @discardableResult
-    public func seek(to target: AKSeekTarget) async -> Bool {
+    public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
         await withCheckedContinuation { con in
-            seek(to: target) { finished in
+            seek(to: target, scope: scope) { finished in
                 con.resume(returning: finished)
             }
         }
@@ -192,12 +217,14 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     @discardableResult
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime
     ) async -> Bool {
         await withCheckedContinuation { con in
             seek(
                 to: target,
+                scope: scope,
                 toleranceBefore: toleranceBefore,
                 toleranceAfter: toleranceAfter
             ) { finished in
@@ -209,10 +236,12 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Seeks to a designated target position with a completion handler callback.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
         seek(
             to: target,
+            scope: scope,
             toleranceBefore: .positiveInfinity,
             toleranceAfter: .positiveInfinity,
             completionHandler: completionHandler
@@ -222,6 +251,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Seeks to a designated target position with custom tolerance bounds and a completion handler callback.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime,
         completionHandler: @Sendable @escaping (Bool) -> Void
@@ -238,6 +268,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 }
                 let seekToken = AKSeek(
                     target: target,
+                    scope: scope,
                     toleranceBefore: toleranceBefore,
                     toleranceAfter: toleranceAfter,
                     completionHandler: completionHandler
@@ -328,7 +359,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         )
     }
     
-    // MARK: - State Management Helpers
+    // MARK: - State Management & Preflight Helpers
     
     /// Transitions the state machine context to a new target state instance.
     /// - Parameter controller: The target state controller to activate.
@@ -497,8 +528,6 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         }
     }
     
-    // MARK: - Private Pipeline
-    
     /// Internal helper method executing pre-load lifecycle hooks and
     /// constructing initial loading state.
     /// - Parameters:
@@ -538,8 +567,12 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         guard !playerController.isSeeking else { return false }
         
         if playerController.interstitialService.isPlayingInterstitial {
+            if playerController.interstitialService.interstitialPlayer?.timeControlStatus == .playing ||
+                playerController.interstitialService.playbackState == .playing {
+                return true
+            }
             guard let adItem = playerController.interstitialService.interstitialPlayer?.currentItem else {
-                return playerController.interstitialService.playbackState == .playing
+                return false
             }
             if adItem.isPlaybackBufferFull || adItem.isPlaybackLikelyToKeepUp {
                 return true
@@ -589,10 +622,4 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     
     /// Hook executed immediately prior to performing state transitions.
     public func beforeStateChange() { }
-    
-    public func handlePlayerStatusChange(_ status: AVPlayer.Status) {}
-    
-    public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {}
-    
-    public func handle(_ event: AKPlayerItemNotificationEvent) {}
 }

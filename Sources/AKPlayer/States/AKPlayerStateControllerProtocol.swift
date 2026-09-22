@@ -42,6 +42,9 @@ public protocol AKPlayerStateControllerProtocol: AnyObject, Sendable, AKPlayerAc
     
     /// Handles lifecycle and progress events forwarded from `AVPlayerItem`.
     func handle(_ event: AKPlayerItemNotificationEvent)
+    
+    /// Responds to playback state transitions forwarded from the interstitial service.
+    func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState)
 }
 
 // MARK: - Default Implementations

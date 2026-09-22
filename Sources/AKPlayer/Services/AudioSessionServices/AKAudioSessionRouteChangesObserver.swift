@@ -16,10 +16,18 @@ import Synchronization
 
 /// Event payload emitted when the active audio output route changes.
 public struct AKAudioSessionRouteChangeEvent: Sendable, Equatable {
+    /// The current audio route description.
     public let currentRoute: AVAudioSessionRouteDescription
+    /// The previous audio route description before the change, if available.
     public let previousRoute: AVAudioSessionRouteDescription?
+    /// The specific reason for the route change (e.g. category change, device plugged/unplugged).
     public let reason: AVAudioSession.RouteChangeReason
 
+    /// Initializes a new route change event payload.
+    /// - Parameters:
+    ///   - currentRoute: The current active route description.
+    ///   - previousRoute: The previous route description before the change occurred.
+    ///   - reason: The underlying reason triggering the route change.
     public init(
         currentRoute: AVAudioSessionRouteDescription,
         previousRoute: AVAudioSessionRouteDescription?,
@@ -42,6 +50,13 @@ public protocol AKAudioSessionRouteChangesObserverProtocol: AnyObject, Sendable 
     /// Asynchronous stream of route change events for Swift Concurrency.
     var events: AsyncStream<AKAudioSessionRouteChangeEvent> { get }
 
+    /// Begins observing system-level audio route change notifications.
+    func startObserving()
+
+    /// Stops monitoring audio route change notifications and clears active
+    /// tasks.
+    func stopObserving()
+
     /// Checks if an external audio device (other than the built-in speaker) is
     /// currently connected.
     /// - Returns: A Boolean value indicating whether an external device is
@@ -51,13 +66,6 @@ public protocol AKAudioSessionRouteChangesObserverProtocol: AnyObject, Sendable 
     /// Checks if headphones are currently connected as an audio output route.
     /// - Returns: A Boolean value indicating whether headphones are connected.
     func hasHeadphonesConnected() -> Bool
-
-    /// Begins observing system-level audio route change notifications.
-    func startObserving()
-
-    /// Stops monitoring audio route change notifications and clears active
-    /// tasks.
-    func stopObserving()
 }
 
 // MARK: - AKAudioSessionRouteChangesObserver

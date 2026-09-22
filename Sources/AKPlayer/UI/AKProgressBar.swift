@@ -13,21 +13,51 @@ import SwiftUI
 
 /// Configuration styling parameters for `AKProgressBar`.
 public struct AKProgressBarConfiguration: Sendable, Equatable {
+    /// The height of the default inactive progress track.
     public var trackHeight: CGFloat
+    /// The height of the progress track while scrubbing.
     public var activeTrackHeight: CGFloat
+    /// The diameter of the circular scrubber thumb.
     public var thumbDiameter: CGFloat
+    /// The background fill color of the progress track.
     public var trackBackgroundColor: Color
+    /// The fill color representing buffered playback progress.
     public var bufferTrackColor: Color
+    /// The fill color representing active playback progress.
     public var progressTrackColor: Color
+    /// The tint color for unplayed interstitial cue point markers.
     public var unplayedMarkerColor: Color
+    /// The tint color for the currently active interstitial marker.
     public var activeMarkerColor: Color
+    /// The tint color for already completed interstitial markers.
     public var playedMarkerColor: Color
+    /// The fill color for ad duration ranges along the track.
     public var fillMarkerColor: Color
+    /// The diameter of individual cue point marker dots.
     public var markerDiameter: CGFloat
+    /// The fractional scrubbing distance threshold for magnetic snapping to ad cue points.
     public var snapThresholdFraction: Double
+    /// Whether scrubbing automatically snaps to nearby ad cue markers.
     public var enableSnapping: Bool
+    /// Whether forward scrubbing restrictions past unplayed interstitials are enforced.
     public var enforceRestrictions: Bool
     
+    /// Initializes a progress bar configuration with custom styling parameters.
+    /// - Parameters:
+    ///   - trackHeight: The height of the default inactive progress track.
+    ///   - activeTrackHeight: The height of the progress track while scrubbing.
+    ///   - thumbDiameter: The diameter of the circular scrubber thumb.
+    ///   - trackBackgroundColor: The background fill color of the progress track.
+    ///   - bufferTrackColor: The fill color representing buffered playback progress.
+    ///   - progressTrackColor: The fill color representing active playback progress.
+    ///   - unplayedMarkerColor: The tint color for unplayed interstitial cue point markers.
+    ///   - activeMarkerColor: The tint color for the currently active interstitial marker.
+    ///   - playedMarkerColor: The tint color for already completed interstitial markers.
+    ///   - fillMarkerColor: The fill color for ad duration ranges along the track.
+    ///   - markerDiameter: The diameter of individual cue point marker dots.
+    ///   - snapThresholdFraction: The fractional scrubbing distance threshold for magnetic snapping.
+    ///   - enableSnapping: Whether scrubbing automatically snaps to nearby ad cue markers.
+    ///   - enforceRestrictions: Whether forward scrubbing restrictions past unplayed interstitials are enforced.
     public init(
         trackHeight: CGFloat = 4,
         activeTrackHeight: CGFloat = 6,
@@ -35,10 +65,10 @@ public struct AKProgressBarConfiguration: Sendable, Equatable {
         trackBackgroundColor: Color = Color(.systemGray5),
         bufferTrackColor: Color = Color(.systemGray3),
         progressTrackColor: Color = .accentColor,
-        unplayedMarkerColor: Color = Color.yellow,
-        activeMarkerColor: Color = Color.orange,
-        playedMarkerColor: Color = Color.gray.opacity(0.6),
-        fillMarkerColor: Color = Color.yellow.opacity(0.35),
+        unplayedMarkerColor: Color = Color(red: 0.98, green: 0.76, blue: 0.03),
+        activeMarkerColor: Color = Color(red: 0.98, green: 0.55, blue: 0.0),
+        playedMarkerColor: Color = Color.gray.opacity(0.5),
+        fillMarkerColor: Color = Color(red: 0.98, green: 0.76, blue: 0.03).opacity(0.70),
         markerDiameter: CGFloat = 6,
         snapThresholdFraction: Double = 0.02,
         enableSnapping: Bool = true,
@@ -68,11 +98,17 @@ public struct AKProgressBar: View {
     
     // MARK: - Inputs
     
+    /// The current playback timestamp in seconds.
     private let currentTime: Double
+    /// The total media duration in seconds.
     private let duration: Double
+    /// The loaded buffer fraction between 0.0 and 1.0.
     private let bufferProgress: Double
+    /// Collection of interstitial cue markers to display along the track.
     private let markers: [AKInterstitialMarker]
+    /// Styling and behavior configuration for the progress bar.
     private let configuration: AKProgressBarConfiguration
+    /// Closure invoked with the targeted playback timestamp when scrubbing commits.
     private let onSeek: @MainActor (Double) -> Void
     
     // MARK: - Internal State
@@ -82,6 +118,14 @@ public struct AKProgressBar: View {
     @State private var hoveredMarker: AKInterstitialMarker?
     @State private var isRestrictedAtMarker: Bool = false
     
+    /// Initializes an interactive playback progress bar.
+    /// - Parameters:
+    ///   - currentTime: The current playback timestamp in seconds.
+    ///   - duration: The total media duration in seconds.
+    ///   - bufferProgress: The loaded buffer fraction between 0.0 and 1.0.
+    ///   - markers: Collection of interstitial cue markers to display along the track.
+    ///   - configuration: Styling and behavior configuration for the progress bar.
+    ///   - onSeek: Closure invoked with the targeted playback timestamp when scrubbing commits.
     public init(
         currentTime: Double,
         duration: Double,
@@ -100,6 +144,7 @@ public struct AKProgressBar: View {
     
     // MARK: - Body
     
+    /// The body view rendering the interactive progress bar track, buffer, ad markers, chapters, and thumb.
     public var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
@@ -156,6 +201,11 @@ public struct AKProgressBar: View {
     
     // MARK: - Ad Fill Ranges
     
+    /// Generates views representing interstitial ad range fill blocks on the track.
+    /// - Parameters:
+    ///   - width: The total pixel width of the progress bar track.
+    ///   - height: The pixel height of the track.
+    /// - Returns: A view displaying filled rectangles across ad duration intervals.
     @ViewBuilder
     private func adFillRangesView(width: CGFloat, height: CGFloat) -> some View {
         if duration > 0 {
@@ -168,7 +218,7 @@ public struct AKProgressBar: View {
                 
                 let fillColor: Color = {
                     if marker.isCurrent {
-                        return configuration.activeMarkerColor.opacity(0.6)
+                        return configuration.activeMarkerColor.opacity(0.85)
                     } else if marker.isPlayed {
                         return configuration.playedMarkerColor.opacity(0.4)
                     } else {
@@ -186,6 +236,9 @@ public struct AKProgressBar: View {
     
     // MARK: - Ad Cue Point Markers
     
+    /// Generates views representing discrete interstitial cue point dots along the track.
+    /// - Parameter width: The total pixel width of the progress bar track.
+    /// - Returns: A view rendering circular cue point indicators.
     @ViewBuilder
     private func adCueMarkersView(width: CGFloat) -> some View {
         if duration > 0 {
@@ -205,12 +258,16 @@ public struct AKProgressBar: View {
                 ZStack {
                     Circle()
                         .fill(markerColor)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.black.opacity(0.2), lineWidth: 0.75)
+                        )
                         .frame(
                             width: marker.isCurrent ? configuration.markerDiameter + 2 : configuration.markerDiameter,
                             height: marker.isCurrent ? configuration.markerDiameter + 2 : configuration.markerDiameter
                         )
                         .shadow(
-                            color: markerColor.opacity(marker.isPlayed ? 0.0 : 0.6),
+                            color: markerColor.opacity(marker.isPlayed ? 0.0 : 0.8),
                             radius: marker.isCurrent ? 4 : 2
                         )
                 }
@@ -221,6 +278,11 @@ public struct AKProgressBar: View {
     
     // MARK: - Scrubber Thumb
     
+    /// Generates the circular scrubber thumb positioned at the current or dragged playback fraction.
+    /// - Parameters:
+    ///   - width: The total pixel width of the progress bar track.
+    ///   - fraction: The fractional position between 0.0 and 1.0.
+    /// - Returns: A view representing the interactive draggable scrubber handle.
     @ViewBuilder
     private func scrubberThumbView(width: CGFloat, fraction: Double) -> some View {
         let xPosition = width * CGFloat(fraction)
@@ -238,6 +300,11 @@ public struct AKProgressBar: View {
     
     // MARK: - Preview Tooltip
     
+    /// Generates a floating timestamp and restriction preview badge above the scrubber thumb.
+    /// - Parameters:
+    ///   - width: The total pixel width of the progress bar track.
+    ///   - fraction: The current fractional position.
+    /// - Returns: A view presenting timestamp and ad warning badge.
     @ViewBuilder
     private func previewTooltip(width: CGFloat, fraction: Double) -> some View {
         let targetSeconds = fraction * duration
@@ -271,6 +338,10 @@ public struct AKProgressBar: View {
     
     // MARK: - Gesture Handling
     
+    /// Processes drag gesture updates, applying seeking constraints and snapping logic.
+    /// - Parameters:
+    ///   - value: The drag gesture location update.
+    ///   - width: The total width of the track.
     private func handleDragChanged(value: DragGesture.Value, width: CGFloat) {
         guard width > 0, duration > 0 else { return }
         isDragging = true
@@ -319,6 +390,7 @@ public struct AKProgressBar: View {
         isRestrictedAtMarker = restricted
     }
     
+    /// Commits final scrubbing position and invokes the seek completion callback.
     private func handleDragEnded() {
         isDragging = false
         isRestrictedAtMarker = false
@@ -329,6 +401,9 @@ public struct AKProgressBar: View {
     
     // MARK: - Helpers
     
+    /// Formats numeric seconds into MM:SS display time strings.
+    /// - Parameter seconds: The time in seconds to format.
+    /// - Returns: A formatted string `MM:SS`.
     private func formatTime(_ seconds: Double) -> String {
         guard seconds.isFinite, !seconds.isNaN, seconds >= 0 else { return "--:--" }
         let total = Int(seconds)

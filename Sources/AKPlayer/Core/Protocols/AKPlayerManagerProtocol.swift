@@ -34,6 +34,7 @@ public protocol AKPlayerManagerProtocol: AKPlayerProtocol,
     /// and activation logic.
     var audioSessionService: AKAudioSessionServiceProtocol { get }
     
+    /// Manager coordinating Now Playing info center metadata publishing and remote command interactions.
     var nowPlayingManager: (any AKNowPlayingManagerProtocol)? { get }
     
     /// Configures the audio session, registers observers, and prepares the
@@ -102,12 +103,14 @@ public enum AKPlaybackInterruptionReason: UInt, Sendable {
 }
 
 public extension AKPlayerManagerProtocol {
-    
+    /// Internal seeking service orchestrating seek operations against media.
     var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
         playerController.playerSeekingThroughMediaService
     }
     
+    /// Interstitial service orchestrating ad events, schedules, and integrated timelines.
     var interstitialService: AKPlayerInterstitialServiceProtocol {
         playerController.interstitialService
     }
 }
+

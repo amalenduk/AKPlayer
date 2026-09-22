@@ -22,6 +22,12 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// The type classification of the media item (e.g., audio, video, stream).
     public let type: AKMediaType
     
+    /// Optional custom pre-configured asset (e.g., for FairPlay DRM or custom ResourceLoader).
+    public let customAsset: AVURLAsset?
+    
+    /// Optional custom pre-configured player item (e.g., for custom Video Composition).
+    public let customPlayerItem: AVPlayerItem?
+    
     /// Optional dictionary options used when initializing the underlying `AVURLAsset`.
     public let assetInitializationOptions: [String: Any]?
     
@@ -44,14 +50,6 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         get { _liveEdgeThreshold ?? (isLive() ? 4.0 : nil) }
         set { _liveEdgeThreshold = newValue }
     }
-    
-    // MARK: - Custom Seed Properties
-    
-    /// Optional custom pre-configured asset (e.g., for FairPlay DRM or custom ResourceLoader).
-    public let customAsset: AVURLAsset?
-    
-    /// Optional custom pre-configured player item (e.g., for custom Video Composition).
-    public let customPlayerItem: AVPlayerItem?
     
     // MARK: - Initialization
     
@@ -91,7 +89,15 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self._liveEdgeThreshold = liveEdgeThreshold
     }
     
-    /// Custom Asset Initializer (For FairPlay DRM / Custom Headers / ResourceLoader)
+    /// Initializes a media item with a pre-configured `AVURLAsset` (e.g. for FairPlay DRM, custom headers, or `AVAssetResourceLoaderDelegate`).
+    /// - Parameters:
+    ///   - asset: The custom pre-configured `AVURLAsset`.
+    ///   - type: The media type classification. Defaults to `.clip`.
+    ///   - automaticallyLoadedAssetKeys: Optional asset property keys to pre-load. Defaults to `nil`.
+    ///   - staticMetadata: Optional static Now Playing metadata. Defaults to `nil`.
+    ///   - cachePolicy: Cache policy for this media item. Defaults to `.useCacheIfAvailable`.
+    ///   - cacheManager: Optional custom cache manager instance. Defaults to `nil`.
+    ///   - liveEdgeThreshold: Optional custom live edge threshold in seconds. Defaults to `nil`.
     public init(
         asset: AVURLAsset,
         type: AKMediaType = .clip,
@@ -113,9 +119,16 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self._liveEdgeThreshold = liveEdgeThreshold
     }
     
-    /// Pre-configured Player Item Initializer (For Video Compositions / Custom Audio Mix)
+    /// Initializes a media item with a pre-configured `AVPlayerItem` (e.g. for custom video compositions or audio mixes).
     ///
     /// Marked `@MainActor` because Apple's `AVPlayerItem.asset` property is isolated to `@MainActor` in Swift 6.
+    /// - Parameters:
+    ///   - playerItem: The custom pre-configured `AVPlayerItem`.
+    ///   - type: The media type classification. Defaults to `.clip`.
+    ///   - staticMetadata: Optional static Now Playing metadata. Defaults to `nil`.
+    ///   - cachePolicy: Cache policy for this media item. Defaults to `.useCacheIfAvailable`.
+    ///   - cacheManager: Optional custom cache manager instance. Defaults to `nil`.
+    ///   - liveEdgeThreshold: Optional custom live edge threshold in seconds. Defaults to `nil`.
     @MainActor
     public init(
         playerItem: AVPlayerItem,
@@ -137,6 +150,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.cacheManager = cacheManager
         self._liveEdgeThreshold = liveEdgeThreshold
     }
+
     
     deinit {
         AKLogger.logDeinit(String(describing: Self.self), pointer: Unmanaged.passUnretained(self))

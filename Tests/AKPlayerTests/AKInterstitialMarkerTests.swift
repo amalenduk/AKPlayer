@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import Synchronization
 import Testing
 @testable import AKPlayer
 
@@ -120,4 +121,44 @@ struct AKInterstitialMarkerTests {
         #expect(unmapped.time == 0.0)
         #expect(unmapped.duration == 10.0)
     }
+    
+    @MainActor
+    @Test func testSeekScopeAndIntegratedTimelineSeekingService() async {
+        let player = AVPlayer()
+        let interstitialService = AKPlayerInterstitialService(with: player)
+        let seekingService = AKPlayerSeekingThroughMediaService(
+            with: player,
+            interstitialService: interstitialService
+        )
+        
+        #expect(seekingService.interstitialService != nil)
+        #expect(!seekingService.isSeeking)
+        #expect(seekingService.pendingSeeks.isEmpty)
+        
+        // Seek scope model checks
+        let primarySeek = AKSeek(target: .seconds(30), scope: .primary)
+        #expect(primarySeek.scope == .primary)
+        #expect(primarySeek.target == .seconds(30))
+        
+        let integratedSeek = AKSeek(target: .seconds(55), scope: .integrated)
+        #expect(integratedSeek.scope == .integrated)
+        #expect(integratedSeek.target == .seconds(55))
+        
+        let relativeIntegratedSeek = AKSeek(target: .offset(15), scope: .integrated)
+        #expect(relativeIntegratedSeek.scope == .integrated)
+        #expect(relativeIntegratedSeek.target == .offset(15))
+        
+        // Without active player item, seeking should complete immediately with false
+        let completedBox = Mutex(false)
+        let successBox = Mutex<Bool?>(nil)
+        let seekToken = AKSeek(target: .seconds(10), scope: .integrated) { success in
+            completedBox.withLock { $0 = true }
+            successBox.withLock { $0 = success }
+        }
+        
+        seekingService.seek(to: seekToken)
+        #expect(completedBox.withLock { $0 })
+        #expect(successBox.withLock { $0 } == false)
+    }
 }
+

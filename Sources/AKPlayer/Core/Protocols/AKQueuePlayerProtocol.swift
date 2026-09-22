@@ -8,8 +8,12 @@
 
 import Foundation
 
+// MARK: - AKQueuePlayerProtocol
+
+/// Protocol defining playlist and media queue playback operations, shuffle/repeat modes, and index navigation.
 @MainActor
 public protocol AKQueuePlayerProtocol: AKPlayerProtocol {
+
     /// The current list of items in the queue.
     var items: [any AKPlayable] { get }
 

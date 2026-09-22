@@ -8,6 +8,7 @@
 
 import AVFoundation
 import Foundation
+import UIKit
 
 // MARK: - AKPlayerController
 
@@ -104,6 +105,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         (controller as? AKFailedState)?.error
     }
     
+    /// Configuration options driving player behavior and timing defaults.
+    public private(set) var configuration: any AKPlayerConfigurationProtocol
+    
     /// Asynchronous stream of player events for Swift Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
         eventBroadcaster.makeStream()
@@ -121,14 +125,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         currentMedia?.isAtLiveEdge ?? true
     }
     
-    /// Configuration options driving player behavior and timing defaults.
-    public private(set) var configuration: any AKPlayerConfigurationProtocol
-    
-    /// The active state controller instance representing current player state
-    /// logic.
-    private var controller: (any AKPlayerStateControllerProtocol)!
-    
-    private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
+    // MARK: - Controller Services
     
     /// Service managing seek operation queuing and execution against
     /// `AVPlayer`.
@@ -139,6 +136,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     
     /// Service monitoring network availability and reachability changes.
     public let networkStatusMonitor: any AKNetworkStatusMonitorProtocol
+    
+    // MARK: - Internal Properties
+    
+    /// The active state controller instance representing current player state
+    /// logic.
+    private var controller: (any AKPlayerStateControllerProtocol)!
+    
+    /// Multicast event broadcaster dispatching playback events to asynchronous stream subscribers.
+    private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
     
     /// Observer service tracking periodic and boundary time playback events.
     private let playerPlaybackTimeObserver: any AKPlayerPlaybackTimeObserverProtocol
@@ -185,8 +191,12 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         
         self.playerRateObserver = AKPlayerRateObserver(with: player)
         self.playerPlaybackTimeObserver = AKPlayerPlaybackTimeObserver(with: player)
-        self.playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(with: player)
-        self.interstitialService = AKPlayerInterstitialService(with: player)
+        let interstitial = AKPlayerInterstitialService(with: player)
+        self.interstitialService = interstitial
+        self.playerSeekingThroughMediaService = AKPlayerSeekingThroughMediaService(
+            with: player,
+            interstitialService: interstitial
+        )
         self.networkStatusMonitor = AKNetworkStatusMonitor()
         self.controller = AKIdleState(playerController: self)
     }
@@ -210,6 +220,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         interstitialObservationTask?.cancel()
         interstitialObservationTask = nil
         eventBroadcaster.finish()
+        Task { @MainActor in
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
     }
     
     // MARK: - Time Observers
@@ -285,9 +298,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// `.percentage`, or `.date`).
     /// - Returns: `true` if the seek command was accepted and executed
     /// successfully; `false` otherwise.
-    public func seek(to target: AKSeekTarget) async -> Bool {
+    public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
         await withCheckedContinuation { continuation in
-            seek(to: target) { finished in
+            seek(to: target, scope: scope) { finished in
                 continuation.resume(returning: finished)
             }
         }
@@ -298,6 +311,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// - Parameters:
     ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - toleranceBefore: Acceptable time offset tolerance before the target
     /// position.
     ///   - toleranceAfter: Acceptable time offset tolerance after the target
@@ -306,12 +320,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// successfully; `false` otherwise.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime
     ) async -> Bool {
         await withCheckedContinuation { continuation in
             seek(
                 to: target,
+                scope: scope,
                 toleranceBefore: toleranceBefore,
                 toleranceAfter: toleranceAfter
             ) { finished in
@@ -324,13 +340,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// - Parameters:
     ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - completionHandler: A callback invoked when the seek operation
     /// finishes or is canceled, receiving a boolean indicating success.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
-        controller.seek(to: target, completionHandler: completionHandler)
+        controller.seek(to: target, scope: scope, completionHandler: completionHandler)
     }
     
     /// Seeks to a designated target position with custom tolerance bounds and a
@@ -338,6 +356,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// - Parameters:
     ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - toleranceBefore: Acceptable time offset tolerance before the target
     /// position.
     ///   - toleranceAfter: Acceptable time offset tolerance after the target
@@ -346,12 +365,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// finishes or is canceled, receiving a boolean indicating success.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
         controller.seek(
             to: target,
+            scope: scope,
             toleranceBefore: toleranceBefore,
             toleranceAfter: toleranceAfter,
             completionHandler: completionHandler
@@ -428,6 +449,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Hook called whenever state changes to execute custom side effects based
     /// on active state.
     public func processStateChange() {
+        updateIdleTimer()
+        
         switch state {
         case .idle, .loading, .buffering, .paused, .playing, .waitingForNetwork:
             break
@@ -553,28 +576,14 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             for await event in stream {
                 guard !Task.isCancelled, let self else { break }
                 if case let .playbackStateDidChange(playbackState) = event {
-                    self.handleInterstitialPlaybackStateChange(playbackState)
+                    guard self.interstitialService.isPlayingInterstitial else { continue }
+                    self.controller.handleInterstitialPlaybackStateChange(playbackState)
                 }
             }
         }
     }
     
-    private func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
-        guard interstitialService.isPlayingInterstitial else { return }
-        switch playbackState {
-        case .paused:
-            if state.isPlaying || ((state.isBuffering || state.isWaitingForNetwork) && autoPlay) {
-                pause()
-            }
-        case .playing:
-            if state.isPaused || state.isLoaded || ((state.isBuffering || state.isWaitingForNetwork) && !autoPlay) {
-                play()
-            }
-        default:
-            break
-        }
-    }
-    
+    /// Observes media player item notification events and forwards them to the active state controller.
     private func observePlayerItemNotifications() {
         playerItemNotificationObservationTask?.cancel()
         guard let events = currentMedia?.playerItemNotifications.events else { return }
@@ -584,6 +593,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
                 guard !Task.isCancelled, let self else { break }
                 self.controller.handle(event)
             }
+        }
+    }
+    
+    /// Updates the application idle timer (screen sleep) state based on whether
+    /// the active playback state is configured in `idleTimerDisabledForStates`.
+    private func updateIdleTimer() {
+        let shouldDisable = configuration.idleTimerDisabledForStates.contains(state)
+        if UIApplication.shared.isIdleTimerDisabled != shouldDisable {
+            UIApplication.shared.isIdleTimerDisabled = shouldDisable
         }
     }
     

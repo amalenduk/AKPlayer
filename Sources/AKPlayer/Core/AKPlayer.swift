@@ -16,6 +16,28 @@ import AVFoundation
 public class AKPlayer: NSObject, AKPlayerProtocol {
     // MARK: - Properties
     
+    /// The underlying `AVPlayer` engine driving system media execution.
+    public var player: AVPlayer {
+        manager.player
+    }
+    
+    /// The current concrete playback state of the player.
+    public var state: AKPlayerState {
+        manager.state
+    }
+    
+    /// The default speed multiplier used when initiating normal playback.
+    public var defaultRate: AKPlaybackRate {
+        get { manager.defaultRate }
+        set { manager.defaultRate = newValue }
+    }
+    
+    /// The active playback rate speed multiplier.
+    public var rate: AKPlaybackRate {
+        get { manager.rate }
+        set { manager.rate = newValue }
+    }
+    
     /// The currently active playable media item loaded into the player
     /// pipeline.
     public var currentMedia: (any AKPlayable)? {
@@ -27,14 +49,14 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.currentItem
     }
     
-    /// The current playback time position of the active media item.
-    public var currentTime: CMTime {
-        manager.currentTime
-    }
-    
     /// The total duration of the currently active media item.
     public var currentItemDuration: CMTime {
         manager.currentItemDuration
+    }
+    
+    /// The current playback time position of the active media item.
+    public var currentTime: CMTime {
+        manager.currentTime
     }
     
     /// The remaining playback time duration for the active media item, if
@@ -60,23 +82,6 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.lastRequestedSeekPosition
     }
     
-    /// The current concrete playback state of the player.
-    public var state: AKPlayerState {
-        manager.state
-    }
-    
-    /// The default speed multiplier used when initiating normal playback.
-    public var defaultRate: AKPlaybackRate {
-        get { manager.defaultRate }
-        set { manager.defaultRate = newValue }
-    }
-    
-    /// The active playback rate speed multiplier.
-    public var rate: AKPlaybackRate {
-        get { manager.rate }
-        set { manager.rate = newValue }
-    }
-    
     /// The audio output playback volume level, ranging from 0.0 to 1.0.
     public var volume: Float {
         get { manager.volume }
@@ -95,11 +100,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.error
     }
     
-    /// The underlying `AVPlayer` engine driving system media execution.
-    public var player: AVPlayer {
-        manager.player
-    }
-    
+    /// Configuration options driving player behavior and timing defaults.
     public var configuration: any AKPlayerConfigurationProtocol {
         manager.configuration
     }
@@ -121,6 +122,8 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.isAtLiveEdge
     }
     
+    // MARK: - Manager & Services
+    
     /// The player manager instance handling core state machine lifecycle and
     /// engine operations.
     private var manager: AKPlayerManagerProtocol
@@ -130,10 +133,12 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.nowPlayingManager
     }
     
+    /// The service managing sequential seeking actions through media queues.
     public var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
         manager.playerSeekingThroughMediaService
     }
     
+    /// The service managing scheduled interstitial (ad) events and playback timelines.
     public var interstitialService: AKPlayerInterstitialServiceProtocol {
         manager.interstitialService
     }
@@ -269,8 +274,8 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     /// - Returns: `true` if the seek command was accepted and successfully
     /// executed; `false` otherwise.
     @discardableResult
-    public func seek(to target: AKSeekTarget) async -> Bool {
-        await manager.seek(to: target)
+    public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
+        await manager.seek(to: target, scope: scope)
     }
     
     /// Asynchronously seeks to a designated target position with explicit
@@ -278,6 +283,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     /// - Parameters:
     ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - toleranceBefore: Acceptable time offset tolerance before the target
     /// position.
     ///   - toleranceAfter: Acceptable time offset tolerance after the target
@@ -287,13 +293,13 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     @discardableResult
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         toleranceBefore: CMTime,
         toleranceAfter: CMTime
-    ) async
-    -> Bool
-    {
+    ) async -> Bool {
         await manager.seek(
             to: target,
+            scope: scope,
             toleranceBefore: toleranceBefore,
             toleranceAfter: toleranceAfter
         )
@@ -303,13 +309,15 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     /// - Parameters:
     ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - completionHandler: A callback invoked when the seek operation
     /// completes or is canceled, receiving a boolean indicating success.
     public func seek(
         to target: AKSeekTarget,
+        scope: AKSeekScope,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
-        manager.seek(to: target, completionHandler: completionHandler)
+        manager.seek(to: target, scope: scope, completionHandler: completionHandler)
     }
     
     /// Seeks to a designated target position with custom tolerance bounds and a
@@ -317,6 +325,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     /// - Parameters:
     ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     ///   - toleranceBefore: Acceptable time offset tolerance before the target
     /// position.
     ///   - toleranceAfter: Acceptable time offset tolerance after the target
@@ -324,30 +333,19 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     ///   - completionHandler: A callback invoked when the seek operation
     /// completes or is canceled, receiving a boolean indicating success.
     public func seek(
-        to target: AKSeekTarget, toleranceBefore: CMTime,
+        to target: AKSeekTarget,
+        scope: AKSeekScope,
+        toleranceBefore: CMTime,
         toleranceAfter: CMTime,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
         manager.seek(
-            to: target, toleranceBefore: toleranceBefore,
+            to: target,
+            scope: scope,
+            toleranceBefore: toleranceBefore,
             toleranceAfter: toleranceAfter,
             completionHandler: completionHandler
         )
-    }
-    
-    // MARK: - Live Stream Controls
-    
-    /// Seeks immediately to the live edge of the current broadcast stream.
-    /// - Returns: `true` if the seek command was accepted and executed successfully; `false` otherwise.
-    @discardableResult
-    public func jumpToLive() async -> Bool {
-        await manager.jumpToLive()
-    }
-    
-    /// Seeks immediately to the live edge with a completion callback.
-    /// - Parameter completionHandler: A callback invoked with the success status of the operation.
-    public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
-        manager.jumpToLive(completionHandler: completionHandler)
     }
     
     // MARK: - Media Navigation
@@ -383,6 +381,23 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     public func rewind(at rate: AKPlaybackRate) {
         manager.rewind(at: rate)
     }
+    
+    // MARK: - Live Stream Navigation
+    
+    /// Seeks immediately to the live edge of the current broadcast stream.
+    /// - Returns: `true` if the seek command was accepted and executed successfully; `false` otherwise.
+    @discardableResult
+    public func jumpToLive() async -> Bool {
+        await manager.jumpToLive()
+    }
+    
+    /// Seeks immediately to the live edge with a completion callback.
+    /// - Parameter completionHandler: A callback invoked with the success status of the operation.
+    public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        manager.jumpToLive(completionHandler: completionHandler)
+    }
+    
+    // MARK: - Private Event Handling
     
     private func startObservingPlayerEvents() {
         playerEventsTask?.cancel()

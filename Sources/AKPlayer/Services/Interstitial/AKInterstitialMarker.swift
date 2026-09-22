@@ -69,6 +69,17 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
     
     // MARK: - Initialization
     
+    /// Initializes a new interstitial cue or ad segment marker.
+    /// - Parameters:
+    ///   - id: Unique identifier for the marker. Defaults to a new UUID string.
+    ///   - time: Presentation timestamp in seconds along the primary timeline.
+    ///   - duration: Duration of the ad break in seconds if known.
+    ///   - occupancy: Single point vs fill range timeline occupancy. Defaults to `.singlePoint`.
+    ///   - restrictions: Playback and seeking restrictions applied during the ad. Defaults to `[]`.
+    ///   - isPlayed: Whether the ad has finished playing. Defaults to `false`.
+    ///   - isCurrent: Whether the ad is actively playing. Defaults to `false`.
+    ///   - templateItemCount: Number of ad items in this interstitial pod. Defaults to `1`.
+    ///   - title: Display title or label for the ad marker.
     public init(
         id: String = UUID().uuidString,
         time: TimeInterval,
@@ -92,6 +103,11 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
     }
     
     /// Initializes a marker from an `AVPlayerInterstitialEvent` and an optional `AVPlayerItemSegment`.
+    /// - Parameters:
+    ///   - event: The AVPlayer interstitial event to extract metadata from.
+    ///   - segment: Optional matching AVPlayer item segment.
+    ///   - isPlayed: Whether the marker has already finished. Defaults to `false`.
+    ///   - isCurrent: Whether the marker is currently active. Defaults to `false`.
     public init(
         event: AVPlayerInterstitialEvent,
         segment: AVPlayerItemSegment? = nil,
@@ -143,6 +159,7 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
 // MARK: - Equatable & Hashable
 
 extension AKInterstitialMarker {
+    /// Returns a boolean value indicating whether two interstitial markers are equal in state and timing.
     public static func == (lhs: AKInterstitialMarker, rhs: AKInterstitialMarker) -> Bool {
         lhs.id == rhs.id &&
         lhs.time == rhs.time &&
@@ -155,6 +172,7 @@ extension AKInterstitialMarker {
         lhs.title == rhs.title
     }
     
+    /// Hashes the essential components of this marker into the given hasher.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(time)

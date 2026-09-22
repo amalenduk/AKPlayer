@@ -44,33 +44,44 @@ public protocol AKNetworkStatusMonitorProtocol: AnyObject, Sendable {
 public final class AKNetworkStatusMonitor: AKNetworkStatusMonitorProtocol, Sendable {
     // MARK: - State
     
+    /// Thread-confined internal state model for NWPathMonitor and network snapshots.
     private struct State {
+        /// The active NWPathMonitor instance.
         var networkPathMonitor: NWPathMonitor?
+        /// Flag indicating whether path observation is currently active.
         var isObserving = false
+        /// The most recent NWPath snapshot recorded.
         var latestPath: NWPath?
     }
     
+    /// Internal state protected by Swift 6 native Mutex.
     private let state = Mutex(State())
     
+    /// Dedicated serial dispatch queue for NWPathMonitor path update callbacks.
     private let monitorQueue = DispatchQueue(
         label: "com.akplayer.networkmonitor",
         qos: .utility
     )
     
+    /// The current network path description if available.
     public var currentPath: NWPath? {
         state.withLock { $0.networkPathMonitor?.currentPath ?? $0.latestPath }
     }
     
+    /// The current network connectivity status (`.satisfied`, `.unsatisfied`, or `.requiresConnection`).
     public var currentNetworkStatus: NWPath.Status {
         currentPath?.status ?? .requiresConnection
     }
     
+    /// A Boolean value indicating whether active internet connectivity is currently satisfied.
     public var isConnected: Bool {
         currentNetworkStatus == .satisfied
     }
     
+    /// Internal event broadcaster emitting network status changes.
     private let eventBroadcaster = AKEventBroadcaster<NWPath.Status>()
     
+    /// An asynchronous stream emitting network status updates as connectivity changes.
     public var networkStatus: AsyncStream<NWPath.Status> {
         eventBroadcaster.makeStream()
     }

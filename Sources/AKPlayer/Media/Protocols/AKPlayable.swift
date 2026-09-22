@@ -64,13 +64,21 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 // MARK: - Default Property Implementations
 
 public extension AKPlayable {
+    /// Default custom AVURLAsset instance (returns `nil`).
     var customAsset: AVURLAsset? { nil }
+    /// Default custom AVPlayerItem instance (returns `nil`).
     var customPlayerItem: AVPlayerItem? { nil }
+    /// Default custom initialization options for AVURLAsset (returns `nil`).
     var assetInitializationOptions: [String: Any]? { nil }
+    /// Default keys automatically preloaded on the asset (returns `nil`).
     var automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? { nil }
+    /// Default static Now Playing metadata (returns `nil`).
     var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? { nil }
+    /// Default media caching policy (`.useCacheIfAvailable`).
     var cachePolicy: AKMediaCachePolicy { .useCacheIfAvailable }
+    /// Default custom media cache manager (returns `nil`).
     var cacheManager: (any AKMediaCacheProtocol)? { nil }
+    /// Default tolerance threshold in seconds from live edge for live streams.
     var liveEdgeThreshold: TimeInterval? {
         isLive() ? 4.0 : nil
     }
@@ -79,10 +87,12 @@ public extension AKPlayable {
 // MARK: - Equatable Implementation
 
 public extension AKPlayable {
+    /// Compares two instances of `AKPlayable` for identity or equality of URL and media type.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs === rhs || (lhs.url == rhs.url && lhs.type == rhs.type)
     }
 
+    /// Checks if this playable media is equal to another existential `AKPlayable` instance.
     func isEqual(to other: any AKPlayable) -> Bool {
         self === other || (url == other.url && type == other.type)
     }
@@ -91,6 +101,7 @@ public extension AKPlayable {
 // MARK: - CustomStringConvertible Defaults
 
 public extension AKPlayable {
+    /// A textual description of the media item including URL and type.
     var description: String {
         "url: \(url.description) | type: \(type.description)"
     }
@@ -99,6 +110,7 @@ public extension AKPlayable {
 // MARK: - Live Stream Helpers
 
 public extension AKPlayable {
+    /// Determines whether the media item is a live stream based on its media type or duration.
     func isLive() -> Bool {
         if case let AKMediaType.stream(isLive) = type, isLive {
             return true
@@ -110,13 +122,16 @@ public extension AKPlayable {
 // MARK: - Network and Storage Helpers
 
 public extension AKPlayable {
+    /// Indicates whether the media item is stored locally on device.
     func isLocal() -> Bool {
         url.isFileURL
     }
 
+    /// Indicates whether the media item is streamed over a network protocol.
     func isOverNetwork() -> Bool {
         guard !url.isFileURL else { return false }
         guard let scheme = url.scheme?.lowercased() else { return false }
         return ["http", "https", "rtsp", "rtmp"].contains(scheme)
     }
 }
+

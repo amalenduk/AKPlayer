@@ -56,6 +56,14 @@ public struct AKChapter: Equatable, Identifiable, Sendable {
     
     // MARK: - Initialization
     
+    /// Initializes a new media chapter domain model.
+    /// - Parameters:
+    ///   - id: The 1-based chapter number.
+    ///   - index: The 0-based chapter index.
+    ///   - title: The chapter title.
+    ///   - timeRange: The playback time range of the chapter.
+    ///   - artworkImage: Optional chapter artwork image.
+    ///   - artworkData: Optional raw binary artwork data.
     public init(
         id: Int,
         index: Int,
@@ -106,6 +114,7 @@ public struct AKChapter: Equatable, Identifiable, Sendable {
     
     // MARK: - Equatable
     
+    /// Returns a boolean value indicating whether two chapters are identical.
     public static func == (lhs: AKChapter, rhs: AKChapter) -> Bool {
         lhs.id == rhs.id &&
         lhs.index == rhs.index &&

@@ -120,6 +120,7 @@ public enum AKSeekTarget: Equatable, Sendable {
 // MARK: - CustomStringConvertible
 
 extension AKSeekTarget: CustomStringConvertible {
+    /// A textual representation of the seek target for logging and debugging.
     public var description: String {
         switch self {
         case let .time(time):

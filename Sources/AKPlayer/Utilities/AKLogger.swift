@@ -13,10 +13,15 @@ import os
 
 /// Categories used to organize AKPlayer's internal logging.
 public enum AKLogCategory: String, Sendable {
+    /// Logging category for playback engine, state transitions, and playback timing.
     case player = "Player"
+    /// Logging category for media assets, metadata parsing, and track options.
     case media = "Media"
+    /// Logging category for system audio session configuration and interruptions.
     case session = "AudioSession"
+    /// Logging category for MPNowPlayingInfoCenter and remote commands.
     case remote = "RemoteCommands"
+    /// Logging category for component initialization and deallocation lifecycles.
     case lifecycle = "Lifecycle"
 }
 
@@ -30,28 +35,34 @@ public enum AKLogCategory: String, Sendable {
 public enum AKLogger: Sendable {
     // MARK: - Subsystem & Static Loggers
     
+    /// System logging subsystem identifier for AKPlayer.
     private static let subsystem = "com.AKPlayer.framework"
     
+    /// Logger instance for playback engine and state transitions.
     private static let player = Logger(
         subsystem: subsystem,
         category: AKLogCategory.player.rawValue
     )
     
+    /// Logger instance for media assets, metadata, and track selection.
     private static let media = Logger(
         subsystem: subsystem,
         category: AKLogCategory.media.rawValue
     )
     
+    /// Logger instance for audio session events and interruptions.
     private static let session = Logger(
         subsystem: subsystem,
         category: AKLogCategory.session.rawValue
     )
     
+    /// Logger instance for Now Playing info and remote command dispatch.
     private static let remote = Logger(
         subsystem: subsystem,
         category: AKLogCategory.remote.rawValue
     )
     
+    /// Logger instance for component lifecycle (init/deinit) telemetry.
     private static let lifecycle = Logger(
         subsystem: subsystem,
         category: AKLogCategory.lifecycle.rawValue
@@ -59,6 +70,9 @@ public enum AKLogger: Sendable {
     
     // MARK: - Logger Resolution
     
+    /// Resolves the dedicated os.Logger instance for a given log category.
+    /// - Parameter category: The targeted log category.
+    /// - Returns: The configured `Logger` instance.
     private static func logger(for category: AKLogCategory) -> Logger {
         switch category {
         case .player:

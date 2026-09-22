@@ -48,7 +48,9 @@ public class AKPictureInPictureController: NSObject {
 
     // MARK: - Private Properties
 
+    /// The underlying UIKit `AVPictureInPictureController` instance.
     private var pipController: AVPictureInPictureController?
+    /// Multicast broadcaster distributing Picture-in-Picture lifecycle events.
     private let eventBroadcaster = AKEventBroadcaster<AKPictureInPictureEvent>()
 
     // MARK: - Initialization
@@ -103,6 +105,7 @@ public class AKPictureInPictureController: NSObject {
 // MARK: - AVPictureInPictureControllerDelegate
 
 extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
+    /// Responds to the system indicating Picture-in-Picture is about to start.
     public nonisolated func pictureInPictureControllerWillStartPictureInPicture(
         _: AVPictureInPictureController
     ) {
@@ -112,6 +115,7 @@ extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
         }
     }
 
+    /// Responds to the system indicating Picture-in-Picture has started.
     public nonisolated func pictureInPictureControllerDidStartPictureInPicture(
         _: AVPictureInPictureController
     ) {
@@ -121,6 +125,7 @@ extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
         }
     }
 
+    /// Responds to the system indicating Picture-in-Picture failed to start.
     public nonisolated func pictureInPictureController(
         _: AVPictureInPictureController,
         failedToStartPictureInPictureWithError error: Error
@@ -131,6 +136,7 @@ extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
         }
     }
 
+    /// Responds to the system indicating Picture-in-Picture is about to stop.
     public nonisolated func pictureInPictureControllerWillStopPictureInPicture(
         _: AVPictureInPictureController
     ) {
@@ -140,6 +146,7 @@ extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
         }
     }
 
+    /// Responds to the system indicating Picture-in-Picture has stopped.
     public nonisolated func pictureInPictureControllerDidStopPictureInPicture(
         _: AVPictureInPictureController
     ) {
@@ -149,6 +156,7 @@ extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
         }
     }
 
+    /// Responds to user request to restore the application user interface when stopping Picture-in-Picture.
     public nonisolated func pictureInPictureController(
         _: AVPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (

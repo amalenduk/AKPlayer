@@ -119,55 +119,65 @@ public protocol AKPlayerDelegate: AnyObject, Sendable {
 // MARK: - Default Implementations
 
 public extension AKPlayerDelegate {
+    /// Default empty implementation for state transition callback.
     func akPlayer(
         _: AKPlayer,
         didChangeStateTo _: AKPlayerState
     ) {}
 
+    /// Default empty implementation for active media change callback.
     func akPlayer(
         _: AKPlayer,
         didChangeMediaTo _: any AKPlayable
     ) {}
 
+    /// Default empty implementation for playback rate change callback.
     func akPlayer(
         _: AKPlayer,
         didChangePlaybackRateTo _: AKPlaybackRate,
         from _: AKPlaybackRate
     ) {}
 
+    /// Default empty implementation for periodic time update callback.
     func akPlayer(
         _: AKPlayer,
         didChangeCurrentTimeTo _: CMTime,
         for _: any AKPlayable
     ) {}
 
+    /// Default empty implementation for boundary time callback.
     func akPlayer(
         _: AKPlayer,
         didInvokeBoundaryTimeObserverAt _: CMTime,
         for _: any AKPlayable
     ) {}
 
+    /// Default empty implementation for media end reached callback.
     func akPlayer(
         _: AKPlayer,
         didReachEndAt _: CMTime,
         for _: any AKPlayable
     ) {}
 
+    /// Default empty implementation for volume change callback.
     func akPlayer(
         _: AKPlayer,
         didChangeVolumeTo _: Float
     ) {}
 
+    /// Default empty implementation for mute status change callback.
     func akPlayer(
         _: AKPlayer,
         didChangeMutedStatusTo _: Bool
     ) {}
 
+    /// Default empty implementation for unavailable command callback.
     func akPlayer(
         _: AKPlayer,
         didEncounterUnavailableAction _: AKPlayerUnavailableCommandReason
     ) {}
 
+    /// Default empty implementation for playback failure callback.
     func akPlayer(
         _: AKPlayer,
         didFailWith _: AKPlayerError

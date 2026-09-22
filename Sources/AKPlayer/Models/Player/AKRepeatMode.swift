@@ -21,6 +21,7 @@ public enum AKRepeatMode: String, CaseIterable, Sendable, Equatable, Hashable, C
 
     // MARK: - CustomStringConvertible
 
+    /// A human-readable display title describing the repeat mode.
     public var description: String {
         switch self {
         case .off: "Off"

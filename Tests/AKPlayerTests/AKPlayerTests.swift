@@ -8,6 +8,7 @@
 import AVFoundation
 import Foundation
 import Testing
+import UIKit
 @testable import AKPlayer
 
 @MainActor
@@ -175,4 +176,20 @@ struct AKPlayerTests {
             #expect(!baseState.canPlay())
         }
     }
+    
+    @Test func testIdleTimerDisabledForStates() async throws {
+        var config = AKPlayerConfiguration()
+        config.idleTimerDisabledForStates = [.playing, .buffering]
+        
+        let player = AVPlayer()
+        let controller = AKPlayerController(player: player, configuration: config)
+        try controller.prepare()
+        
+        #expect(controller.state == .idle)
+        controller.change(AKPlayingState(playerController: controller))
+        #expect(controller.state == .playing)
+        controller.change(AKPausedState(playerController: controller))
+        #expect(controller.state == .paused)
+    }
 }
+

@@ -10,17 +10,25 @@ import CoreMedia
 
 // MARK: - AKTime
 
+/// A lightweight value type encapsulating a CoreMedia timestamp (`CMTime`) along with formatted string representations.
 public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
     // MARK: - Properties
 
+    /// The underlying CoreMedia time representation, or `nil` if unspecified.
     public let value: CMTime?
 
     // MARK: - Initializers
 
+    /// Initializes an `AKTime` instance from an optional `CMTime` value.
+    /// - Parameter time: The underlying `CMTime` representation.
     public init(time: CMTime?) {
         value = time
     }
 
+    /// Initializes an `AKTime` instance from a numeric seconds duration and timescale.
+    /// - Parameters:
+    ///   - seconds: The duration in seconds.
+    ///   - preferredTimescale: The preferred timescale for the `CMTime`.
     public init(seconds: Double, preferredTimescale: Int32) {
         self.init(
             time: CMTimeMakeWithSeconds(
@@ -30,6 +38,8 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
         )
     }
 
+    /// Initializes an `AKTime` instance from a numeric seconds duration using nanosecond timescale.
+    /// - Parameter seconds: The duration in seconds.
     public init(seconds: Double) {
         self.init(
             time: CMTimeMakeWithSeconds(
@@ -41,15 +51,18 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
 
     // MARK: - Computed Properties
 
+    /// The time value expressed in fractional seconds, or `nil` if invalid or non-numeric.
     public var seconds: Double? {
         guard let value, value.isValid, value.isNumeric else { return nil }
         return CMTimeGetSeconds(value)
     }
 
+    /// Textual description matching `stringValue`.
     public var description: String {
         stringValue
     }
 
+    /// Formatted time string in `mm:ss` or `h:mm:ss` format (e.g., "03:45" or "1:15:30").
     public var stringValue: String {
         guard let value,
               value.isValid && value.isNumeric
@@ -76,6 +89,8 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
 
     // MARK: - Methods
 
+    /// Formatted time string including milliseconds in `mm:ss.SSS` or `h:mm:ss.SSS` format.
+    /// - Returns: The formatted sub-second string.
     public func subSecondStringValue() -> String {
         guard let value, value.isValid && value.isNumeric else {
             return "--:--.---"
@@ -115,6 +130,8 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
         }
     }
 
+    /// Formatted verbose natural language time string (e.g. "3 minutes 45 seconds" or "3 minutes 45 seconds remaining").
+    /// - Returns: The localized verbose time string.
     public func verboseStringValue() -> String {
         guard let value, value.isValid && value.isNumeric else {
             return ""
@@ -147,6 +164,7 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
 
     // MARK: - Protocol Conformances (Equatable & Comparable)
 
+    /// Compares two `AKTime` instances based on their numeric seconds.
     public static func < (lhs: AKTime, rhs: AKTime) -> Bool {
         guard let a = lhs.value?.seconds,
               let b = rhs.value?.seconds
@@ -154,6 +172,7 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
         return a < b
     }
 
+    /// Checks equality between two `AKTime` instances based on their numeric seconds.
     public static func == (lhs: AKTime, rhs: AKTime) -> Bool {
         lhs.value?.seconds == rhs.value?.seconds
     }

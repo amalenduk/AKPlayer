@@ -14,13 +14,25 @@ import Foundation
 /// Protocol declaring capabilities for monitoring AVPlayer periodic and boundary time updates.
 @MainActor
 public protocol AKPlayerPlaybackTimeObserverProtocol: AnyObject, Sendable {
+    /// The underlying AVPlayer instance being observed.
     var player: AVPlayer { get }
+    /// Asynchronous stream of periodic playback time updates.
     var periodicTimes: AsyncStream<CMTime> { get }
+    /// Asynchronous stream of boundary time crossings.
     var boundaryTimes: AsyncStream<CMTime> { get }
 
+    /// Starts periodic time observation at the specified interval.
+    /// - Parameter interval: The frequency interval for updates.
     func startObservingPeriodicTime(for interval: CMTime)
-    func startObservingBoundaryTime(for times: [CMTime])
+    
+    /// Stops periodic time observation and removes the registered observer.
     func stopObservingPeriodicTime()
+    
+    /// Starts boundary time observation for the specified timestamps.
+    /// - Parameter times: The collection of boundary timestamps to observe.
+    func startObservingBoundaryTime(for times: [CMTime])
+    
+    /// Stops boundary time observation and removes the registered observer.
     func stopObservingBoundaryTime()
 }
 
@@ -31,20 +43,27 @@ public protocol AKPlayerPlaybackTimeObserverProtocol: AnyObject, Sendable {
 public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol {
     // MARK: - Properties
 
+    /// The observed AVPlayer instance.
     public let player: AVPlayer
 
+    /// Asynchronous stream emitting periodic time updates during active playback.
     public var periodicTimes: AsyncStream<CMTime> {
         periodicBroadcaster.makeStream()
     }
 
+    /// Asynchronous stream emitting boundary time events as thresholds are crossed.
     public var boundaryTimes: AsyncStream<CMTime> {
         boundaryBroadcaster.makeStream()
     }
 
+    /// Internal broadcaster dispatching periodic time events.
     private let periodicBroadcaster = AKEventBroadcaster<CMTime>()
+    /// Internal broadcaster dispatching boundary time events.
     private let boundaryBroadcaster = AKEventBroadcaster<CMTime>()
 
+    /// Retained token for the periodic time observer on AVPlayer.
     private nonisolated(unsafe) var periodicTimeObserverToken: Any?
+    /// Retained token for the boundary time observer on AVPlayer.
     private nonisolated(unsafe) var boundaryTimeObserverToken: Any?
 
     // MARK: - Init & Deinit
@@ -70,6 +89,8 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
 
     // MARK: - Periodic Time Observation
 
+    /// Starts observing periodic playback time intervals on the player.
+    /// - Parameter interval: The interval between time update callbacks.
     public func startObservingPeriodicTime(for interval: CMTime) {
         stopObservingPeriodicTime()
 
@@ -81,6 +102,7 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
         }
     }
 
+    /// Stops periodic time observation and releases the observer token.
     public func stopObservingPeriodicTime() {
         if let token = periodicTimeObserverToken {
             player.removeTimeObserver(token)
@@ -90,6 +112,8 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
 
     // MARK: - Boundary Time Observation
 
+    /// Starts observing boundary timestamps on the player timeline.
+    /// - Parameter times: The collection of CMTime points that trigger events when crossed.
     public func startObservingBoundaryTime(for times: [CMTime]) {
         stopObservingBoundaryTime()
 
@@ -103,6 +127,7 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
         }
     }
 
+    /// Stops boundary time observation and releases the observer token.
     public func stopObservingBoundaryTime() {
         if let token = boundaryTimeObserverToken {
             player.removeTimeObserver(token)

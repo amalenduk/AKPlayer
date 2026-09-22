@@ -135,6 +135,7 @@ extension AKPlaybackRate: Equatable {
         }
     }
     
+    /// Hashes the essential components of this playback rate into the given hasher.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(rate)
     }

@@ -46,11 +46,17 @@ public protocol AKPictureInPictureDelegate: AnyObject {
 // MARK: - Default Implementations
 
 public extension AKPictureInPictureDelegate {
+    /// Default empty implementation for PiP will start.
     func pictureInPictureWillStart(_: AKPictureInPictureController) {}
+    /// Default empty implementation for PiP did start.
     func pictureInPictureDidStart(_: AKPictureInPictureController) {}
+    /// Default empty implementation for PiP failure.
     func pictureInPicture(_: AKPictureInPictureController, failedToStartWithError _: Error) {}
+    /// Default empty implementation for PiP will stop.
     func pictureInPictureWillStop(_: AKPictureInPictureController) {}
+    /// Default empty implementation for PiP did stop.
     func pictureInPictureDidStop(_: AKPictureInPictureController) {}
+    /// Default implementation for restoring user interface, immediately completing with `true`.
     func pictureInPicture(
         _: AKPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWith completionHandler: @escaping @Sendable (
