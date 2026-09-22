@@ -20,7 +20,7 @@ public class AKIdleState: AKBaseState {
     /// controller.
     /// - Parameter playerController: The target player controller executing
     /// playback commands.
-    public init(playerController: any AKPlayerControllerProtocol) {
+    public init(playerController: (any AKPlayerControllerProtocol)?) {
         super.init(playerController: playerController, state: .idle)
     }
 

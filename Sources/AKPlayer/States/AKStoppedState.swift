@@ -23,7 +23,7 @@ public class AKStoppedState: AKBaseState {
     /// player controller.
     /// - Parameter playerController: The underlying player controller driving
     /// execution.
-    public init(playerController: any AKPlayerControllerProtocol) {
+    public init(playerController: (any AKPlayerControllerProtocol)?) {
         defer {
             AKLogger.logInit(self)
         }
@@ -44,13 +44,13 @@ public class AKStoppedState: AKBaseState {
     override public func processStateChange() {
         super.processStateChange()
 
-        playerController.performStop()
+        playerController?.performStop()
     }
 
     /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if
     /// needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,

@@ -66,7 +66,7 @@ public class AKWaitingForNetworkState: AKBaseState {
     ///   - reason: The underlying reason that triggered the transition to waiting for network.
     ///   - retryCount: The current retry attempt count for exponential backoff.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         autoPlay: Bool = false,
         rate: AKPlaybackRate? = nil,
         stateToNavigateAfterBuffering: AKPlayerState? = nil,
@@ -105,7 +105,7 @@ public class AKWaitingForNetworkState: AKBaseState {
     /// Entry point for state setup. Ensures player is paused, starts observer pipelines, and
     /// monitors network changes.
     override public func processStateChange() {
-        guard let media = playerController.currentMedia else { return stop() }
+        guard let playerController, let media = playerController.currentMedia else { return stop() }
         super.processStateChange()
 
         if !playerController.player.timeControlStatus.isPaused {
@@ -126,7 +126,7 @@ public class AKWaitingForNetworkState: AKBaseState {
     /// Handles changes to the AVPlayer's status, transitioning to failed if an error occurs.
     /// - Parameter status: The updated player status.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard status == .failed else { return }
+        guard status == .failed, let playerController else { return }
         let controller = AKFailedState(
             playerController: playerController,
             error: .playerCanNoLongerPlay(
@@ -139,7 +139,7 @@ public class AKWaitingForNetworkState: AKBaseState {
     /// Handles changes to the player's time control status while waiting for network.
     /// - Parameter status: The updated time control status.
     override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch status {
         case .playing:
@@ -166,7 +166,7 @@ public class AKWaitingForNetworkState: AKBaseState {
     /// time.
     /// - Parameter event: The player item notification event.
     override public func handle(_ event: AKPlayerItemNotificationEvent) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch event {
         case let .failedToPlayToEndTime(error):
@@ -230,7 +230,7 @@ public class AKWaitingForNetworkState: AKBaseState {
     /// Requests to resume playback once network connectivity is restored by enabling autoplay.
     override public func play() {
         if autoPlay {
-            playerController
+            playerController?
                 .emit(.commandUnavailable(reason: .alreadyTryingToPlay))
         } else {
             performIfAllowed(
@@ -240,7 +240,7 @@ public class AKWaitingForNetworkState: AKBaseState {
                 },
                 blocked: { [weak self] reason in
                     guard let self else { return }
-                    playerController.emit(.commandUnavailable(reason: reason))
+                    playerController?.emit(.commandUnavailable(reason: reason))
                 },
                 fallback: ()
             )
@@ -258,7 +258,7 @@ public class AKWaitingForNetworkState: AKBaseState {
             },
             blocked: { [weak self] reason in
                 guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -346,6 +346,7 @@ public class AKWaitingForNetworkState: AKBaseState {
 
     /// Schedules an exponential backoff task to retry buffering after a timeout.
     private func scheduleBackoffRetry() {
+        guard let playerController else { return }
         let base = playerController.configuration.waitingForNetworkBaseCooldown
         let multiplier = playerController.configuration.backoffMultiplier
         let maxCooldown = playerController.configuration.maxWaitingForNetworkCooldown

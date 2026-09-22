@@ -20,7 +20,7 @@ import Foundation
 public protocol AKPlayerStateControllerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
     /// The underlying player controller driving playback, asset management, and
     /// audio state transitions.
-    var playerController: any AKPlayerControllerProtocol { get }
+    var playerController: (any AKPlayerControllerProtocol)? { get }
 
     /// The current operational state classification represented by this state
     /// controller instance.

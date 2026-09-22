@@ -50,7 +50,7 @@ public class AKLoadingState: AKBaseState {
     ///   - position: Optional initial seek target.
     ///   - rate: Optional initial playback speed multiplier.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         media: any AKPlayable,
         autoPlay: Bool = false,
         position: AKSeekTarget? = nil,
@@ -84,7 +84,7 @@ public class AKLoadingState: AKBaseState {
     /// initial media change events, and monitors media load state transitions.
     override public func processStateChange() {
         super.processStateChange()
-        playerController.emit(.mediaDidChange(media))
+        playerController?.emit(.mediaDidChange(media))
 
         mediaObservationTask?.cancel()
         mediaObservationTask = Task { @MainActor [weak self] in
@@ -128,7 +128,7 @@ public class AKLoadingState: AKBaseState {
     /// fires unavailable action delegate notifications.
     /// - Parameter rate: The target speed requested.
     override public func play(at _: AKPlaybackRate) {
-        playerController.emit(.commandUnavailable(reason: .waitTillMediaLoaded))
+        playerController?.emit(.commandUnavailable(reason: .waitTillMediaLoaded))
     }
 
     /// Cancels queued autoplay request while media is loading.
@@ -166,7 +166,7 @@ public class AKLoadingState: AKBaseState {
             }
         case .playerItemLoaded:
             playerItemLoaded()
-        case .readyToPlay where !(playerController.player.currentItem == media.playerItem):
+        case .readyToPlay where !(playerController?.player.currentItem == media.playerItem):
             playerItemLoaded()
             becameReadyToPlay()
         case .readyToPlay:
@@ -203,6 +203,7 @@ public class AKLoadingState: AKBaseState {
 
     /// Prepares player item and links it with AVPlayer pipeline once loaded.
     private func playerItemLoaded() {
+        guard let playerController else { return }
         if let item = media.playerItem {
             item.automaticallyPreservesTimeOffsetFromLive = playerController.configuration
                 .automaticallyPreservesTimeOffsetFromLive
@@ -214,6 +215,7 @@ public class AKLoadingState: AKBaseState {
 
     /// Evaluates AVPlayer ready status and transitions state upon success.
     private func becameReadyToPlay() {
+        guard let playerController else { return }
         guard let currentItem = playerController.player.currentItem,
               currentItem == media.playerItem,
               currentItem.status == .readyToPlay,
@@ -241,6 +243,7 @@ public class AKLoadingState: AKBaseState {
 
     /// Transitions state machine to `AKFailedState` upon item or player loading failure.
     private func transitionToFailed() {
+        guard let playerController else { return }
         let controller = AKFailedState(
             playerController: playerController,
             error: .playerCanNoLongerPlay(error: playerController.player.error)

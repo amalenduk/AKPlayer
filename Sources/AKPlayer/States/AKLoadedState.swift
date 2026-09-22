@@ -39,7 +39,7 @@ public class AKLoadedState: AKBaseState {
     ///   - position: An optional initial position to apply on load.
     ///   - rate: An optional initial playback rate speed multiplier.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         autoPlay: Bool = false,
         position: AKSeekTarget? = nil,
         rate: AKPlaybackRate? = nil
@@ -67,6 +67,7 @@ public class AKLoadedState: AKBaseState {
     override public func processStateChange() {
         super.processStateChange()
 
+        guard let playerController else { return }
         playerController.emit(.timeDidChange(playerController.currentTime))
 
         if autoPlay {
@@ -93,7 +94,7 @@ public class AKLoadedState: AKBaseState {
 
     /// Responds to changes in the underlying `AVPlayer.Status`.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,
@@ -106,7 +107,7 @@ public class AKLoadedState: AKBaseState {
 
     /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
     override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch status {
         case .playing:
@@ -188,7 +189,7 @@ public class AKLoadedState: AKBaseState {
             },
             blocked: { [weak self] reason in
                 guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -200,7 +201,7 @@ public class AKLoadedState: AKBaseState {
         if autoPlay {
             autoPlay = false
         } else {
-            playerController.emit(.commandUnavailable(reason: .alreadyPaused))
+            playerController?.emit(.commandUnavailable(reason: .alreadyPaused))
         }
     }
 }

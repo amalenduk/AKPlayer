@@ -57,7 +57,7 @@ public class AKBufferingState: AKBaseState {
     ///   - targetSeek: Optional pending seek command to process during buffering.
     ///   - retryCount: Consecutive retry counter for buffer stall escalation.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         autoPlay: Bool = false,
         rate: AKPlaybackRate? = nil,
         stateToNavigateAfterBuffering: AKPlayerState? = nil,
@@ -67,7 +67,8 @@ public class AKBufferingState: AKBaseState {
         defer {
             AKLogger.logInit(self)
         }
-        self.stateToNavigateAfterBuffering = stateToNavigateAfterBuffering ?? playerController.state
+        self.stateToNavigateAfterBuffering = stateToNavigateAfterBuffering ?? playerController?
+            .state ?? .buffering
         self.autoPlay = autoPlay
         self.rate = rate
         self.targetSeek = targetSeek
@@ -93,7 +94,7 @@ public class AKBufferingState: AKBaseState {
     /// observation streams, handling pauses, pending seeks, and network
     /// monitoring.
     override public func processStateChange() {
-        guard let currentMedia = playerController.currentMedia else {
+        guard let playerController, let currentMedia = playerController.currentMedia else {
             return stop()
         }
         super.processStateChange()
@@ -125,7 +126,7 @@ public class AKBufferingState: AKBaseState {
     /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if
     /// needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,
@@ -138,7 +139,7 @@ public class AKBufferingState: AKBaseState {
 
     /// Responds to changes in `AVPlayer.TimeControlStatus` while waiting to play.
     override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch status {
         case .waitingToPlayAtSpecifiedRate:
@@ -158,7 +159,7 @@ public class AKBufferingState: AKBaseState {
     /// Handles media player item notification events such as network errors and playback failures
     /// during buffering.
     override public func handle(_ event: AKPlayerItemNotificationEvent) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch event {
         case let .failedToPlayToEndTime(error):
@@ -210,7 +211,7 @@ public class AKBufferingState: AKBaseState {
     /// parameters if already buffering.
     override public func play() {
         if autoPlay {
-            playerController
+            playerController?
                 .emit(.commandUnavailable(reason: .alreadyTryingToPlay))
         } else {
             autoPlay = true
@@ -231,7 +232,7 @@ public class AKBufferingState: AKBaseState {
             },
             blocked: { [weak self] reason in
                 guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -271,7 +272,7 @@ public class AKBufferingState: AKBaseState {
             blocked: { [weak self] reason in
                 completionHandler(false)
                 guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -316,7 +317,7 @@ public class AKBufferingState: AKBaseState {
             blocked: { [weak self] reason in
                 completionHandler(false)
                 guard let s = self else { return }
-                s.playerController.emit(.commandUnavailable(reason: reason))
+                s.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -393,7 +394,7 @@ public class AKBufferingState: AKBaseState {
     /// Transitions back to the designated state prior to buffering if autoplay
     /// is not requested.
     private func changeToPreviousState() {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard activePlayerItem != nil,
               !playerController.isSeeking,
               canPlay()
@@ -414,7 +415,7 @@ public class AKBufferingState: AKBaseState {
 
     /// Checks buffer availability and transitions into `AKPlayingState` if ready.
     private func startPlayingIfPossible() {
-        guard canPlay() else { return }
+        guard let playerController, canPlay() else { return }
 
         let controller = AKPlayingState(
             playerController: playerController,
@@ -428,7 +429,7 @@ public class AKBufferingState: AKBaseState {
     private func observeNetworkChanges() {
         networkObservationTask?.cancel()
         networkObservationTask = observeNetworkStatus { [weak self] status in
-            guard let self, status != .satisfied else { return }
+            guard let self, let playerController, status != .satisfied else { return }
 
             let controller = AKWaitingForNetworkState(
                 playerController: playerController,
@@ -446,7 +447,7 @@ public class AKBufferingState: AKBaseState {
     /// Performs the pending seek command if the state instance is active, and resets the timeout
     /// timer.
     private func performTargetSeekIfActive() {
-        guard isActiveState, let targetSeek else { return }
+        guard isActiveState, let targetSeek, let playerController else { return }
         playerController.performSeek(to: targetSeek)
         restartBufferTimeoutWatcher()
     }
@@ -467,6 +468,7 @@ public class AKBufferingState: AKBaseState {
 extension AKBufferingState {
     /// Starts a recurring timer task that monitors buffering readiness AND download progress.
     private func startProgressAwareBufferTimeoutWatcher() {
+        guard let playerController else { return }
         let interval = playerController.configuration.bufferObservingTimeInterval
         let stallTickLimit = playerController.configuration.bufferStallTickLimit
         let hardTimeout = playerController.configuration.bufferObservingTimeout
@@ -537,6 +539,7 @@ extension AKBufferingState {
     /// observation window.
     ///   - reason: The triggering reason for the buffer timeout.
     private func handleBufferTimeoutExceeded(madeAnyProgress: Bool, reason: BufferStallReason) {
+        guard let playerController else { return }
         guard let media = playerController.currentMedia, media.isOverNetwork() else {
             let controller = AKFailedState(
                 playerController: playerController,

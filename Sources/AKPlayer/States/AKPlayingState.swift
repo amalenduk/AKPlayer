@@ -29,7 +29,7 @@ public class AKPlayingState: AKBaseState {
     ///   - playerController: The underlying player controller driving execution.
     ///   - rate: An optional initial playback speed multiplier.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         rate: AKPlaybackRate? = nil
     ) {
         defer {
@@ -52,6 +52,8 @@ public class AKPlayingState: AKBaseState {
     override public func processStateChange() {
         super.processStateChange()
 
+        guard let playerController else { return }
+
         if playerController.player.timeControlStatus == .playing {
             playingStarted = true
         }
@@ -66,7 +68,7 @@ public class AKPlayingState: AKBaseState {
     /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if
     /// needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard status == .failed else { return }
         let controller = AKFailedState(
             playerController: playerController,
@@ -80,7 +82,7 @@ public class AKPlayingState: AKBaseState {
     /// Responds to changes in `AVPlayer.TimeControlStatus` to detect stalls, pause, or buffering
     /// needs.
     override public func handleTimeControlStatusChange(_: AVPlayer.TimeControlStatus) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch playerController.player.timeControlStatus {
         case .playing:
@@ -114,7 +116,7 @@ public class AKPlayingState: AKBaseState {
     /// Handles media player item notification events such as stall, completion, and playback
     /// failures.
     override public func handle(_ event: AKPlayerItemNotificationEvent) {
-        guard isActiveState else { return }
+        guard isActiveState, let playerController else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch event {
         case let .failedToPlayToEndTime(error):
@@ -189,11 +191,11 @@ public class AKPlayingState: AKBaseState {
             check: { availability(for: .play(at: rate)) },
             action: {
                 self.rate = rate
-                playerController.performPlay(at: rate)
+                playerController?.performPlay(at: rate)
             },
             blocked: { [weak self] reason in
                 guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )

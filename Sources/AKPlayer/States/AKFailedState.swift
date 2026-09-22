@@ -28,7 +28,7 @@ public class AKFailedState: AKBaseState {
     /// commands.
     ///   - error: The player error describing the underlying failure.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         error: AKPlayerError
     ) {
         defer {
@@ -51,7 +51,7 @@ public class AKFailedState: AKBaseState {
     /// transitioned into the failed state.
     override public func processStateChange() {
         super.processStateChange()
-        playerController.emit(.didFail(with: error))
+        playerController?.emit(.didFail(with: error))
         AKLogger.error(error.localizedDescription, category: .player)
     }
 
@@ -65,6 +65,9 @@ public class AKFailedState: AKBaseState {
     override public func availability(for action: AKPlayerAction) -> (
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
+        guard let playerController else {
+            return (allowed: false, reason: .loadMediaFirst)
+        }
         switch action {
         case .load:
             let hasPlayerError = playerController.player.error != nil

@@ -41,8 +41,8 @@ public enum AKPlayerAction: Equatable, Sendable {
 public class AKBaseState: AKPlayerStateControllerProtocol {
     // MARK: - Properties
 
-    /// Unowned reference to the parent player controller context.
-    public unowned let playerController: any AKPlayerControllerProtocol
+    /// Weak reference to the parent player controller context.
+    public private(set) weak var playerController: (any AKPlayerControllerProtocol)?
 
     /// The explicit player state represented by this class instance.
     public let state: AKPlayerState
@@ -63,7 +63,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     ///   - state: The concrete player state classification represented by this
     /// instance.
     public init(
-        playerController: any AKPlayerControllerProtocol,
+        playerController: (any AKPlayerControllerProtocol)?,
         state: AKPlayerState
     ) {
         self.playerController = playerController
@@ -116,7 +116,8 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     public func play() {
         performIfAllowed(
             check: { availability(for: .play()) },
-            action: {
+            action: { [weak self] in
+                guard let self, let playerController else { return }
                 let controller = AKBufferingState(
                     playerController: playerController,
                     autoPlay: true
@@ -124,8 +125,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 change(controller)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -139,7 +139,8 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             check: {
                 availability(for: .play(at: rate))
             },
-            action: {
+            action: { [weak self] in
+                guard let self, let playerController else { return }
                 let controller = AKBufferingState(
                     playerController: playerController,
                     autoPlay: true,
@@ -148,8 +149,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 change(controller)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -159,13 +159,13 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     public func pause() {
         performIfAllowed(
             check: { availability(for: .pause) },
-            action: {
+            action: { [weak self] in
+                guard let self, let playerController else { return }
                 let controller = AKPausedState(playerController: playerController)
                 change(controller)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -186,14 +186,14 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         guard !hasTransitioned, state != .stopped else { return }
         performIfAllowed(
             check: { availability(for: .stop) },
-            action: {
+            action: { [weak self] in
+                guard let self, let playerController else { return }
                 beforeStop()
                 let controller = AKStoppedState(playerController: playerController)
                 change(controller)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -273,6 +273,11 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                     completionHandler: completionHandler
                 )
 
+                guard let playerController else {
+                    completionHandler(false)
+                    return
+                }
+
                 let controller = AKBufferingState(
                     playerController: playerController,
                     autoPlay: state.isPlaying || autoPlay,
@@ -283,8 +288,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             },
             blocked: { [weak self] reason in
                 completionHandler(false)
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -303,12 +307,10 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 return availability(for: .step(by: count))
             },
             action: { [weak self] in
-                guard let self else { return }
-                playerController.performStep(by: count)
+                self?.playerController?.performStep(by: count)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -317,7 +319,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Fast-forwards playback using default fast-forward speed defined in
     /// player configuration.
     public func fastForward() {
-        fastForward(at: playerController.configuration.fastForwardRate)
+        if let rate = playerController?.configuration.fastForwardRate {
+            fastForward(at: rate)
+        }
     }
 
     /// Fast-forwards playback at a custom speed multiplier.
@@ -329,8 +333,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 play(at: rate)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -339,7 +342,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// Rewinds playback using default rewind speed defined in player
     /// configuration.
     public func rewind() {
-        rewind(at: playerController.configuration.rewindRate)
+        if let rate = playerController?.configuration.rewindRate {
+            rewind(at: rate)
+        }
     }
 
     /// Rewinds playback at a custom speed multiplier.
@@ -351,8 +356,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 play(at: rate)
             },
             blocked: { [weak self] reason in
-                guard let self else { return }
-                playerController.emit(.commandUnavailable(reason: reason))
+                self?.playerController?.emit(.commandUnavailable(reason: reason))
             },
             fallback: ()
         )
@@ -367,7 +371,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         isActiveState = false
         hasTransitioned = true
         beforeStateChange()
-        playerController.change(controller)
+        playerController?.change(controller)
     }
 
     /// Validates an action requirement and executes an asynchronous task if
@@ -435,6 +439,10 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     public func availability(for action: AKPlayerAction) -> (
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
+        guard let playerController else {
+            return (false, .loadMediaFirst)
+        }
+
         switch action {
         case let .play(at: rate):
             guard let currentMedia = playerController.currentMedia else {
@@ -524,14 +532,14 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     public func observeNetworkStatus(
         handler: @escaping @MainActor (NWPath.Status) -> Void
     ) -> Task<Void, Never>? {
-        guard let currentMedia = playerController.currentMedia,
-              currentMedia.isOverNetwork()
+        guard let currentMedia = playerController?.currentMedia,
+              currentMedia.isOverNetwork(),
+              let monitor = playerController?.networkStatusMonitor
         else {
             return nil
         }
 
         return Task { @MainActor [weak self] in
-            guard let monitor = self?.playerController.networkStatusMonitor else { return }
             for await status in monitor.networkStatus {
                 guard !Task.isCancelled, let _ = self else { break }
                 handler(status)
@@ -552,6 +560,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         autoPlay: Bool,
         at position: AKSeekTarget?
     ) {
+        guard let playerController else { return }
         if !playerController.player.timeControlStatus.isPaused {
             playerController.performPause()
         }
@@ -567,6 +576,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// The active player item currently being rendered / buffered (interstitial item if active,
     /// otherwise primary media item).
     public var activePlayerItem: AVPlayerItem? {
+        guard let playerController else { return nil }
         if playerController.interstitialService.isPlayingInterstitial,
            let adItem = playerController.interstitialService.interstitialPlayer?.currentItem
         {
@@ -577,7 +587,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
 
     /// Determines whether the media buffer conditions are sufficient to allow playback.
     public func canPlay() -> Bool {
-        guard !playerController.isSeeking else { return false }
+        guard let playerController, !playerController.isSeeking else { return false }
 
         if playerController.interstitialService.isPlayingInterstitial {
             if playerController.interstitialService.interstitialPlayer?
