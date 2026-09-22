@@ -201,6 +201,8 @@ public class AKLoadingState: AKBaseState {
         if let item = media.playerItem {
             item.automaticallyPreservesTimeOffsetFromLive = playerController.configuration
                 .automaticallyPreservesTimeOffsetFromLive
+            item.audioTimePitchAlgorithm = media.audioTimePitchAlgorithm?.avAlgorithm ??
+                playerController.configuration.audioTimePitchAlgorithm.avAlgorithm
             playerController.player.replaceCurrentItem(with: item)
         }
     }

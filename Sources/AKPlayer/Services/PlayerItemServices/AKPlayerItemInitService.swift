@@ -128,12 +128,18 @@ public final class AKPlayerItemInitService: AKPlayerItemInitServiceProtocol {
         from asset: AVURLAsset,
         for media: any AKPlayable
     ) -> AVPlayerItem {
-        if let customItem = media.customPlayerItem {
+        let playerItem: AVPlayerItem = if let customItem = media.customPlayerItem {
             customItem
         } else if let keys = media.automaticallyLoadedAssetKeys {
             AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: keys)
         } else {
             AVPlayerItem(asset: asset)
         }
+
+        if let algorithm = media.audioTimePitchAlgorithm {
+            playerItem.audioTimePitchAlgorithm = algorithm.avAlgorithm
+        }
+
+        return playerItem
     }
 }

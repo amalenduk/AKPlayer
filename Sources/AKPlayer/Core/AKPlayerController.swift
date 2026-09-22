@@ -110,6 +110,20 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Configuration options driving player behavior and timing defaults.
     public private(set) var configuration: any AKPlayerConfigurationProtocol
 
+    /// The active time-pitch algorithm used for pitch preservation and time stretching.
+    public var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm {
+        get {
+            if let currentItem {
+                return AKAudioTimePitchAlgorithm(avAlgorithm: currentItem.audioTimePitchAlgorithm)
+            }
+            return configuration.audioTimePitchAlgorithm
+        }
+        set {
+            configuration.audioTimePitchAlgorithm = newValue
+            currentItem?.audioTimePitchAlgorithm = newValue.avAlgorithm
+        }
+    }
+
     /// Asynchronous stream of player events for Swift Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
         eventBroadcaster.makeStream()

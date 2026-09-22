@@ -70,6 +70,11 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
     /// Player configuration specifying timing, audio session, and buffering policies.
     var configuration: any AKPlayerConfigurationProtocol { get }
 
+    /// The time-pitch algorithm used for pitch preservation and time stretching during
+    /// variable-speed
+    /// playback.
+    var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm { get set }
+
     /// An asynchronous sequence of player lifecycle and playback events.
     var events: AsyncStream<AKPlayerEvent> { get }
 

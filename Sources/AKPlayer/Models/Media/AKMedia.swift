@@ -42,6 +42,9 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     /// Optional FairPlay DRM key session handler.
     public let fairPlayHandler: (any AKFairPlayHandlerProtocol)?
 
+    /// Optional custom time-pitch algorithm for this media item.
+    public let audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm?
+
     /// The cache policy for this media item.
     public var cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable
 
@@ -73,6 +76,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ///   - cachePolicy: Cache policy for this media item.
     ///   - cacheManager: Optional custom cache manager instance.
     ///   - liveEdgeThreshold: Optional custom live edge threshold in seconds.
+    ///   - audioTimePitchAlgorithm: Optional custom time-pitch algorithm.
     public init(
         url: URL,
         type: AKMediaType,
@@ -85,7 +89,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
         cacheManager: (any AKMediaCacheProtocol)? = nil,
-        liveEdgeThreshold: TimeInterval? = nil
+        liveEdgeThreshold: TimeInterval? = nil,
+        audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm? = nil
     ) {
         self.url = url
         self.type = type
@@ -101,6 +106,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
         _liveEdgeThreshold = liveEdgeThreshold
+        self.audioTimePitchAlgorithm = audioTimePitchAlgorithm
     }
 
     /// Initializes a media item with a pre-configured `AVURLAsset` (e.g. for FairPlay DRM, custom
@@ -116,6 +122,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ///   - cachePolicy: Cache policy for this media item. Defaults to `.useCacheIfAvailable`.
     ///   - cacheManager: Optional custom cache manager instance. Defaults to `nil`.
     ///   - liveEdgeThreshold: Optional custom live edge threshold in seconds. Defaults to `nil`.
+    ///   - audioTimePitchAlgorithm: Optional custom time-pitch algorithm. Defaults to `nil`.
     public init(
         asset: AVURLAsset,
         type: AKMediaType = .clip,
@@ -125,7 +132,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
         cacheManager: (any AKMediaCacheProtocol)? = nil,
-        liveEdgeThreshold: TimeInterval? = nil
+        liveEdgeThreshold: TimeInterval? = nil,
+        audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm? = nil
     ) {
         url = asset.url
         self.type = type
@@ -141,6 +149,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
         _liveEdgeThreshold = liveEdgeThreshold
+        self.audioTimePitchAlgorithm = audioTimePitchAlgorithm
     }
 
     /// Initializes a media item with a pre-configured `AVPlayerItem` (e.g. for custom video
@@ -157,6 +166,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ///   - cachePolicy: Cache policy for this media item. Defaults to `.useCacheIfAvailable`.
     ///   - cacheManager: Optional custom cache manager instance. Defaults to `nil`.
     ///   - liveEdgeThreshold: Optional custom live edge threshold in seconds. Defaults to `nil`.
+    ///   - audioTimePitchAlgorithm: Optional custom time-pitch algorithm. Defaults to `nil`.
     @MainActor
     public init(
         playerItem: AVPlayerItem,
@@ -166,7 +176,8 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? = nil,
         cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable,
         cacheManager: (any AKMediaCacheProtocol)? = nil,
-        liveEdgeThreshold: TimeInterval? = nil
+        liveEdgeThreshold: TimeInterval? = nil,
+        audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm? = nil
     ) {
         let asset = playerItem.asset as? AVURLAsset
         url = asset?.url ?? URL(fileURLWithPath: "")
@@ -183,6 +194,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
         _liveEdgeThreshold = liveEdgeThreshold
+        self.audioTimePitchAlgorithm = audioTimePitchAlgorithm
     }
 
     deinit {

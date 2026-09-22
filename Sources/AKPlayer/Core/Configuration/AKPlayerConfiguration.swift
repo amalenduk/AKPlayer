@@ -44,6 +44,13 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// service.
     public var audioSession: AKAudioSessionConfiguration
 
+    // MARK: - Audio Processing Configurations
+
+    /// The time-pitch algorithm used for pitch preservation and time stretching during
+    /// variable-speed
+    /// playback. Defaults to `.spectral`.
+    public var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm
+
     // MARK: - Lifecycle Behavior Configurations
 
     /// Specifies whether playback automatically pauses when the application
@@ -140,6 +147,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     ///   - bufferObservingTimeInterval: The polling interval in seconds used to check buffer
     /// progress.
     ///   - audioSession: The configuration parameters applied to the audio session service.
+    ///   - audioTimePitchAlgorithm: The time-pitch algorithm used for pitch preservation during
+    /// variable-speed playback.
     ///   - playbackPausesWhenResigningActive: Whether playback pauses when application resigns
     /// active status.
     ///   - playbackPausesWhenBackgrounded: Whether playback pauses when application enters
@@ -173,6 +182,7 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         bufferObservingTimeout: TimeInterval = 30,
         bufferObservingTimeInterval: TimeInterval = 0.5,
         audioSession: AKAudioSessionConfiguration = .init(),
+        audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm = .spectral,
         playbackPausesWhenResigningActive: Bool = false,
         playbackPausesWhenBackgrounded: Bool = false,
         playbackResumesWhenBecameActive: Bool = true,
@@ -196,6 +206,7 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         self.bufferObservingTimeout = bufferObservingTimeout
         self.bufferObservingTimeInterval = bufferObservingTimeInterval
         self.audioSession = audioSession
+        self.audioTimePitchAlgorithm = audioTimePitchAlgorithm
         self.playbackPausesWhenResigningActive = playbackPausesWhenResigningActive
         self.playbackPausesWhenBackgrounded = playbackPausesWhenBackgrounded
         self.playbackResumesWhenBecameActive = playbackResumesWhenBecameActive

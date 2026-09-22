@@ -61,6 +61,10 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
     /// Optional FairPlay DRM key session handler.
     var fairPlayHandler: (any AKFairPlayHandlerProtocol)? { get }
 
+    /// Optional custom time-pitch algorithm for this media item, overriding the player
+    /// configuration.
+    var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm? { get }
+
     /// Indicates whether the media item is a live stream.
     func isLive() -> Bool
 
@@ -119,6 +123,11 @@ public extension AKPlayable {
     /// Default tolerance threshold in seconds from live edge for live streams.
     var liveEdgeThreshold: TimeInterval? {
         isLive() ? 4.0 : nil
+    }
+
+    /// Default time-pitch algorithm override (returns `nil`, using player configuration).
+    var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm? {
+        nil
     }
 }
 

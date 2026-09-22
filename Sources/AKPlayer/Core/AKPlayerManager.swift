@@ -104,6 +104,12 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.configuration
     }
 
+    /// The active time-pitch algorithm used for pitch preservation and time stretching.
+    public var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm {
+        get { playerController.audioTimePitchAlgorithm }
+        set { playerController.audioTimePitchAlgorithm = newValue }
+    }
+
     /// Asynchronous stream of player events for Swift Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
         playerController.events

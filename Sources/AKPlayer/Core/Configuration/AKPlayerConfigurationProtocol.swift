@@ -121,6 +121,13 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     /// service.
     var audioSession: AKAudioSessionConfiguration { get set }
 
+    // MARK: - Audio Processing Configurations
+
+    /// The time-pitch algorithm used for pitch preservation and time stretching during
+    /// variable-speed
+    /// playback (e.g., `.spectral` preserves voice pitch naturally for podcasts and audiobooks).
+    var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm { get set }
+
     // MARK: - Lifecycle Behavior Configurations
 
     /// Pauses playback automatically when the application resigns active
