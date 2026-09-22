@@ -168,6 +168,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// interruption ends.
     ///   - playbackFreezesAtEnd: Whether playback freezes on the final frame upon completion.
     ///   - isNowPlayingEnabled: Whether Now Playing system integration is enabled.
+    ///   - isSharePlayEnabled: Whether Apple SharePlay (GroupActivities) support is enabled.
+    ///   - sharePlay: SharePlay configuration options and policies.
     ///   - idleTimerDisabledForStates: The list of player states during which screen sleep is
     /// disabled.
     ///   - fastForwardRate: The default speed multiplier used when fast-forwarding.

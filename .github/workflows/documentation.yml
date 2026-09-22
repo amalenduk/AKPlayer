@@ -1,0 +1,72 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy-docc:
+    name: Build & Deploy DocC Documentation
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: macos-15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build DocC Documentation
+        run: |
+          xcodebuild docbuild \
+            -scheme AKPlayer \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            DOCC_HOSTING_BASE_PATH=AKPlayer
+
+      - name: Process DocC Archive for Static Hosting
+        run: |
+          xcrun docc process-archive transform-for-static-hosting \
+            DerivedData/Build/Products/Debug-iphonesimulator/AKPlayer.doccarchive \
+            --output-path docs \
+            --hosting-base-path AKPlayer
+
+      - name: Create Root Redirect
+        run: |
+          cat << 'EOF' > docs/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="utf-8">
+              <meta http-equiv="refresh" content="0; url=/AKPlayer/documentation/akplayer">
+              <title>Redirecting to AKPlayer Documentation...</title>
+              <script>
+                  window.location.href = "/AKPlayer/documentation/akplayer" + window.location.search + window.location.hash;
+              </script>
+          </head>
+          <body>
+              <p>Redirecting to <a href="/AKPlayer/documentation/akplayer">AKPlayer Documentation</a>...</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

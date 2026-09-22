@@ -338,8 +338,10 @@ public class AKPlayerController: AKPlayerControllerProtocol {
 
     /// Asynchronously seeks to a designated target position within current
     /// media.
-    /// - Parameter target: The target position (`.time`, `.seconds`, `.offset`,
+    /// - Parameters:
+    ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate scope (`.primary` or `.integrated`).
     /// - Returns: `true` if the seek command was accepted and executed
     /// successfully; `false` otherwise.
     public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {

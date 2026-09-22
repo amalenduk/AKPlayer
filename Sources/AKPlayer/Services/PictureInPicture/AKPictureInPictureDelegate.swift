@@ -33,7 +33,9 @@ public protocol AKPictureInPictureDelegate: AnyObject {
     func pictureInPictureDidStop(_ controller: AKPictureInPictureController)
 
     /// Called when the user taps the restore button in the floating PiP window.
-    /// - Parameter completionHandler: Call with `true` once your UI navigation is restored.
+    /// - Parameters:
+    ///   - controller: The Picture-in-Picture controller instance.
+    ///   - completionHandler: Call with `true` once your UI navigation is restored.
     func pictureInPicture(
         _ controller: AKPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWith completionHandler: @escaping @Sendable (

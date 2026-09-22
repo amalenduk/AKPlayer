@@ -283,8 +283,10 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
 
     /// Asynchronously seeks to a designated target position within the current
     /// media.
-    /// - Parameter target: The target position (`.time`, `.seconds`, `.offset`,
+    /// - Parameters:
+    ///   - target: The target position (`.time`, `.seconds`, `.offset`,
     /// `.percentage`, or `.date`).
+    ///   - scope: The timeline coordinate scope (`.primary` or `.integrated`).
     /// - Returns: `true` if the seek command was accepted and successfully
     /// executed; `false` otherwise.
     @discardableResult
