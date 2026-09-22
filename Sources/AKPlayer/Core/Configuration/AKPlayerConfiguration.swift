@@ -101,7 +101,8 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// Defaults to `1.0` seconds.
     public var waitingForNetworkBaseCooldown: TimeInterval
 
-    /// The exponential multiplier applied to retry delay intervals during repeated network recovery cycles.
+    /// The exponential multiplier applied to retry delay intervals during repeated network recovery
+    /// cycles.
     /// Defaults to `1.8`.
     public var backoffMultiplier: Double
 
@@ -109,13 +110,15 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// Defaults to `20.0` seconds.
     public var maxWaitingForNetworkCooldown: TimeInterval
 
-    /// The consecutive threshold count of stalled buffer observation ticks required to trigger a stall state transition.
+    /// The consecutive threshold count of stalled buffer observation ticks required to trigger a
+    /// stall state transition.
     /// Defaults to `12` (12 ticks * 0.5s = 6.0 seconds).
     public var bufferStallTickLimit: Int
 
     // MARK: - Live Stream Configurations
 
-    /// Controls whether AVPlayer automatically preserves time offset from live edge. Defaults to `true`.
+    /// Controls whether AVPlayer automatically preserves time offset from live edge. Defaults to
+    /// `true`.
     public var automaticallyPreservesTimeOffsetFromLive: Bool
 
     // MARK: - Static Default Instance
@@ -127,28 +130,42 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
 
     /// Creates a new player configuration instance with optional custom parameters.
     /// - Parameters:
-    ///   - periodicTimeInterval: The frequency interval at which periodic time observers trigger updates.
-    ///   - boundaryTimeObserverMultiplier: The offset multiplier applied when calculating boundary time observer positions.
+    ///   - periodicTimeInterval: The frequency interval at which periodic time observers trigger
+    /// updates.
+    ///   - boundaryTimeObserverMultiplier: The offset multiplier applied when calculating boundary
+    /// time observer positions.
     ///   - preferredTimeScale: The preferred timescale used when calculating time observations.
-    ///   - bufferObservingTimeout: The maximum duration in seconds the player waits for buffering before timing out.
-    ///   - bufferObservingTimeInterval: The polling interval in seconds used to check buffer progress.
+    ///   - bufferObservingTimeout: The maximum duration in seconds the player waits for buffering
+    /// before timing out.
+    ///   - bufferObservingTimeInterval: The polling interval in seconds used to check buffer
+    /// progress.
     ///   - audioSession: The configuration parameters applied to the audio session service.
-    ///   - playbackPausesWhenResigningActive: Whether playback pauses when application resigns active status.
-    ///   - playbackPausesWhenBackgrounded: Whether playback pauses when application enters background.
-    ///   - playbackResumesWhenBecameActive: Whether playback resumes when application becomes active.
-    ///   - playbackResumesWhenEnteringForeground: Whether playback resumes when application enters foreground.
-    ///   - playbackResumesWhenAudioSessionInterruptionEnded: Whether playback resumes after audio interruption ends.
+    ///   - playbackPausesWhenResigningActive: Whether playback pauses when application resigns
+    /// active status.
+    ///   - playbackPausesWhenBackgrounded: Whether playback pauses when application enters
+    /// background.
+    ///   - playbackResumesWhenBecameActive: Whether playback resumes when application becomes
+    /// active.
+    ///   - playbackResumesWhenEnteringForeground: Whether playback resumes when application enters
+    /// foreground.
+    ///   - playbackResumesWhenAudioSessionInterruptionEnded: Whether playback resumes after audio
+    /// interruption ends.
     ///   - playbackFreezesAtEnd: Whether playback freezes on the final frame upon completion.
     ///   - isNowPlayingEnabled: Whether Now Playing system integration is enabled.
-    ///   - idleTimerDisabledForStates: The list of player states during which screen sleep is disabled.
+    ///   - idleTimerDisabledForStates: The list of player states during which screen sleep is
+    /// disabled.
     ///   - fastForwardRate: The default speed multiplier used when fast-forwarding.
     ///   - rewindRate: The default speed multiplier used when rewinding.
     ///   - maxBufferRetryCount: The maximum number of buffer stall retries before failing.
-    ///   - waitingForNetworkBaseCooldown: The initial base backoff cooldown in seconds when waiting for network.
+    ///   - waitingForNetworkBaseCooldown: The initial base backoff cooldown in seconds when waiting
+    /// for network.
     ///   - backoffMultiplier: The exponential multiplier applied to retry delay intervals.
-    ///   - maxWaitingForNetworkCooldown: The maximum ceiling in seconds for exponential backoff network delay.
-    ///   - bufferStallTickLimit: The consecutive threshold count of stalled buffer ticks before transitioning state.
-    ///   - automaticallyPreservesTimeOffsetFromLive: Whether AVPlayer automatically preserves time offset from live edge.
+    ///   - maxWaitingForNetworkCooldown: The maximum ceiling in seconds for exponential backoff
+    /// network delay.
+    ///   - bufferStallTickLimit: The consecutive threshold count of stalled buffer ticks before
+    /// transitioning state.
+    ///   - automaticallyPreservesTimeOffsetFromLive: Whether AVPlayer automatically preserves time
+    /// offset from live edge.
     public init(
         periodicTimeInterval: AKTimeEventFrequency = .everyQuarterSecond,
         boundaryTimeObserverMultiplier: Double = 0.10,
@@ -183,7 +200,9 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         self.playbackPausesWhenBackgrounded = playbackPausesWhenBackgrounded
         self.playbackResumesWhenBecameActive = playbackResumesWhenBecameActive
         self.playbackResumesWhenEnteringForeground = playbackResumesWhenEnteringForeground
-        self.playbackResumesWhenAudioSessionInterruptionEnded = playbackResumesWhenAudioSessionInterruptionEnded
+        self
+            .playbackResumesWhenAudioSessionInterruptionEnded =
+            playbackResumesWhenAudioSessionInterruptionEnded
         self.playbackFreezesAtEnd = playbackFreezesAtEnd
         self.isNowPlayingEnabled = isNowPlayingEnabled
         self.idleTimerDisabledForStates = idleTimerDisabledForStates

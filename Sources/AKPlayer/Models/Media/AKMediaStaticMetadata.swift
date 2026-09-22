@@ -1,8 +1,9 @@
 //
-//  AKMediaStaticMetadata.swift
-//  AKPlayer
+//   AKMediaStaticMetadata.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 15/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
 import AVFoundation
@@ -11,9 +12,9 @@ import UIKit
 
 // MARK: - AKMediaStaticMetadata
 
-/// A model representing static container metadata extracted directly from media asset tags (ID3, QuickTime, iTunes, CommonMetadata).
+/// A model representing static container metadata extracted directly from media asset tags (ID3,
+/// QuickTime, iTunes, CommonMetadata).
 public struct AKMediaStaticMetadata: @unchecked Sendable {
-    
     /// The media title.
     public var title: String?
     /// The main artist or performer.
@@ -50,7 +51,7 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
     public var publisher: String?
     /// The primary spoken or written language tag.
     public var language: String?
-    
+
     /// Initializes a static metadata payload with explicit property values.
     /// - Parameters:
     ///   - title: The media title.
@@ -110,9 +111,9 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
         self.publisher = publisher
         self.language = language
     }
-    
+
     // MARK: - Now Playing Bridge
-    
+
     /// Converts this static metadata payload into an `AKNowPlayableStaticMetadata` instance.
     /// - Parameters:
     ///   - defaultURL: The asset URL to use if unspecified.
@@ -144,7 +145,7 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
         } else if let artwork {
             artworkPayload = .artwork(artwork)
         }
-        
+
         return AKNowPlayableStaticMetadata(
             assetURL: defaultURL ?? URL(fileURLWithPath: ""),
             mediaType: defaultMediaType,

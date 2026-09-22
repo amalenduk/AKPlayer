@@ -19,14 +19,16 @@ public enum AKPlayerError: Error, Equatable, @unchecked Sendable {
     case noItemToPlay
     /// Indicates that the current player item has not yet reached the `.readyToPlay` status.
     case playerItemNotReady
-    /// Indicates that the media item failed to play to completion, typically due to network dropouts.
+    /// Indicates that the media item failed to play to completion, typically due to network
+    /// dropouts.
     case itemFailedToPlayToEndTime
     /// Indicates that the underlying player failed into an unrecoverable state.
     case playerCanNoLongerPlay(error: Error?)
 
     /// Indicates that an underlying `AVAsset` failed to load with the specified failure reason.
     case assetLoadingFailed(reason: AssetLoadingFailureReason)
-    /// Indicates that an `AVPlayerItem` failed to load or initialize with the specified failure reason.
+    /// Indicates that an `AVPlayerItem` failed to load or initialize with the specified failure
+    /// reason.
     case playerItemLoadingFailed(reason: PlayerItemLoadingFailureReason)
     /// Indicates that an `AVPlayerItem` encountered a runtime failure during playback.
     case playerItemFailedToPlay(reason: PlayerItemFailedToPlayReason)
@@ -455,7 +457,8 @@ extension AKPlayerError.AssetLoadingFailureReason: Equatable {
 }
 
 extension AKPlayerError.PlayerItemLoadingFailureReason: Equatable {
-    /// Returns a boolean value indicating whether two player item loading failure reasons are equal.
+    /// Returns a boolean value indicating whether two player item loading failure reasons are
+    /// equal.
     public static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.statusLoadingFailed, .statusLoadingFailed),

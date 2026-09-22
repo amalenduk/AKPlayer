@@ -1,33 +1,34 @@
 //
-//  LivePlayerView.swift
-//  AKPlayerDemo
+//   LivePlayerView.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 18/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import SwiftUI
 import AKPlayer
 import AVFoundation
+import SwiftUI
 
 // MARK: - LivePlayerUIView
 
 struct LivePlayerUIView: UIViewRepresentable {
     @ObservedObject var viewModel: LivePlayerViewModel
-    
-    func makeUIView(context: Context) -> AKPlayerView {
+
+    func makeUIView(context _: Context) -> AKPlayerView {
         let v = AKPlayerView()
         v.player = viewModel.player.player
         viewModel.setupPip(with: v.playerLayer)
         return v
     }
-    
-    func updateUIView(_ uiView: AKPlayerView, context: Context) {
+
+    func updateUIView(_ uiView: AKPlayerView, context _: Context) {
         if uiView.player != viewModel.player.player {
             uiView.player = viewModel.player.player
         }
     }
-    
-    static func dismantleUIView(_ uiView: AKPlayerView, coordinator: ()) {
+
+    static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
         uiView.player = nil
     }
 }
@@ -36,27 +37,27 @@ struct LivePlayerUIView: UIViewRepresentable {
 
 public struct LivePlayerView: View {
     @StateObject public var viewModel = LivePlayerViewModel()
-    
+
     public let initialMedia: AKMedia?
     public let autoPlay: Bool
-    
-    @State private var isScrubbing: Bool = false
-    @State private var scrubOffset: Double = 0.0
-    @State private var isPulseActive: Bool = false
-    @State private var showCustomURLAlert: Bool = false
-    @State private var customURLString: String = ""
-    @State private var activeStreamTitle: String = "iReplay Live"
-    
+
+    @State private var isScrubbing = false
+    @State private var scrubOffset = 0.0
+    @State private var isPulseActive = false
+    @State private var showCustomURLAlert = false
+    @State private var customURLString = ""
+    @State private var activeStreamTitle = "iReplay Live"
+
     @Environment(\.dismiss) private var dismiss
-    
+
     public init(
         media: AKMedia? = nil,
         autoPlay: Bool = true
     ) {
-        self.initialMedia = media
+        initialMedia = media
         self.autoPlay = autoPlay
     }
-    
+
     public var body: some View {
         NavigationStack {
             ScrollView {
@@ -67,7 +68,7 @@ public struct LivePlayerView: View {
                     playbackControlsSection()
                     catchUpSpeedSection()
                     diagnosticsSection()
-                    
+
                     if let msg = viewModel.unavailableMessage {
                         unavailableBanner(msg)
                     }
@@ -97,9 +98,9 @@ public struct LivePlayerView: View {
                                     Label(liveMedia.name, systemImage: "tv")
                                 }
                             }
-                            
+
                             Divider()
-                            
+
                             Button {
                                 showCustomURLAlert = true
                             } label: {
@@ -108,7 +109,7 @@ public struct LivePlayerView: View {
                         } label: {
                             Image(systemName: "list.bullet.rectangle")
                         }
-                        
+
                         if viewModel.isPipPossible {
                             Button {
                                 viewModel.togglePip()
@@ -124,8 +125,10 @@ public struct LivePlayerView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                 Button("Load") {
-                    if let url = URL(string: customURLString.trimmingCharacters(in: .whitespacesAndNewlines)),
-                       !customURLString.isEmpty {
+                    if let url = URL(string: customURLString
+                        .trimmingCharacters(in: .whitespacesAndNewlines)),
+                        !customURLString.isEmpty
+                    {
                         let customLive = TestMedia(
                             name: "Custom Live Stream",
                             subtitle: url.host,
@@ -150,14 +153,13 @@ public struct LivePlayerView: View {
             }
         }
     }
-    
+
     // MARK: - Video Container
-    
-    @ViewBuilder
+
     private func videoPlayerContainer() -> some View {
         ZStack(alignment: .top) {
             LivePlayerUIView(viewModel: viewModel)
-                .aspectRatio(16/9, contentMode: .fit)
+                .aspectRatio(16 / 9, contentMode: .fit)
                 .background(Color.black)
                 .cornerRadius(14)
                 .overlay(
@@ -165,25 +167,27 @@ public struct LivePlayerView: View {
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
-            
+
             // Top overlay bar
             HStack {
                 liveEdgeBadge()
-                
+
                 Spacer()
-                
+
                 if viewModel.presentationSize != .zero {
-                    Text("\(Int(viewModel.presentationSize.width))x\(Int(viewModel.presentationSize.height))")
-                        .font(.caption2.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(6)
-                        .foregroundColor(.white)
+                    Text(
+                        "\(Int(viewModel.presentationSize.width))x\(Int(viewModel.presentationSize.height))"
+                    )
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(6)
+                    .foregroundColor(.white)
                 }
             }
             .padding(12)
-            
+
             // Loading Overlay
             if viewModel.isLoading {
                 VStack(spacing: 8) {
@@ -200,9 +204,9 @@ public struct LivePlayerView: View {
             }
         }
     }
-    
+
     // MARK: - Live Edge Badge (Top Overlay)
-    
+
     @ViewBuilder
     private func liveEdgeBadge() -> some View {
         if viewModel.isAtLiveEdge {
@@ -212,8 +216,11 @@ public struct LivePlayerView: View {
                     .frame(width: 8, height: 8)
                     .scaleEffect(isPulseActive ? 1.3 : 0.9)
                     .opacity(isPulseActive ? 1.0 : 0.6)
-                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPulseActive)
-                
+                    .animation(
+                        .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                        value: isPulseActive
+                    )
+
                 Text("LIVE")
                     .font(.caption.bold())
                     .foregroundColor(.white)
@@ -246,9 +253,9 @@ public struct LivePlayerView: View {
             }
         }
     }
-    
+
     // MARK: - Hero Live Sync Banner
-    
+
     @ViewBuilder
     private func liveSyncHeroBanner() -> some View {
         if viewModel.isAtLiveEdge {
@@ -256,7 +263,7 @@ public struct LivePlayerView: View {
                 Image(systemName: "dot.radiowaves.left.and.right")
                     .foregroundColor(.green)
                     .font(.title3)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Watching Live Broadcast")
                         .font(.subheadline.bold())
@@ -265,9 +272,9 @@ public struct LivePlayerView: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Text("0.0s Drift")
                     .font(.caption2.bold())
                     .padding(.horizontal, 8)
@@ -293,9 +300,9 @@ public struct LivePlayerView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Button {
                     viewModel.jumpToLive()
                 } label: {
@@ -322,19 +329,18 @@ public struct LivePlayerView: View {
             .cornerRadius(12)
         }
     }
-    
+
     // MARK: - DVR Scrubber Section
-    
-    @ViewBuilder
+
     private func dvrScrubberSection() -> some View {
         VStack(spacing: 6) {
             HStack {
                 Text("DVR Buffer Window")
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 let currentDrift = isScrubbing ? scrubOffset : -viewModel.liveOffset
                 if abs(currentDrift) <= viewModel.liveEdgeThreshold {
                     Text("🔴 LIVE")
@@ -346,24 +352,24 @@ public struct LivePlayerView: View {
                         .foregroundColor(.orange)
                 }
             }
-            
+
             let minOffset = -max(1.0, viewModel.dvrWindowDuration)
             let maxOffset = 0.0
-            
+
             Slider(
                 value: Binding(
                     get: {
                         if isScrubbing {
-                            return scrubOffset
+                            scrubOffset
                         } else {
-                            return -min(viewModel.liveOffset, viewModel.dvrWindowDuration)
+                            -min(viewModel.liveOffset, viewModel.dvrWindowDuration)
                         }
                     },
                     set: { newVal in
                         scrubOffset = newVal
                     }
                 ),
-                in: minOffset...maxOffset,
+                in: minOffset ... maxOffset,
                 onEditingChanged: { editing in
                     isScrubbing = editing
                     if !editing {
@@ -372,14 +378,14 @@ public struct LivePlayerView: View {
                 }
             )
             .tint(viewModel.isAtLiveEdge ? .red : .orange)
-            
+
             HStack {
                 Text("-\(formatSeconds(viewModel.dvrWindowDuration))")
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 Text("LIVE")
                     .font(.caption2.bold())
                     .foregroundColor(viewModel.isAtLiveEdge ? .red : .secondary)
@@ -389,10 +395,9 @@ public struct LivePlayerView: View {
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
     }
-    
+
     // MARK: - Playback Controls Section
-    
-    @ViewBuilder
+
     private func playbackControlsSection() -> some View {
         HStack(spacing: 24) {
             // Rewind 15s in DVR
@@ -403,17 +408,18 @@ public struct LivePlayerView: View {
                     .font(.title2)
             }
             .buttonStyle(.plain)
-            
+
             // Play / Pause Toggle
             Button {
                 viewModel.togglePlayPause()
             } label: {
-                Image(systemName: viewModel.stateDescription == "Playing" ? "pause.circle.fill" : "play.circle.fill")
+                Image(systemName: viewModel
+                    .stateDescription == "Playing" ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 48))
                     .foregroundColor(.accentColor)
             }
             .buttonStyle(.plain)
-            
+
             // Skip 15s / Jump to Live
             Button {
                 viewModel.seekForward(seconds: 15)
@@ -422,7 +428,7 @@ public struct LivePlayerView: View {
                     .font(.title2)
             }
             .buttonStyle(.plain)
-            
+
             // Direct Jump to Live Button
             Button {
                 viewModel.jumpToLive()
@@ -440,10 +446,9 @@ public struct LivePlayerView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
     }
-    
+
     // MARK: - Catch-up Speed Controls
-    
-    @ViewBuilder
+
     private func catchUpSpeedSection() -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -454,7 +459,7 @@ public struct LivePlayerView: View {
                 Text(String(format: "%.2fx", viewModel.playbackRate.rate))
                     .font(.caption.monospacedDigit().bold())
             }
-            
+
             HStack(spacing: 8) {
                 ForEach([AKPlaybackRate.normal, .fast, .faster, .superfast], id: \.rate) { rate in
                     let isSelected = (viewModel.playbackRate.rate == rate.rate)
@@ -465,31 +470,33 @@ public struct LivePlayerView: View {
                             .font(.caption.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
-                            .background(isSelected ? Color.accentColor : Color(.tertiarySystemBackground))
+                            .background(isSelected ? Color
+                                .accentColor : Color(.tertiarySystemBackground))
                             .foregroundColor(isSelected ? .white : .primary)
                             .cornerRadius(8)
                     }
                 }
             }
-            
-            Text("Tip: Speeding up to 1.25x or 1.5x allows catching up smoothly to the live head without jumping.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+
+            Text(
+                "Tip: Speeding up to 1.25x or 1.5x allows catching up smoothly to the live head without jumping."
+            )
+            .font(.caption2)
+            .foregroundColor(.secondary)
         }
         .padding(12)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
     }
-    
+
     // MARK: - Diagnostics & Telemetry
-    
-    @ViewBuilder
+
     private func diagnosticsSection() -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Live Stream Telemetry")
                 .font(.caption.bold())
                 .foregroundColor(.secondary)
-            
+
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                 GridRow {
                     Text("State:")
@@ -497,7 +504,7 @@ public struct LivePlayerView: View {
                         .foregroundColor(.secondary)
                     Text(viewModel.stateDescription)
                         .font(.caption2.bold())
-                    
+
                     Text("Drift / Lag:")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -505,14 +512,14 @@ public struct LivePlayerView: View {
                         .font(.caption2.monospacedDigit().bold())
                         .foregroundColor(viewModel.isAtLiveEdge ? .green : .orange)
                 }
-                
+
                 GridRow {
                     Text("DVR Buffer:")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     Text(String(format: "%.1fs", viewModel.dvrWindowDuration))
                         .font(.caption2.monospacedDigit())
-                    
+
                     Text("Position:")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -525,10 +532,9 @@ public struct LivePlayerView: View {
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
     }
-    
+
     // MARK: - Unavailable Banner
-    
-    @ViewBuilder
+
     private func unavailableBanner(_ msg: String) -> some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -541,9 +547,9 @@ public struct LivePlayerView: View {
         .background(Color.yellow.opacity(0.15))
         .cornerRadius(8)
     }
-    
+
     // MARK: - Helpers & Setup
-    
+
     private func setupPlayer() {
         if let media = initialMedia {
             activeStreamTitle = media.staticMetadata?.title ?? "Live Stream"
@@ -551,20 +557,21 @@ public struct LivePlayerView: View {
         } else {
             // Default to 24/7 Live HLS Stream
             if let defaultLive = sampleTestMedia.first(where: { $0.kind == .live }),
-               let media = makeAKMedia(from: defaultLive) {
+               let media = makeAKMedia(from: defaultLive)
+            {
                 activeStreamTitle = defaultLive.name
                 viewModel.load(media: media, autoPlay: autoPlay)
             }
         }
     }
-    
+
     private func formatTimeOffset(_ seconds: Double) -> String {
         let s = Int(seconds)
         let mins = s / 60
         let secs = s % 60
         return String(format: "%02d:%02d", mins, secs)
     }
-    
+
     private func formatSeconds(_ seconds: Double) -> String {
         let s = Int(seconds)
         let mins = s / 60

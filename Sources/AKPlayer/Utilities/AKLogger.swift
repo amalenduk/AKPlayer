@@ -34,42 +34,42 @@ public enum AKLogCategory: String, Sendable {
 /// on AKPlayer's internal logging implementation.
 public enum AKLogger: Sendable {
     // MARK: - Subsystem & Static Loggers
-    
+
     /// System logging subsystem identifier for AKPlayer.
     private static let subsystem = "com.AKPlayer.framework"
-    
+
     /// Logger instance for playback engine and state transitions.
     private static let player = Logger(
         subsystem: subsystem,
         category: AKLogCategory.player.rawValue
     )
-    
+
     /// Logger instance for media assets, metadata, and track selection.
     private static let media = Logger(
         subsystem: subsystem,
         category: AKLogCategory.media.rawValue
     )
-    
+
     /// Logger instance for audio session events and interruptions.
     private static let session = Logger(
         subsystem: subsystem,
         category: AKLogCategory.session.rawValue
     )
-    
+
     /// Logger instance for Now Playing info and remote command dispatch.
     private static let remote = Logger(
         subsystem: subsystem,
         category: AKLogCategory.remote.rawValue
     )
-    
+
     /// Logger instance for component lifecycle (init/deinit) telemetry.
     private static let lifecycle = Logger(
         subsystem: subsystem,
         category: AKLogCategory.lifecycle.rawValue
     )
-    
+
     // MARK: - Logger Resolution
-    
+
     /// Resolves the dedicated os.Logger instance for a given log category.
     /// - Parameter category: The targeted log category.
     /// - Returns: The configured `Logger` instance.
@@ -93,7 +93,7 @@ public enum AKLogger: Sendable {
 
 public extension AKLogger {
     // MARK: - Debug
-    
+
     /// Logs a debug-level message.
     ///
     /// - Parameters:
@@ -107,9 +107,9 @@ public extension AKLogger {
             "\(message, privacy: .public)"
         )
     }
-    
+
     // MARK: - Info
-    
+
     /// Logs an info-level message.
     ///
     /// - Parameters:
@@ -123,9 +123,9 @@ public extension AKLogger {
             "\(message, privacy: .public)"
         )
     }
-    
+
     // MARK: - Warning
-    
+
     /// Logs a warning-level message.
     ///
     /// - Parameters:
@@ -139,9 +139,9 @@ public extension AKLogger {
             "\(message, privacy: .public)"
         )
     }
-    
+
     // MARK: - Error
-    
+
     /// Logs an error-level message, optionally including an underlying error.
     ///
     /// - Parameters:
@@ -166,7 +166,6 @@ public extension AKLogger {
 }
 
 public extension AKLogger {
-    
     /// Logs the initialization of an object.
     static func logInit(
         _ object: AnyObject,
@@ -174,9 +173,12 @@ public extension AKLogger {
     ) {
         let pointer = Unmanaged.passUnretained(object).toOpaque()
         // Pass string interpolation directly to .debug() so OSLogMessage type inference works:
-        logger(for: category).debug("⚙️ [Init] \(String(describing: type(of: object)), privacy: .public) <\(String(describing: pointer), privacy: .public)>")
+        logger(for: category)
+            .debug(
+                "⚙️ [Init] \(String(describing: type(of: object)), privacy: .public) <\(String(describing: pointer), privacy: .public)>"
+            )
     }
-    
+
     /// Logs the deinitialization of an object.
     static func logDeinit(
         _ objectName: String,
@@ -185,7 +187,10 @@ public extension AKLogger {
     ) {
         if let pointer {
             let address = pointer.toOpaque()
-            logger(for: category).debug("🗑️ [Deinit] \(objectName, privacy: .public) <\(String(describing: address), privacy: .public)>")
+            logger(for: category)
+                .debug(
+                    "🗑️ [Deinit] \(objectName, privacy: .public) <\(String(describing: address), privacy: .public)>"
+                )
         } else {
             logger(for: category).debug("🗑️ [Deinit] \(objectName, privacy: .public)")
         }

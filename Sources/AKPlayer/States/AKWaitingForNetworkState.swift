@@ -15,7 +15,8 @@ import Foundation
 public enum AKWaitingForNetworkReason: Sendable, Hashable, Equatable {
     /// Indicates that the network path became unsatisfied or disconnected.
     case disconnected
-    /// Indicates that buffering timed out while the network remained satisfied (e.g., low throughput).
+    /// Indicates that buffering timed out while the network remained satisfied (e.g., low
+    /// throughput).
     case bufferTimeout
 }
 
@@ -26,37 +27,41 @@ public enum AKWaitingForNetworkReason: Sendable, Hashable, Equatable {
 @MainActor
 public class AKWaitingForNetworkState: AKBaseState {
     // MARK: - Properties
-    
+
     /// Optional target playback speed multiplier to apply once network connection recovers.
     private var rate: AKPlaybackRate?
-    
-    /// Indicates whether playback should resume automatically when network connectivity is re-established.
+
+    /// Indicates whether playback should resume automatically when network connectivity is
+    /// re-established.
     public private(set) var autoPlay = false
-    
+
     /// The player state to transition into after buffering resolves following network restoration.
     private var stateToNavigateAfterBuffering: AKPlayerState?
-    
+
     /// Optional pending seek command to preserve across network waiting state.
     private var targetSeek: AKSeek?
-    
+
     /// The underlying reason that triggered the transition to waiting for network.
     private let reason: AKWaitingForNetworkReason
     /// The current retry attempt count for exponential backoff buffering retries.
     private let retryCount: Int
-    
+
     /// The active task observing network connectivity updates.
     private var networkObservationTask: Task<Void, Never>?
     /// The active task running the backoff delay before retrying buffering.
     private var retryTask: Task<Void, Never>?
-    
+
     // MARK: - Initialization & Deinitialization
-    
+
     /// Initializes a waiting-for-network state instance.
     /// - Parameters:
     ///   - playerController: The player controller managing state transitions.
-    ///   - autoPlay: Indicates whether playback should resume automatically when network connectivity is re-established.
-    ///   - rate: Optional target playback speed multiplier to apply once network connection recovers.
-    ///   - stateToNavigateAfterBuffering: The player state to transition into after buffering resolves.
+    ///   - autoPlay: Indicates whether playback should resume automatically when network
+    /// connectivity is re-established.
+    ///   - rate: Optional target playback speed multiplier to apply once network connection
+    /// recovers.
+    ///   - stateToNavigateAfterBuffering: The player state to transition into after buffering
+    /// resolves.
     ///   - targetSeek: Optional pending seek command to preserve across network waiting state.
     ///   - reason: The underlying reason that triggered the transition to waiting for network.
     ///   - retryCount: The current retry attempt count for exponential backoff.
@@ -83,36 +88,37 @@ public class AKWaitingForNetworkState: AKBaseState {
             state: .waitingForNetwork
         )
     }
-    
+
     deinit {
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
     }
-    
+
     // MARK: - State Lifecycle & Event Handlers
-    
-    /// Entry point for state setup. Ensures player is paused, starts observer pipelines, and monitors network changes.
+
+    /// Entry point for state setup. Ensures player is paused, starts observer pipelines, and
+    /// monitors network changes.
     override public func processStateChange() {
         guard let media = playerController.currentMedia else { return stop() }
         super.processStateChange()
-        
+
         if !playerController.player.timeControlStatus.isPaused {
             playerController.performPause()
         }
-        
+
         switch reason {
         case .disconnected:
             if media.isOverNetwork() {
                 observeNetworkChanges()
             }
-            
+
         case .bufferTimeout:
             scheduleBackoffRetry()
         }
     }
-    
+
     /// Handles changes to the AVPlayer's status, transitioning to failed if an error occurs.
     /// - Parameter status: The updated player status.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
@@ -125,7 +131,7 @@ public class AKWaitingForNetworkState: AKBaseState {
         )
         change(controller)
     }
-    
+
     /// Handles changes to the player's time control status while waiting for network.
     /// - Parameter status: The updated time control status.
     override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
@@ -135,7 +141,8 @@ public class AKWaitingForNetworkState: AKBaseState {
         case .playing:
             play()
         case .waitingToPlayAtSpecifiedRate:
-            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
+            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay
+            else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 retryBuffering()
@@ -150,8 +157,9 @@ public class AKWaitingForNetworkState: AKBaseState {
             break
         }
     }
-    
-    /// Handles player item notification events such as playback stalling or failure to play to end time.
+
+    /// Handles player item notification events such as playback stalling or failure to play to end
+    /// time.
     /// - Parameter event: The player item notification event.
     override public func handle(_ event: AKPlayerItemNotificationEvent) {
         guard isActiveState else { return }
@@ -185,10 +193,12 @@ public class AKWaitingForNetworkState: AKBaseState {
             break
         }
     }
-    
+
     /// Handles changes in interstitial playback state.
     /// - Parameter playbackState: The updated interstitial playback state.
-    override public func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
+    override public func handleInterstitialPlaybackStateChange(
+        _ playbackState: AKInterstitialPlaybackState
+    ) {
         guard isActiveState else { return }
         switch playbackState {
         case .playing:
@@ -199,19 +209,20 @@ public class AKWaitingForNetworkState: AKBaseState {
             break
         }
     }
-    
-    /// Performs cleanup before transitioning away from the waiting-for-network state, cancelling active observation and retry tasks.
+
+    /// Performs cleanup before transitioning away from the waiting-for-network state, cancelling
+    /// active observation and retry tasks.
     override public func beforeStateChange() {
         networkObservationTask?.cancel()
         networkObservationTask = nil
         retryTask?.cancel()
         retryTask = nil
     }
-    
+
     // MARK: - Commands
-    
+
     // MARK: - Controlling Playback
-    
+
     /// Requests to resume playback once network connectivity is restored by enabling autoplay.
     override public func play() {
         if autoPlay {
@@ -231,7 +242,7 @@ public class AKWaitingForNetworkState: AKBaseState {
             )
         }
     }
-    
+
     /// Requests to resume playback at the specified rate once network connectivity is restored.
     /// - Parameter rate: The target playback rate.
     override public func play(at rate: AKPlaybackRate) {
@@ -248,9 +259,9 @@ public class AKWaitingForNetworkState: AKBaseState {
             fallback: ()
         )
     }
-    
+
     // MARK: - Seeking Through Media
-    
+
     /// Saves the pending seek target to be executed once network connectivity is restored.
     /// - Parameters:
     ///   - target: The target seek position.
@@ -268,8 +279,9 @@ public class AKWaitingForNetworkState: AKBaseState {
             completionHandler: completionHandler
         )
     }
-    
-    /// Saves the pending seek target and tolerances to be executed once network connectivity is restored.
+
+    /// Saves the pending seek target and tolerances to be executed once network connectivity is
+    /// restored.
     /// - Parameters:
     ///   - target: The target seek position.
     ///   - scope: The seek scope.
@@ -292,12 +304,13 @@ public class AKWaitingForNetworkState: AKBaseState {
             completionHandler: completionHandler
         )
     }
-    
+
     // MARK: - Availability Overrides
-    
+
     /// Evaluates the command availability for a given player action while waiting for network.
     /// - Parameter action: The requested player action.
-    /// - Returns: A tuple containing whether the action is allowed and an optional unavailable reason.
+    /// - Returns: A tuple containing whether the action is allowed and an optional unavailable
+    /// reason.
     override public func availability(for action: AKPlayerAction) -> (
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
@@ -308,40 +321,40 @@ public class AKWaitingForNetworkState: AKBaseState {
             super.availability(for: action)
         }
     }
-    
+
     // MARK: - Private Helper Functions
-    
+
     /// Starts observing network status changes to detect when network path becomes satisfied.
     private func observeNetworkChanges() {
         networkObservationTask?.cancel()
         networkObservationTask = observeNetworkStatus { [weak self] status in
             guard let self, status == .satisfied else { return }
             let controller = AKBufferingState(
-                playerController: self.playerController,
-                autoPlay: self.autoPlay,
-                rate: self.rate,
-                stateToNavigateAfterBuffering: self.stateToNavigateAfterBuffering ?? .paused,
-                targetSeek: self.targetSeek
+                playerController: playerController,
+                autoPlay: autoPlay,
+                rate: rate,
+                stateToNavigateAfterBuffering: stateToNavigateAfterBuffering ?? .paused,
+                targetSeek: targetSeek
             )
-            self.change(controller)
+            change(controller)
         }
     }
-    
+
     /// Schedules an exponential backoff task to retry buffering after a timeout.
     private func scheduleBackoffRetry() {
         let base = playerController.configuration.waitingForNetworkBaseCooldown
         let multiplier = playerController.configuration.backoffMultiplier
         let maxCooldown = playerController.configuration.maxWaitingForNetworkCooldown
         let cooldown = min(base * pow(multiplier, Double(retryCount)), maxCooldown)
-        
+
         retryTask?.cancel()
         retryTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(cooldown * 1_000_000_000))
             guard let self, !Task.isCancelled else { return }
-            self.retryBuffering()
+            retryBuffering()
         }
     }
-    
+
     /// Transitions back to the buffering state to attempt re-buffering media.
     private func retryBuffering() {
         let controller = AKBufferingState(

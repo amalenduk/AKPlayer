@@ -11,7 +11,9 @@ import Foundation
 // MARK: - AKPlayerState
 
 /// Represents the current operational state of the media player.
-public enum AKPlayerState: String, CustomStringConvertible, Sendable, Equatable, Hashable, CaseIterable {
+public enum AKPlayerState: String, CustomStringConvertible, Sendable, Equatable, Hashable,
+    CaseIterable
+{
     // MARK: - Cases
 
     /// Initial state when no media is loaded.

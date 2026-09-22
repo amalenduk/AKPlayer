@@ -44,14 +44,15 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 
     /// Optional static Now Playing metadata associated with the media.
     var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? { get }
-    
+
     /// The cache policy for this media item.
     var cachePolicy: AKMediaCachePolicy { get }
-    
+
     /// Optional cache manager instance.
     var cacheManager: (any AKMediaCacheProtocol)? { get }
-    
-    /// The live edge threshold in seconds. Defaults to `4.0` seconds for live streams, and `nil` for non-live media.
+
+    /// The live edge threshold in seconds. Defaults to `4.0` seconds for live streams, and `nil`
+    /// for non-live media.
     var liveEdgeThreshold: TimeInterval? { get }
 
     /// Indicates whether the media item is a live stream.
@@ -65,19 +66,40 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 
 public extension AKPlayable {
     /// Default custom AVURLAsset instance (returns `nil`).
-    var customAsset: AVURLAsset? { nil }
+    var customAsset: AVURLAsset? {
+        nil
+    }
+
     /// Default custom AVPlayerItem instance (returns `nil`).
-    var customPlayerItem: AVPlayerItem? { nil }
+    var customPlayerItem: AVPlayerItem? {
+        nil
+    }
+
     /// Default custom initialization options for AVURLAsset (returns `nil`).
-    var assetInitializationOptions: [String: Any]? { nil }
+    var assetInitializationOptions: [String: Any]? {
+        nil
+    }
+
     /// Default keys automatically preloaded on the asset (returns `nil`).
-    var automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? { nil }
+    var automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]? {
+        nil
+    }
+
     /// Default static Now Playing metadata (returns `nil`).
-    var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? { nil }
+    var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)? {
+        nil
+    }
+
     /// Default media caching policy (`.useCacheIfAvailable`).
-    var cachePolicy: AKMediaCachePolicy { .useCacheIfAvailable }
+    var cachePolicy: AKMediaCachePolicy {
+        .useCacheIfAvailable
+    }
+
     /// Default custom media cache manager (returns `nil`).
-    var cacheManager: (any AKMediaCacheProtocol)? { nil }
+    var cacheManager: (any AKMediaCacheProtocol)? {
+        nil
+    }
+
     /// Default tolerance threshold in seconds from live edge for live streams.
     var liveEdgeThreshold: TimeInterval? {
         isLive() ? 4.0 : nil
@@ -134,4 +156,3 @@ public extension AKPlayable {
         return ["http", "https", "rtsp", "rtmp"].contains(scheme)
     }
 }
-

@@ -1,15 +1,16 @@
 //
-//  QueuePlayerViewModel.swift
-//  AKPlayerDemo
+//   QueuePlayerViewModel.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import SwiftUI
 import AKPlayer
 import AVFoundation
 import Combine
 import Foundation
+import SwiftUI
 
 @MainActor
 public class QueuePlayerViewModel: NSObject, ObservableObject {
@@ -24,24 +25,24 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
         p.delegate = self
         return p
     }()
-    
+
     static let session = AVAudioSession.sharedInstance()
     let audioSession = AKAudioSessionService(audioSession: session)
-    
+
     // Playback State
     @Published public var playlist: [TestMedia] = []
     @Published public var currentMedia: (any AKPlayable)?
     @Published public var currentIndex: Int? = nil
-    @Published public var stateDescription: String = "Idle"
-    @Published public var isPlaying: Bool = false
-    @Published public var isLoading: Bool = false
+    @Published public var stateDescription = "Idle"
+    @Published public var isPlaying = false
+    @Published public var isLoading = false
     @Published public var currentTime: Double = 0
     @Published public var duration: Double = 0
     @Published public var repeatMode: AKRepeatMode = .off
-    @Published public var isShuffleEnabled: Bool = false
-    @Published public var canPlayNext: Bool = false
-    @Published public var canPlayPrevious: Bool = false
-    
+    @Published public var isShuffleEnabled = false
+    @Published public var canPlayNext = false
+    @Published public var canPlayPrevious = false
+
     override public init() {
         super.init()
         AKLogger.logInit(self)
@@ -53,61 +54,61 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
             }
         }
     }
-    
+
     deinit {
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
     }
-    
+
     private func updateQueueProperties() {
-        self.currentIndex = queuePlayer.currentIndex
-        self.currentMedia = queuePlayer.currentMedia
-        self.repeatMode = queuePlayer.repeatMode
-        self.isShuffleEnabled = queuePlayer.isShuffleEnabled
-        self.canPlayNext = queuePlayer.canPlayNext
-        self.canPlayPrevious = queuePlayer.canPlayPrevious
+        currentIndex = queuePlayer.currentIndex
+        currentMedia = queuePlayer.currentMedia
+        repeatMode = queuePlayer.repeatMode
+        isShuffleEnabled = queuePlayer.isShuffleEnabled
+        canPlayNext = queuePlayer.canPlayNext
+        canPlayPrevious = queuePlayer.canPlayPrevious
     }
-    
+
     // MARK: - Media Loading
-    
+
     public func loadQueue(with testMedias: [TestMedia], startIndex: Int = 0) {
-        self.playlist = testMedias
+        playlist = testMedias
         let akMedias = testMedias.compactMap { makeAKMedia(from: $0) }
         guard !akMedias.isEmpty else { return }
-        
+
         queuePlayer.load(items: akMedias, startIndex: startIndex, autoPlay: true)
         Task { @MainActor [weak self] in
             await self?.queuePlayer.configureNowPlaying(with: AKNowPlayingCommandPresets.queue())
         }
-        self.stateDescription = queuePlayer.state.description
-        self.isLoading = queuePlayer.state.isAny(of: [.loading, .buffering, .waitingForNetwork])
+        stateDescription = queuePlayer.state.description
+        isLoading = queuePlayer.state.isAny(of: [.loading, .buffering, .waitingForNetwork])
         updateQueueProperties()
     }
-    
+
     // MARK: - Playback Controls
-    
+
     public func togglePlayPause() {
         queuePlayer.togglePlayPause()
-        self.isPlaying = (queuePlayer.state == .playing)
+        isPlaying = (queuePlayer.state == .playing)
     }
-    
+
     public func next() {
         queuePlayer.next()
         updateQueueProperties()
     }
-    
+
     public func previous() {
         queuePlayer.previous()
         updateQueueProperties()
     }
-    
+
     public func jumpTo(index: Int) {
         queuePlayer.jumpTo(index: index)
         updateQueueProperties()
     }
-    
+
     public func toggleRepeat() {
         switch queuePlayer.repeatMode {
         case .off:
@@ -117,23 +118,23 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
         case .one:
             queuePlayer.repeatMode = .off
         }
-        self.repeatMode = queuePlayer.repeatMode
+        repeatMode = queuePlayer.repeatMode
         updateQueueProperties()
     }
-    
+
     public func toggleShuffle() {
         queuePlayer.isShuffleEnabled.toggle()
-        self.isShuffleEnabled = queuePlayer.isShuffleEnabled
+        isShuffleEnabled = queuePlayer.isShuffleEnabled
         updateQueueProperties()
     }
-    
+
     public func removeItem(at index: Int) {
         guard playlist.indices.contains(index) else { return }
         playlist.remove(at: index)
         queuePlayer.remove(at: index)
         updateQueueProperties()
     }
-    
+
     public func moveItem(from source: IndexSet, to destination: Int) {
         playlist.move(fromOffsets: source, toOffset: destination)
         if let first = source.first {
@@ -141,13 +142,13 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
         }
         updateQueueProperties()
     }
-    
+
     public func seek(to seconds: Double) {
         Task {
             await queuePlayer.seek(to: .seconds(seconds))
         }
     }
-    
+
     public func stop() {
         queuePlayer.stop()
     }
@@ -156,20 +157,20 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
 // MARK: - AKPlayerDelegate
 
 extension QueuePlayerViewModel: AKPlayerDelegate {
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeStateTo state: AKPlayerState) {
+    public nonisolated func akPlayer(_ player: AKPlayer, didChangeStateTo state: AKPlayerState) {
         DispatchQueue.main.async {
             self.stateDescription = state.description
             self.isPlaying = (state == .playing)
             self.isLoading = state.isAny(of: [.loading, .buffering, .waitingForNetwork])
             let dur = player.currentItemDuration.seconds
-            if dur.isFinite && dur > 0 {
+            if dur.isFinite, dur > 0 {
                 self.duration = dur
             }
             self.updateQueueProperties()
         }
     }
-    
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
+
+    public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
         DispatchQueue.main.async {
             self.currentMedia = media
             self.currentTime = player.currentTime.seconds
@@ -178,28 +179,43 @@ extension QueuePlayerViewModel: AKPlayerDelegate {
             self.updateQueueProperties()
         }
     }
-    
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeCurrentTimeTo currentTime: CMTime, for media: any AKPlayable) {
+
+    public nonisolated func akPlayer(
+        _ player: AKPlayer,
+        didChangeCurrentTimeTo currentTime: CMTime,
+        for _: any AKPlayable
+    ) {
         DispatchQueue.main.async {
             self.currentTime = currentTime.seconds
             let dur = player.currentItemDuration.seconds
-            if dur.isFinite && dur > 0 && self.duration != dur {
+            if dur.isFinite, dur > 0, self.duration != dur {
                 self.duration = dur
             }
         }
     }
-    
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangePlaybackRateTo newRate: AKPlaybackRate, from oldRate: AKPlaybackRate) {}
-    nonisolated public func akPlayer(_ player: AKPlayer, didInvokeBoundaryTimeObserverAt time: CMTime, for media: any AKPlayable) {}
-    
-    nonisolated public func akPlayer(_ player: AKPlayer, didReachEndAt time: CMTime, for media: any AKPlayable) {
+
+    public nonisolated func akPlayer(
+        _: AKPlayer,
+        didChangePlaybackRateTo _: AKPlaybackRate,
+        from _: AKPlaybackRate
+    ) {}
+    public nonisolated func akPlayer(
+        _: AKPlayer,
+        didInvokeBoundaryTimeObserverAt _: CMTime,
+        for _: any AKPlayable
+    ) {}
+
+    public nonisolated func akPlayer(_: AKPlayer, didReachEndAt _: CMTime, for _: any AKPlayable) {
         DispatchQueue.main.async {
             self.updateQueueProperties()
         }
     }
-    
-    nonisolated public func akPlayer(_ player: AKPlayer, didEncounterUnavailableAction reason: AKPlayerUnavailableCommandReason) {}
-    nonisolated public func akPlayer(_ player: AKPlayer, didFailWith error: AKPlayerError) {}
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeVolumeTo volume: Float) {}
-    nonisolated public func akPlayer(_ player: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {}
+
+    public nonisolated func akPlayer(
+        _: AKPlayer,
+        didEncounterUnavailableAction _: AKPlayerUnavailableCommandReason
+    ) {}
+    public nonisolated func akPlayer(_: AKPlayer, didFailWith _: AKPlayerError) {}
+    public nonisolated func akPlayer(_: AKPlayer, didChangeVolumeTo _: Float) {}
+    public nonisolated func akPlayer(_: AKPlayer, didChangeMutedStatusTo _: Bool) {}
 }

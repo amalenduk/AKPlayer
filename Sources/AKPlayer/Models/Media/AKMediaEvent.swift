@@ -47,7 +47,8 @@ public enum AKMediaEvent: Sendable {
 
     // MARK: - Capabilities
 
-    /// A specific playback capability status changed (e.g., fast-forward becoming available or restricted).
+    /// A specific playback capability status changed (e.g., fast-forward becoming available or
+    /// restricted).
     case capabilityDidChange(AKMediaCapability, isSupported: Bool)
 
     // MARK: - Range Updates

@@ -1,9 +1,9 @@
 //
-//  AKInterstitialScheduleConfig.swift
-//  AKPlayer
+//   AKInterstitialScheduleConfig.swift
+//   AKPlayer
 //
-//  Copyright (c) 2020 Amalendu Kar. All rights reserved.
-//  Licensed under the MIT license. See LICENSE file in the project root.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
 import AVFoundation
@@ -27,11 +27,12 @@ public struct AKInterstitialScheduleConfig: @unchecked Sendable {
     public var playoutLimit: CMTime
     /// Specifies whether the interstitial represents a single point cue or fills timeline duration.
     public var timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy
-    /// Whether this interstitial supplements the primary content without replacing timeline intervals.
+    /// Whether this interstitial supplements the primary content without replacing timeline
+    /// intervals.
     public var supplementsPrimaryContent: Bool
     /// Indicates whether dynamic server-side variations in content duration or payload may occur.
     public var contentMayVary: Bool
-    
+
     /// Initializes an interstitial schedule configuration payload.
     /// - Parameters:
     ///   - time: Scheduled timestamp along the primary media timeline.
@@ -42,7 +43,8 @@ public struct AKInterstitialScheduleConfig: @unchecked Sendable {
     ///   - playoutLimit: Maximum duration limit. Defaults to `.invalid` (unlimited).
     ///   - timelineOccupancy: Single-point cue vs fill segment. Defaults to `.singlePoint`.
     ///   - supplementsPrimaryContent: Whether it supplements primary content. Defaults to `false`.
-    ///   - contentMayVary: Whether ad content duration or payload may vary dynamically. Defaults to `true`.
+    ///   - contentMayVary: Whether ad content duration or payload may vary dynamically. Defaults to
+    /// `true`.
     public init(
         time: CMTime,
         templateItems: [AVPlayerItem],

@@ -29,9 +29,9 @@ open class AKPlayerView: UIView {
     }
 
     /// Specifies how the video is displayed within the player layer's bounds.
-    /// - Parameter fillMode: The video gravity raw string value (e.g. `AVLayerVideoGravity.resizeAspect.rawValue`).
+    /// - Parameter fillMode: The video gravity raw string value (e.g.
+    /// `AVLayerVideoGravity.resizeAspect.rawValue`).
     open func setVideoFillMode(_ fillMode: String) {
         playerLayer.videoGravity = AVLayerVideoGravity(rawValue: fillMode)
     }
 }
-

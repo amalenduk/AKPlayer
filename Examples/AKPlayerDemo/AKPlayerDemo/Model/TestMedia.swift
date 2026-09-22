@@ -1,12 +1,13 @@
 //
-//  TestMedia.swift
-//  AKPlayerDemo
+//   TestMedia.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import Foundation
 import AKPlayer
+import Foundation
 
 // MARK: - TestMediaKind
 
@@ -54,13 +55,13 @@ public struct TestMedia: Identifiable, Codable {
 
 // MARK: - TestMediaKind + AKMediaType
 
-extension TestMediaKind {
-    public var akMediaType: AKMediaType {
+public extension TestMediaKind {
+    var akMediaType: AKMediaType {
         switch self {
         case .clip:
-            return .clip
+            .clip
         case .live:
-            return .stream(isLive: true)
+            .stream(isLive: true)
         }
     }
 }
@@ -73,7 +74,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Apple TV Trailer Advanced",
         subtitle: "Dolby Vision + Dolby Atmos + Multi-tier H.264",
-        url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/adv_dv_atmos/main.m3u8"),
+        url: URL(
+            string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/adv_dv_atmos/main.m3u8"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -97,7 +100,7 @@ public let sampleTestMedia: [TestMedia] = [
             "Dolby Atmos / Spatial Audio output",
             "Adaptive bitrate & resolution switching (1080p / 720p / 540p)",
             "AVPlayer layer rendering & aspect ratio fitting",
-            "Audio session routing & route changes"
+            "Audio session routing & route changes",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: ["en"]
@@ -107,7 +110,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Apple TV Trailer Interstitials",
         subtitle: "HLS Interstitials (Ads at 00:10, 00:25, 00:55) + Multi-Audio + Multi-Subtitle",
-        url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/interstitial-sample/mvp_interstitial_sample.m3u8"),
+        url: URL(
+            string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/interstitial-sample/mvp_interstitial_sample.m3u8"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -147,7 +152,7 @@ public let sampleTestMedia: [TestMedia] = [
             "Multi-audio track switching (HE-AAC, Dolby Digital 5.1, Dolby Atmos 7.1)",
             "Subtitle track switching (English, Spanish)",
             "ID3 / emsg timed metadata observation",
-            "Timeline integration & snapshot synchronization"
+            "Timeline integration & snapshot synchronization",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: ["en", "es"]
@@ -157,7 +162,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Bip Bop Advanced Stream",
         subtitle: "Burned-in Timecode Display + HEVC & H.264 Fallback Variants",
-        url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"),
+        url: URL(
+            string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -180,7 +187,7 @@ public let sampleTestMedia: [TestMedia] = [
             "Accurate scrubbing & seek precision",
             "Variable playback rates (0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x)",
             "Picture-in-Picture (PiP) playback and background transitions",
-            "Adaptive bitrate variant switching (HEVC & H.264)"
+            "Adaptive bitrate variant switching (HEVC & H.264)",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: ["en"]
@@ -210,7 +217,7 @@ public let sampleTestMedia: [TestMedia] = [
             "24/7 live stream playback & sliding window buffer",
             "Jump to Live UI & live seek head management",
             "Live stream pausing & seek-to-live recovery",
-            "Live drift calculation & catch-up playback"
+            "Live drift calculation & catch-up playback",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -220,7 +227,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Bloomberg Originals Live",
         subtitle: "24/7 Live Financial News Broadcast • 1080p HD",
-        url: URL(string: "https://86fdc85a.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnT3JpZ2luYWxzX0hMUw/playlist.m3u8"),
+        url: URL(
+            string: "https://86fdc85a.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnT3JpZ2luYWxzX0hMUw/playlist.m3u8"
+        ),
         kind: .live,
         isPlayable: true,
         note: """
@@ -238,7 +247,7 @@ public let sampleTestMedia: [TestMedia] = [
             "24/7 live broadcast stream playback",
             "Live head tracking & DVR buffer window",
             "Live indicator UI & Jump to Live action",
-            "Closed captioning in live streams"
+            "Closed captioning in live streams",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: ["en"]
@@ -248,7 +257,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Big Buck Bunny",
         subtitle: "1080p Progressive MP4 Clip",
-        url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"),
+        url: URL(
+            string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -267,7 +278,7 @@ public let sampleTestMedia: [TestMedia] = [
             "Progressive MP4 download & caching",
             "Frame stepping forward and backward",
             "Accurate seek tolerance and scrubbing",
-            "Full-screen scaling modes (.fit, .fill)"
+            "Full-screen scaling modes (.fit, .fill)",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -277,7 +288,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "For Bigger Blazes (Nature Clip)",
         subtitle: "720p MP4 Short Form Clip",
-        url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"),
+        url: URL(
+            string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -294,7 +307,7 @@ public let sampleTestMedia: [TestMedia] = [
         testCapabilities: [
             "Fast asset initialization & quick start playback",
             "Looping and repeat mode verification",
-            "Playback rate controls and audio pitch correction"
+            "Playback rate controls and audio pitch correction",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -304,7 +317,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Apple HLS Audio-Only Stream",
         subtitle: "HLS Audio Stream • AAC-LC 48 kHz @ 128 kbps",
-        url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/a1/prog_index.m3u8"),
+        url: URL(
+            string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/a1/prog_index.m3u8"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -321,7 +336,7 @@ public let sampleTestMedia: [TestMedia] = [
             "HLS audio-only segment streaming & buffering",
             "Background audio playback with lock screen controls",
             "Now Playing metadata updates and cover art",
-            "Audio route changes (Headphones / Bluetooth / AirPlay)"
+            "Audio route changes (Headphones / Bluetooth / AirPlay)",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -347,7 +362,7 @@ public let sampleTestMedia: [TestMedia] = [
             "Progressive MP3 audio streaming and playback",
             "Accurate audio timeline scrubbing and seeking",
             "Remote command center play/pause/skip commands",
-            "Audio session ducking and phone call interruptions"
+            "Audio session ducking and phone call interruptions",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -372,7 +387,7 @@ public let sampleTestMedia: [TestMedia] = [
         testCapabilities: [
             "Sequential audio track switching and queue transitions",
             "Audio pitch preservation at variable playback speeds",
-            "Lock screen playback rate manipulation (0.5x, 1.0x, 2.0x)"
+            "Lock screen playback rate manipulation (0.5x, 1.0x, 2.0x)",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -382,7 +397,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "The Art of War (Audiobook)",
         subtitle: "LibriVox M4B Audiobook with 13 Embedded Chapters",
-        url: URL(string: "https://archive.org/download/art_of_war_librivox/art_of_war_librivox.m4b"),
+        url: URL(
+            string: "https://archive.org/download/art_of_war_librivox/art_of_war_librivox.m4b"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -412,7 +429,7 @@ public let sampleTestMedia: [TestMedia] = [
             "AKChapterService chapter extraction & parsing",
             "Chapter boundary jumping (nextChapter / previousChapter)",
             "Now Playing chapter title & artwork sync",
-            "Audiobook resume & bookmarking"
+            "Audiobook resume & bookmarking",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
@@ -422,7 +439,9 @@ public let sampleTestMedia: [TestMedia] = [
     TestMedia(
         name: "Alice in Wonderland (Audiobook)",
         subtitle: "LibriVox M4B Audiobook with 12 Embedded Chapters",
-        url: URL(string: "https://archive.org/download/alices_adventures_1005_librivox/AlicesAdventuresInWonderlandV5_librivox.m4b"),
+        url: URL(
+            string: "https://archive.org/download/alices_adventures_1005_librivox/AlicesAdventuresInWonderlandV5_librivox.m4b"
+        ),
         kind: .clip,
         isPlayable: true,
         note: """
@@ -449,9 +468,9 @@ public let sampleTestMedia: [TestMedia] = [
         testCapabilities: [
             "Multi-chapter navigation and chapter index lookup",
             "Long-form audio playback stability & background suspension",
-            "Periodic time updates and timeline scrubber chapter indicators"
+            "Periodic time updates and timeline scrubber chapter indicators",
         ],
         audioLanguages: ["en"],
         subtitleLanguages: nil
-    )
+    ),
 ]

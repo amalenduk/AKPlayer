@@ -42,7 +42,9 @@ public struct AKNowPlayableMetadata: AKNowPlayableInfoProtocol, Sendable {
 
 /// A concrete struct implementing static metadata properties for Now Playing
 /// displays.
-public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, @unchecked Sendable {
+public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
+    @unchecked Sendable
+{
     // MARK: - Properties
 
     /// Destination asset URL.
@@ -89,31 +91,31 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
 
     /// Time ranges for advertisements.
     public var adTimeRanges: [MPAdTimeRange]?
-    
+
     /// Music / item genre.
     public var genre: String?
-    
+
     /// Composer name.
     public var composer: String?
-    
+
     /// Track number in album.
     public var trackNumber: Int?
-    
+
     /// Total track count in album.
     public var trackCount: Int?
-    
+
     /// Disc number.
     public var discNumber: Int?
-    
+
     /// Total disc count.
     public var discCount: Int?
-    
+
     /// Explicit content flag.
     public var isExplicit: Bool?
-    
+
     /// Release date.
     public var releaseDate: Date?
-    
+
     /// Comments or description.
     public var descriptionText: String?
 
@@ -202,7 +204,9 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol, 
 
 /// A concrete struct implementing dynamic metadata properties for Now Playing
 /// displays.
-public struct AKNowPlayableDynamicMetadata: AKNowPlayableDynamicMetadataProtocol, @unchecked Sendable {
+public struct AKNowPlayableDynamicMetadata: AKNowPlayableDynamicMetadataProtocol,
+    @unchecked Sendable
+{
     // MARK: - Properties
 
     /// Current playback speed multiplier.

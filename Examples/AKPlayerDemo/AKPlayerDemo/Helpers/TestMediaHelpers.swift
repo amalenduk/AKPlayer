@@ -1,13 +1,14 @@
 //
-//  TestMediaHelpers.swift
-//  AKPlayerDemo
+//   TestMediaHelpers.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
+import AKPlayer
 import Foundation
 import UIKit
-import AKPlayer
 
 public func makeAKMedia(from test: TestMedia) -> AKMedia? {
     guard let url = test.url else { return nil }
@@ -24,12 +25,11 @@ public func makeAKMedia(from test: TestMedia) -> AKMedia? {
         albumArtist: nil,
         albumTitle: nil
     )
-    let media = AKMedia(
+    return AKMedia(
         url: url,
         type: test.kind.akMediaType,
         assetInitializationOptions: ["AVURLAssetHTTPHeaderFieldsKey": headers],
         automaticallyLoadedAssetKeys: [.duration, .isPlayable, .commonMetadata],
         staticMetadata: staticMetadata
     )
-    return media
 }

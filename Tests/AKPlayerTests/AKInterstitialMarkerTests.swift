@@ -1,31 +1,33 @@
 //
-//  AKInterstitialMarkerTests.swift
-//  AKPlayer
+//   AKInterstitialMarkerTests.swift
+//   AKPlayer
 //
-//  Copyright (c) 2020 Amalendu Kar. All rights reserved.
-//  Licensed under the MIT license. See LICENSE file in the project root.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
+@testable import AKPlayer
 import AVFoundation
 import Synchronization
 import Testing
-@testable import AKPlayer
 
 struct AKInterstitialMarkerTests {
-    
-    @Test func testInterstitialMarkerInitializationAndProperties() {
+    @Test func interstitialMarkerInitializationAndProperties() {
         let marker = AKInterstitialMarker(
             id: "ad-1",
             time: 30.0,
             duration: 15.0,
             occupancy: .singlePoint,
-            restrictions: [.constrainsSeekingForwardInPrimaryContent, .requiresPlaybackAtPreferredRateForAdvancement],
+            restrictions: [
+                .constrainsSeekingForwardInPrimaryContent,
+                .requiresPlaybackAtPreferredRateForAdvancement,
+            ],
             isPlayed: false,
             isCurrent: false,
             templateItemCount: 2,
             title: "Mid-Roll 1"
         )
-        
+
         #expect(marker.id == "ad-1")
         #expect(marker.time == 30.0)
         #expect(marker.duration == 15.0)
@@ -39,8 +41,8 @@ struct AKInterstitialMarkerTests {
         #expect(marker.templateItemCount == 2)
         #expect(marker.title == "Mid-Roll 1")
     }
-    
-    @Test func testInterstitialMarkerFillAndUnrestrictedProperties() {
+
+    @Test func interstitialMarkerFillAndUnrestrictedProperties() {
         let fillMarker = AKInterstitialMarker(
             id: "ad-fill",
             time: 60.0,
@@ -50,7 +52,7 @@ struct AKInterstitialMarkerTests {
             isPlayed: true,
             isCurrent: true
         )
-        
+
         #expect(fillMarker.isFill)
         #expect(!fillMarker.isSinglePoint)
         #expect(fillMarker.canSeek)
@@ -58,20 +60,20 @@ struct AKInterstitialMarkerTests {
         #expect(fillMarker.isPlayed)
         #expect(fillMarker.isCurrent)
     }
-    
+
     @MainActor
-    @Test func testInterstitialMarkerSynthesisAndServiceQueries() {
+    @Test func interstitialMarkerSynthesisAndServiceQueries() throws {
         let player = AVPlayer()
         let service = AKPlayerInterstitialService(with: player)
-        
+
         #expect(service.markers.isEmpty)
         #expect(service.marker(at: 10.0, tolerance: 1.0) == nil)
         #expect(service.nextUnplayedMarker(after: 0.0) == nil)
-        
-        let url = URL(string: "https://example.com/ad.m3u8")!
+
+        let url = try #require(URL(string: "https://example.com/ad.m3u8"))
         let primaryItem = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: primaryItem)
-        
+
         let adItem = AVPlayerItem(url: url)
         service.schedule(
             at: CMTime(seconds: 15, preferredTimescale: 600),
@@ -79,75 +81,79 @@ struct AKInterstitialMarkerTests {
             identifier: "ad-midroll-15",
             restrictions: [.constrainsSeekingForwardInPrimaryContent]
         )
-        
+
         service.schedule(
             at: CMTime(seconds: 45, preferredTimescale: 600),
             templateItems: [adItem],
             identifier: "ad-midroll-45",
             restrictions: []
         )
-        
+
         #expect(service.markers.count == 2)
         #expect(service.markers[0].id == "ad-midroll-15")
         #expect(service.markers[0].time == 15.0)
         #expect(!service.markers[0].canSeek)
-        
+
         #expect(service.markers[1].id == "ad-midroll-45")
         #expect(service.markers[1].time == 45.0)
         #expect(service.markers[1].canSeek)
-        
+
         // Query helpers
         let found = service.marker(at: 15.2, tolerance: 0.5)
         #expect(found?.id == "ad-midroll-15")
-        
+
         let next = service.nextUnplayedMarker(after: 20.0)
         #expect(next?.id == "ad-midroll-45")
     }
-    
-    @Test func testSegmentMappedInterstitialMarker() {
-        let event = AVPlayerInterstitialEvent(
-            primaryItem: AVPlayerItem(url: URL(string: "https://example.com/stream.m3u8")!),
+
+    @Test func segmentMappedInterstitialMarker() throws {
+        let event = try AVPlayerInterstitialEvent(
+            primaryItem: AVPlayerItem(
+                url: #require(URL(string: "https://example.com/stream.m3u8"))
+            ),
             identifier: "ad-seg",
             date: Date(),
-            templateItems: [AVPlayerItem(url: URL(string: "https://example.com/ad.m3u8")!)],
+            templateItems: [
+                AVPlayerItem(url: #require(URL(string: "https://example.com/ad.m3u8"))),
+            ],
             restrictions: [.constrainsSeekingForwardInPrimaryContent],
             resumptionOffset: .zero,
             playoutLimit: CMTime(seconds: 10, preferredTimescale: 600)
         )
-        
+
         // Without segment, date-based event defaults to 0.0 until timeline segment maps it
         let unmapped = AKInterstitialMarker(event: event)
         #expect(unmapped.id == "ad-seg")
         #expect(unmapped.time == 0.0)
         #expect(unmapped.duration == 10.0)
     }
-    
+
     @MainActor
-    @Test func testSeekScopeAndIntegratedTimelineSeekingService() async {
+    @Test func seekScopeAndIntegratedTimelineSeekingService() {
         let player = AVPlayer()
         let interstitialService = AKPlayerInterstitialService(with: player)
         let seekingService = AKPlayerSeekingThroughMediaService(
             with: player,
             interstitialService: interstitialService
         )
-        
+
         #expect(seekingService.interstitialService != nil)
         #expect(!seekingService.isSeeking)
         #expect(seekingService.pendingSeeks.isEmpty)
-        
+
         // Seek scope model checks
         let primarySeek = AKSeek(target: .seconds(30), scope: .primary)
         #expect(primarySeek.scope == .primary)
         #expect(primarySeek.target == .seconds(30))
-        
+
         let integratedSeek = AKSeek(target: .seconds(55), scope: .integrated)
         #expect(integratedSeek.scope == .integrated)
         #expect(integratedSeek.target == .seconds(55))
-        
+
         let relativeIntegratedSeek = AKSeek(target: .offset(15), scope: .integrated)
         #expect(relativeIntegratedSeek.scope == .integrated)
         #expect(relativeIntegratedSeek.target == .offset(15))
-        
+
         // Without active player item, seeking should complete immediately with false
         let completedBox = Mutex(false)
         let successBox = Mutex<Bool?>(nil)
@@ -155,10 +161,9 @@ struct AKInterstitialMarkerTests {
             completedBox.withLock { $0 = true }
             successBox.withLock { $0 = success }
         }
-        
+
         seekingService.seek(to: seekToken)
         #expect(completedBox.withLock { $0 })
         #expect(successBox.withLock { $0 } == false)
     }
 }
-

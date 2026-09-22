@@ -12,9 +12,11 @@ import Foundation
 
 /// Specifies the timeline coordinate space targeted by a seek operation.
 public enum AKSeekScope: String, Sendable, Equatable, CaseIterable {
-    /// Seeks along the primary media asset's playback timeline (excluding interstitial ad durations).
+    /// Seeks along the primary media asset's playback timeline (excluding interstitial ad
+    /// durations).
     case primary
-    
-    /// Seeks along the stitched integrated timeline (inclusive of scheduled interstitial `.fill` ad breaks).
+
+    /// Seeks along the stitched integrated timeline (inclusive of scheduled interstitial `.fill` ad
+    /// breaks).
     case integrated
 }

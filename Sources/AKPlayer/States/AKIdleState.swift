@@ -25,12 +25,10 @@ public class AKIdleState: AKBaseState {
     }
 
     deinit {
-       
-            AKLogger.logDeinit(
-                String(describing: Self.self),
-                pointer: Unmanaged.passUnretained(self)
-            )
-        
+        AKLogger.logDeinit(
+            String(describing: Self.self),
+            pointer: Unmanaged.passUnretained(self)
+        )
     }
 
     // MARK: - Availability Overrides

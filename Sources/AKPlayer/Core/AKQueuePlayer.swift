@@ -31,7 +31,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     public var repeatMode: AKRepeatMode = .off
 
     /// Indicates whether shuffle mode is active.
-    public var isShuffleEnabled: Bool = false {
+    public var isShuffleEnabled = false {
         didSet {
             guard oldValue != isShuffleEnabled else { return }
             updateShuffleQueue()
@@ -41,14 +41,18 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     /// Indicates whether a valid next item exists to play.
     public var canPlayNext: Bool {
         guard !activeItems.isEmpty, let currentIndex else { return false }
-        if repeatMode == .one || repeatMode == .all { return true }
+        if repeatMode == .one || repeatMode == .all {
+            return true
+        }
         return currentIndex < activeItems.count - 1
     }
 
     /// Indicates whether a valid previous item exists to play.
     public var canPlayPrevious: Bool {
         guard !activeItems.isEmpty, let currentIndex else { return false }
-        if repeatMode == .one || repeatMode == .all { return true }
+        if repeatMode == .one || repeatMode == .all {
+            return true
+        }
         return currentIndex > 0 || currentTime.seconds > 3.0
     }
 
@@ -69,7 +73,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     ///   - player: The underlying `AVPlayer` instance. Defaults to a new player.
     ///   - configuration: Configuration options. Defaults to `AKPlayerConfiguration.default`.
     ///   - audioSessionService: Audio session service. Defaults to `AKAudioSessionService()`.
-    public override init(
+    override public init(
         player: AVPlayer = AVPlayer(),
         configuration: AKPlayerConfigurationProtocol = AKPlayerConfiguration.default,
         audioSessionService: AKAudioSessionServiceProtocol = AKAudioSessionService()
@@ -91,7 +95,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     // MARK: - Lifecycle Preparation
 
     /// Configures audio sessions and registers remote queue command presets.
-    public override func prepare() async throws {
+    override public func prepare() async throws {
         try await super.prepare()
         await setupQueueNowPlayingCommands()
     }
@@ -219,7 +223,8 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
 
     // MARK: - Private Queue Helpers
 
-    /// Rebuilds the internal randomized queue order when shuffle mode is toggled or current item changes.
+    /// Rebuilds the internal randomized queue order when shuffle mode is toggled or current item
+    /// changes.
     private func updateShuffleQueue() {
         guard let currentMedia else {
             shuffledItems = items.shuffled()
@@ -259,7 +264,8 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
 
     // MARK: - Private Remote Command Handlers
 
-    /// Configures Now Playing remote command handlers for playlist actions (Next, Previous, Repeat, Shuffle).
+    /// Configures Now Playing remote command handlers for playlist actions (Next, Previous, Repeat,
+    /// Shuffle).
     private func setupQueueNowPlayingCommands() async {
         guard let nowPlayingManager else { return }
 
@@ -269,16 +275,16 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         // Wire Next Track
         await nowPlayingManager.setHandler(for: .nextTrack) { [weak self] _ in
             guard let self else { return .commandFailed }
-            guard self.canPlayNext else { return .noSuchContent }
-            self.next()
+            guard canPlayNext else { return .noSuchContent }
+            next()
             return .success
         }
 
         // Wire Previous Track
         await nowPlayingManager.setHandler(for: .previousTrack) { [weak self] _ in
             guard let self else { return .commandFailed }
-            guard self.canPlayPrevious else { return .noSuchContent }
-            self.previous()
+            guard canPlayPrevious else { return .noSuchContent }
+            previous()
             return .success
         }
 
@@ -289,9 +295,9 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
             else { return .commandFailed }
 
             switch repeatEvent.repeatType {
-            case .off: self.repeatMode = .off
-            case .one: self.repeatMode = .one
-            case .all: self.repeatMode = .all
+            case .off: repeatMode = .off
+            case .one: repeatMode = .one
+            case .all: repeatMode = .all
             @unknown default: break
             }
             return .success
@@ -303,7 +309,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
                   let shuffleEvent = event as? MPChangeShuffleModeCommandEvent
             else { return .commandFailed }
 
-            self.isShuffleEnabled = (shuffleEvent.shuffleType != .off)
+            isShuffleEnabled = (shuffleEvent.shuffleType != .off)
             return .success
         }
     }
@@ -322,4 +328,3 @@ extension AKQueuePlayer: AKNowPlayingQueueInfoProvider {
         currentIndex
     }
 }
-

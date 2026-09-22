@@ -1,19 +1,19 @@
 //
-//  AKQueuePlayerProtocol.swift
-//  AKPlayer
+//   AKQueuePlayerProtocol.swift
+//   AKPlayer
 //
-//  Copyright (c) 2020 Amalendu Kar. All rights reserved.
-//  Licensed under the MIT license. See LICENSE file in the project root.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
 import Foundation
 
 // MARK: - AKQueuePlayerProtocol
 
-/// Protocol defining playlist and media queue playback operations, shuffle/repeat modes, and index navigation.
+/// Protocol defining playlist and media queue playback operations, shuffle/repeat modes, and index
+/// navigation.
 @MainActor
 public protocol AKQueuePlayerProtocol: AKPlayerProtocol {
-
     /// The current list of items in the queue.
     var items: [any AKPlayable] { get }
 

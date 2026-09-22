@@ -5,13 +5,13 @@ let package = Package(
     name: "AKPlayer",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v18)
+        .iOS(.v18),
     ],
     products: [
         .library(
             name: "AKPlayer",
             targets: ["AKPlayer"]
-        )
+        ),
     ],
     targets: [
         .target(
@@ -19,15 +19,14 @@ let package = Package(
             dependencies: [],
             path: "Sources/AKPlayer",
             resources: [
-                .process("Resources")
+                .process("Resources"),
             ]
         ),
         .testTarget(
             name: "AKPlayerTests",
             dependencies: ["AKPlayer"],
             path: "Tests/AKPlayerTests"
-        )
+        ),
     ],
     swiftLanguageModes: [.v6]
 )
-

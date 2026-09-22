@@ -66,18 +66,18 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
     /// Contains error details if a failure occurs during initialization or
     /// playback.
     var error: AKPlayerError? { get }
-    
+
     /// Player configuration specifying timing, audio session, and buffering policies.
     var configuration: any AKPlayerConfigurationProtocol { get }
 
     /// An asynchronous sequence of player lifecycle and playback events.
     var events: AsyncStream<AKPlayerEvent> { get }
-    
+
     // MARK: - Live Stream Properties
-    
+
     /// Indicates whether the active media is a live broadcast stream.
     var isLive: Bool { get }
-    
+
     /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
     var isAtLiveEdge: Bool { get }
 

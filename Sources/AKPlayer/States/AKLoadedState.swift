@@ -16,19 +16,19 @@ import Foundation
 @MainActor
 public class AKLoadedState: AKBaseState {
     // MARK: - Properties
-    
+
     /// Indicates whether autoplay should trigger automatically once preparation
     /// finishes.
     public private(set) var autoPlay: Bool
-    
+
     /// Optional target position to navigate to upon loading.
     private let position: AKSeekTarget?
-    
+
     /// Optional target playback speed multiplier to apply on play.
     private var rate: AKPlaybackRate?
-    
+
     // MARK: - Initialization & Deinitialization
-    
+
     /// Initializes a loaded state instance associated with the specified player
     /// controller.
     /// - Parameters:
@@ -52,23 +52,23 @@ public class AKLoadedState: AKBaseState {
         self.rate = rate
         super.init(playerController: playerController, state: .loaded)
     }
-    
+
     deinit {
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
     }
-    
+
     // MARK: - State Lifecycle & Event Handlers
-    
+
     /// Processes state updates, sets up KVO observations, and handles automatic
     /// seek or playback triggers.
     override public func processStateChange() {
         super.processStateChange()
-        
+
         playerController.emit(.timeDidChange(playerController.currentTime))
-        
+
         if autoPlay {
             play()
         } else if let position, let currentMedia = playerController.currentMedia {
@@ -79,18 +79,18 @@ public class AKLoadedState: AKBaseState {
                 }
                 return
             }
-            
+
             let controller = AKBufferingState(
                 playerController: playerController,
                 autoPlay: false,
                 rate: rate,
                 targetSeek: AKSeek(target: position)
             )
-            
+
             change(controller)
         }
     }
-    
+
     /// Responds to changes in the underlying `AVPlayer.Status`.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
         guard isActiveState else { return }
@@ -103,7 +103,7 @@ public class AKLoadedState: AKBaseState {
         )
         change(controller)
     }
-    
+
     /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
     override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
         guard isActiveState else { return }
@@ -112,7 +112,8 @@ public class AKLoadedState: AKBaseState {
         case .playing:
             play()
         case .waitingToPlayAtSpecifiedRate:
-            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
+            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay
+            else { return }
             switch reasonForWaitingToPlay {
             case .noItemToPlay:
                 stop()
@@ -123,9 +124,11 @@ public class AKLoadedState: AKBaseState {
             break
         }
     }
-    
+
     /// Responds to interstitial ad playback state changes to resume or buffer content accordingly.
-    override public func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
+    override public func handleInterstitialPlaybackStateChange(
+        _ playbackState: AKInterstitialPlaybackState
+    ) {
         guard isActiveState else { return }
         switch playbackState {
         case .playing:
@@ -137,31 +140,29 @@ public class AKLoadedState: AKBaseState {
         }
     }
 
-    
     // MARK: - Commands
-    
+
     /// Commands the player to unpause and enter the buffering state prior to
     /// active playback.
     override public func play() {
-        var controller: AKBufferingState
-        if let position {
-            controller = AKBufferingState(
+        var controller = if let position {
+            AKBufferingState(
                 playerController: playerController,
                 autoPlay: true,
                 rate: rate,
                 targetSeek: AKSeek(target: position)
             )
         } else {
-            controller = AKBufferingState(
+            AKBufferingState(
                 playerController: playerController,
                 autoPlay: true,
                 rate: rate
             )
         }
-        
+
         change(controller)
     }
-    
+
     /// Commands the player to unpause and play at a specific target rate
     /// multiplier.
     /// - Parameter rate: Target playback rate multiplier.
@@ -169,17 +170,15 @@ public class AKLoadedState: AKBaseState {
         performIfAllowed(
             check: { availability(for: .play(at: rate)) },
             action: {
-                var controller: AKBufferingState
-                
-                if let position {
-                    controller = AKBufferingState(
+                var controller = if let position {
+                    AKBufferingState(
                         playerController: playerController,
                         autoPlay: true,
                         rate: rate,
                         targetSeek: AKSeek(target: position)
                     )
                 } else {
-                    controller = AKBufferingState(
+                    AKBufferingState(
                         playerController: playerController,
                         autoPlay: true,
                         rate: rate
@@ -194,7 +193,7 @@ public class AKLoadedState: AKBaseState {
             fallback: ()
         )
     }
-    
+
     /// Commands the player to pause. Disables `autoPlay` if queued, or emits an
     /// `.alreadyPaused` unavailability warning.
     override public func pause() {

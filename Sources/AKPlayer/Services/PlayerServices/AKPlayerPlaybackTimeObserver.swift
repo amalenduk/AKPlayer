@@ -24,21 +24,22 @@ public protocol AKPlayerPlaybackTimeObserverProtocol: AnyObject, Sendable {
     /// Starts periodic time observation at the specified interval.
     /// - Parameter interval: The frequency interval for updates.
     func startObservingPeriodicTime(for interval: CMTime)
-    
+
     /// Stops periodic time observation and removes the registered observer.
     func stopObservingPeriodicTime()
-    
+
     /// Starts boundary time observation for the specified timestamps.
     /// - Parameter times: The collection of boundary timestamps to observe.
     func startObservingBoundaryTime(for times: [CMTime])
-    
+
     /// Stops boundary time observation and removes the registered observer.
     func stopObservingBoundaryTime()
 }
 
 // MARK: - AKPlayerPlaybackTimeObserver
 
-/// Concrete observer delivering periodic and boundary time progress updates via asynchronous event streams.
+/// Concrete observer delivering periodic and boundary time progress updates via asynchronous event
+/// streams.
 @MainActor
 public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverProtocol {
     // MARK: - Properties
@@ -123,7 +124,7 @@ public final class AKPlayerPlaybackTimeObserver: AKPlayerPlaybackTimeObserverPro
             queue: .main
         ) { [weak self] in
             guard let self else { return }
-            self.boundaryBroadcaster.send(self.player.currentTime())
+            boundaryBroadcaster.send(player.currentTime())
         }
     }
 

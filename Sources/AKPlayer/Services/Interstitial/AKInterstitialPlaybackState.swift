@@ -11,7 +11,9 @@ import Foundation
 // MARK: - AKInterstitialPlaybackState
 
 /// Represents the active playback state of an interstitial ad or clip.
-public enum AKInterstitialPlaybackState: String, CaseIterable, Sendable, Equatable, Hashable, CustomStringConvertible {
+public enum AKInterstitialPlaybackState: String, CaseIterable, Sendable, Equatable, Hashable,
+    CustomStringConvertible
+{
     /// Interstitial playback has not started or has reset.
     case idle
     /// Interstitial asset is actively loading.

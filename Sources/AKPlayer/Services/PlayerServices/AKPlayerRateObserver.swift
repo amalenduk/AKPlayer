@@ -19,7 +19,7 @@ public struct AKPlaybackRateChange: Equatable, Sendable {
     public let currentRate: AKPlaybackRate
     /// The system-reported reason for the rate change, if available.
     public let reason: AVPlayer.RateDidChangeReason?
-    
+
     /// Initializes a new playback rate change event payload.
     /// - Parameters:
     ///   - previousRate: The previous playback rate before the transition.
@@ -45,7 +45,7 @@ public protocol AKPlayerRateObserverProtocol: AnyObject, Sendable {
     var player: AVPlayer { get }
     /// Asynchronous stream yielding rate change events.
     var rateChanges: AsyncStream<AKPlaybackRateChange> { get }
-    
+
     /// Begins observing rate change notifications on the player.
     func startObserving()
     /// Stops observing rate change notifications and cancels observation tasks.
@@ -58,47 +58,47 @@ public protocol AKPlayerRateObserverProtocol: AnyObject, Sendable {
 @MainActor
 public final class AKPlayerRateObserver: AKPlayerRateObserverProtocol {
     // MARK: - Properties
-    
+
     /// The underlying AVPlayer instance being observed.
     public let player: AVPlayer
-    
+
     /// Asynchronous stream emitting playback rate changes.
     public var rateChanges: AsyncStream<AKPlaybackRateChange> {
         eventBroadcaster.makeStream()
     }
-    
+
     /// Internal broadcaster dispatching playback rate change events.
     private let eventBroadcaster = AKEventBroadcaster<AKPlaybackRateChange>()
-    
+
     /// Boolean indicating whether the observer is actively listening for rate notifications.
     private var isObserving = false
     /// Cached playback rate used to compute previous vs new rate changes.
     private var currentRate: AKPlaybackRate?
     /// Active task receiving and handling rate change notifications.
     private var observationTask: Task<Void, Never>?
-    
+
     // MARK: - Init & Deinit
-    
+
     /// Initializes a rate observer instance bound to an AVPlayer.
     /// - Parameter player: The AVPlayer instance to monitor.
     public init(with player: AVPlayer) {
         self.player = player
     }
-    
+
     deinit {
         observationTask?.cancel()
         observationTask = nil
         eventBroadcaster.finish()
     }
-    
+
     // MARK: - Observation Lifecycle
-    
+
     /// Starts observing system rate change notifications for the player.
     public func startObserving() {
         guard !isObserving else { return }
         isObserving = true
         currentRate = AKPlaybackRate(rate: player.rate)
-        
+
         observationTask?.cancel()
         observationTask = Task { @MainActor [weak self, player] in
             for await notification in NotificationCenter.default.notifications(
@@ -106,11 +106,11 @@ public final class AKPlayerRateObserver: AKPlayerRateObserverProtocol {
                 object: player
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.handleRateDidChangeNotification(notification)
+                handleRateDidChangeNotification(notification)
             }
         }
     }
-    
+
     /// Stops observing system rate change notifications and cleans up observation tasks.
     public func stopObserving() {
         guard isObserving else { return }
@@ -118,24 +118,26 @@ public final class AKPlayerRateObserver: AKPlayerRateObserverProtocol {
         observationTask = nil
         isObserving = false
     }
-    
+
     // MARK: - Private Notification Handling
-    
+
     /// Processes rate change notifications from AVPlayer and broadcasts delta change events.
-    /// - Parameter notification: The `AVPlayer.rateDidChangeNotification` instance containing reason payload.
+    /// - Parameter notification: The `AVPlayer.rateDidChangeNotification` instance containing
+    /// reason payload.
     private func handleRateDidChangeNotification(_ notification: Notification) {
-        let reason = notification.userInfo?[AVPlayer.rateDidChangeReasonKey] as? AVPlayer.RateDidChangeReason
+        let reason = notification.userInfo?[AVPlayer.rateDidChangeReasonKey] as? AVPlayer
+            .RateDidChangeReason
         let previous = currentRate ?? AKPlaybackRate(rate: player.rate)
         let current = AKPlaybackRate(rate: player.rate)
-        
+
         currentRate = current
-        
+
         let change = AKPlaybackRateChange(
             previousRate: previous,
             currentRate: current,
             reason: reason
         )
-        
+
         eventBroadcaster.send(change)
     }
 }

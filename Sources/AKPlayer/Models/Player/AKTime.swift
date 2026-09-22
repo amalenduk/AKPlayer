@@ -10,7 +10,8 @@ import CoreMedia
 
 // MARK: - AKTime
 
-/// A lightweight value type encapsulating a CoreMedia timestamp (`CMTime`) along with formatted string representations.
+/// A lightweight value type encapsulating a CoreMedia timestamp (`CMTime`) along with formatted
+/// string representations.
 public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
     // MARK: - Properties
 
@@ -130,7 +131,8 @@ public struct AKTime: Equatable, Comparable, CustomStringConvertible, Sendable {
         }
     }
 
-    /// Formatted verbose natural language time string (e.g. "3 minutes 45 seconds" or "3 minutes 45 seconds remaining").
+    /// Formatted verbose natural language time string (e.g. "3 minutes 45 seconds" or "3 minutes 45
+    /// seconds remaining").
     /// - Returns: The localized verbose time string.
     public func verboseStringValue() -> String {
         guard let value, value.isValid && value.isNumeric else {

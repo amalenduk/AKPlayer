@@ -100,7 +100,8 @@ public enum AKSeekTarget: Equatable, Sendable {
             )
 
         case .date, .live:
-            // Date-based and live-head targets cannot be resolved to a static CMTime without player item context
+            // Date-based and live-head targets cannot be resolved to a static CMTime without player
+            // item context
             // and must be dispatched to seeking services directly.
             return nil
         }
@@ -124,18 +125,17 @@ extension AKSeekTarget: CustomStringConvertible {
     public var description: String {
         switch self {
         case let .time(time):
-            return "time(\(time.seconds)s)"
+            "time(\(time.seconds)s)"
         case let .seconds(seconds):
-            return "seconds(\(seconds)s)"
+            "seconds(\(seconds)s)"
         case let .offset(offset):
-            return "offset(\(offset)s)"
+            "offset(\(offset)s)"
         case let .percentage(percentage):
-            return "percentage(\(percentage)%)"
+            "percentage(\(percentage)%)"
         case let .date(date):
-            return "date(\(date))"
+            "date(\(date))"
         case .live:
-            return "live"
+            "live"
         }
     }
 }
-

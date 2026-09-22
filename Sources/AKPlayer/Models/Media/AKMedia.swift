@@ -13,46 +13,46 @@ import Foundation
 
 /// A thread-safe concrete representation of a playable media item.
 public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
-    
     // MARK: - Properties
-    
+
     /// The media asset's destination URL (file path or remote stream).
     public let url: URL
-    
+
     /// The type classification of the media item (e.g., audio, video, stream).
     public let type: AKMediaType
-    
+
     /// Optional custom pre-configured asset (e.g., for FairPlay DRM or custom ResourceLoader).
     public let customAsset: AVURLAsset?
-    
+
     /// Optional custom pre-configured player item (e.g., for custom Video Composition).
     public let customPlayerItem: AVPlayerItem?
-    
+
     /// Optional dictionary options used when initializing the underlying `AVURLAsset`.
     public let assetInitializationOptions: [String: Any]?
-    
+
     /// Optional asset properties to automatically load asynchronously prior to playback.
     public let automaticallyLoadedAssetKeys: [AVPartialAsyncProperty<AVAsset>]?
-    
+
     /// Optional static Now Playing metadata associated with the media.
     public private(set) var staticMetadata: (any AKNowPlayableStaticMetadataProtocol)?
-    
+
     /// The cache policy for this media item.
     public var cachePolicy: AKMediaCachePolicy = .useCacheIfAvailable
-    
+
     /// Optional cache manager instance.
     public var cacheManager: (any AKMediaCacheProtocol)?
-    
+
     private var _liveEdgeThreshold: TimeInterval?
-    
-    /// The live edge threshold in seconds. Returns a custom value if assigned, or defaults to `4.0` seconds for live streams, and `nil` for non-live media.
+
+    /// The live edge threshold in seconds. Returns a custom value if assigned, or defaults to `4.0`
+    /// seconds for live streams, and `nil` for non-live media.
     public var liveEdgeThreshold: TimeInterval? {
         get { _liveEdgeThreshold ?? (isLive() ? 4.0 : nil) }
         set { _liveEdgeThreshold = newValue }
     }
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a new media item with playback properties and optional metadata.
     /// - Parameters:
     ///   - url: The media URL destination.
@@ -86,14 +86,16 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
-        self._liveEdgeThreshold = liveEdgeThreshold
+        _liveEdgeThreshold = liveEdgeThreshold
     }
-    
-    /// Initializes a media item with a pre-configured `AVURLAsset` (e.g. for FairPlay DRM, custom headers, or `AVAssetResourceLoaderDelegate`).
+
+    /// Initializes a media item with a pre-configured `AVURLAsset` (e.g. for FairPlay DRM, custom
+    /// headers, or `AVAssetResourceLoaderDelegate`).
     /// - Parameters:
     ///   - asset: The custom pre-configured `AVURLAsset`.
     ///   - type: The media type classification. Defaults to `.clip`.
-    ///   - automaticallyLoadedAssetKeys: Optional asset property keys to pre-load. Defaults to `nil`.
+    ///   - automaticallyLoadedAssetKeys: Optional asset property keys to pre-load. Defaults to
+    /// `nil`.
     ///   - staticMetadata: Optional static Now Playing metadata. Defaults to `nil`.
     ///   - cachePolicy: Cache policy for this media item. Defaults to `.useCacheIfAvailable`.
     ///   - cacheManager: Optional custom cache manager instance. Defaults to `nil`.
@@ -107,21 +109,23 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         cacheManager: (any AKMediaCacheProtocol)? = nil,
         liveEdgeThreshold: TimeInterval? = nil
     ) {
-        self.url = asset.url
+        url = asset.url
         self.type = type
-        self.customAsset = asset
-        self.customPlayerItem = nil
-        self.assetInitializationOptions = nil
+        customAsset = asset
+        customPlayerItem = nil
+        assetInitializationOptions = nil
         self.automaticallyLoadedAssetKeys = automaticallyLoadedAssetKeys
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
-        self._liveEdgeThreshold = liveEdgeThreshold
+        _liveEdgeThreshold = liveEdgeThreshold
     }
-    
-    /// Initializes a media item with a pre-configured `AVPlayerItem` (e.g. for custom video compositions or audio mixes).
+
+    /// Initializes a media item with a pre-configured `AVPlayerItem` (e.g. for custom video
+    /// compositions or audio mixes).
     ///
-    /// Marked `@MainActor` because Apple's `AVPlayerItem.asset` property is isolated to `@MainActor` in Swift 6.
+    /// Marked `@MainActor` because Apple's `AVPlayerItem.asset` property is isolated to
+    /// `@MainActor` in Swift 6.
     /// - Parameters:
     ///   - playerItem: The custom pre-configured `AVPlayerItem`.
     ///   - type: The media type classification. Defaults to `.clip`.
@@ -139,27 +143,27 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
         liveEdgeThreshold: TimeInterval? = nil
     ) {
         let asset = playerItem.asset as? AVURLAsset
-        self.url = asset?.url ?? URL(fileURLWithPath: "")
+        url = asset?.url ?? URL(fileURLWithPath: "")
         self.type = type
-        self.customAsset = asset
-        self.customPlayerItem = playerItem
-        self.assetInitializationOptions = nil
-        self.automaticallyLoadedAssetKeys = nil
+        customAsset = asset
+        customPlayerItem = playerItem
+        assetInitializationOptions = nil
+        automaticallyLoadedAssetKeys = nil
         self.staticMetadata = staticMetadata
         self.cachePolicy = cachePolicy
         self.cacheManager = cacheManager
-        self._liveEdgeThreshold = liveEdgeThreshold
+        _liveEdgeThreshold = liveEdgeThreshold
     }
 
-    
     deinit {
         AKLogger.logDeinit(String(describing: Self.self), pointer: Unmanaged.passUnretained(self))
     }
-    
+
     // MARK: - Public Methods
-    
+
     /// Updates the static Now Playing metadata for the media item.
-    /// - Parameter staticMetadata: The new metadata payload conforming to `AKNowPlayableStaticMetadataProtocol`.
+    /// - Parameter staticMetadata: The new metadata payload conforming to
+    /// `AKNowPlayableStaticMetadataProtocol`.
     public func updateMetadata(_ staticMetadata: any AKNowPlayableStaticMetadataProtocol) {
         self.staticMetadata = staticMetadata
     }

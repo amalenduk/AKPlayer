@@ -156,7 +156,8 @@ extension AKPictureInPictureController: AVPictureInPictureControllerDelegate {
         }
     }
 
-    /// Responds to user request to restore the application user interface when stopping Picture-in-Picture.
+    /// Responds to user request to restore the application user interface when stopping
+    /// Picture-in-Picture.
     public nonisolated func pictureInPictureController(
         _: AVPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (

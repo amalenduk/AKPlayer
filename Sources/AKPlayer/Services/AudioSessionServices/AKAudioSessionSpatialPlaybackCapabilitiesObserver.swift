@@ -29,7 +29,8 @@ public protocol AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol: AnyOb
 
 // MARK: - AKAudioSessionSpatialPlaybackCapabilitiesObserver
 
-/// A thread-safe observer class responsible for monitoring `AVAudioSession.spatialPlaybackCapabilitiesChangedNotification`
+/// A thread-safe observer class responsible for monitoring
+/// `AVAudioSession.spatialPlaybackCapabilitiesChangedNotification`
 /// and broadcasting updates via `AsyncStream`.
 public final class AKAudioSessionSpatialPlaybackCapabilitiesObserver:
     AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol, Sendable
@@ -75,7 +76,7 @@ public final class AKAudioSessionSpatialPlaybackCapabilitiesObserver:
                 object: audioSession
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.handleSpatialPlaybackCapabilitiesChangedNotification(notification)
+                handleSpatialPlaybackCapabilitiesChangedNotification(notification)
             }
         }
 
@@ -92,13 +93,15 @@ public final class AKAudioSessionSpatialPlaybackCapabilitiesObserver:
 
     // MARK: - Handlers
 
-    /// Processes incoming spatial playback capabilities changed notifications and emits stream events.
+    /// Processes incoming spatial playback capabilities changed notifications and emits stream
+    /// events.
     /// - Parameter notification: The `Notification` object containing capability metadata.
     private func handleSpatialPlaybackCapabilitiesChangedNotification(
         _ notification: Notification
     ) {
         guard let userInfo = notification.userInfo,
-              let isSpatialAudioEnabled = userInfo[AVAudioSessionSpatialAudioEnabledKey] as? NSNumber
+              let isSpatialAudioEnabled =
+              userInfo[AVAudioSessionSpatialAudioEnabledKey] as? NSNumber
         else {
             return
         }

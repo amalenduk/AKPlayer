@@ -17,162 +17,164 @@ import MediaPlayer
 @MainActor
 public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     // MARK: - Properties
-    
+
     /// The underlying `AVPlayer` instance controlling media playback.
     public var player: AVPlayer {
         playerController.player
     }
-    
+
     /// Current state of the player (e.g., playing, paused, stopped, failed).
     public var state: AKPlayerState {
         playerController.state
     }
-    
+
     /// Default rate used when initiating media playback.
     public var defaultRate: AKPlaybackRate {
         get { playerController.defaultRate }
         set { playerController.defaultRate = newValue }
     }
-    
+
     /// Current rate of audio playback (1.0 = normal, 0.0 = paused).
     public var rate: AKPlaybackRate {
         get { playerController.rate }
         set { playerController.rate = newValue }
     }
-    
+
     /// The current active playable media metadata item.
     public var currentMedia: (any AKPlayable)? {
         playerController.currentMedia
     }
-    
+
     /// The current `AVPlayerItem` loaded in the player.
     public var currentItem: AVPlayerItem? {
         playerController.currentItem
     }
-    
+
     /// The total duration of the currently playing item as `CMTime`.
     public var currentItemDuration: CMTime {
         playerController.currentItemDuration
     }
-    
+
     /// The current playback position in time as `CMTime`.
     public var currentTime: CMTime {
         playerController.currentTime
     }
-    
+
     /// The remaining playback time of the active item, if available.
     public var remainingTime: CMTime? {
         playerController.remainingTime
     }
-    
+
     /// Flag indicating whether playback starts automatically upon loading
     /// media.
     public var autoPlay: Bool {
         playerController.autoPlay
     }
-    
+
     /// Flag indicating if a seek action is currently in progress.
     public var isSeeking: Bool {
         playerController.isSeeking
     }
-    
+
     /// The target time or position requested during the latest seek command.
     public var lastRequestedSeekPosition: AKSeekTarget? {
         playerController.lastRequestedSeekPosition
     }
-    
+
     /// The current output volume level (0.0 to 1.0).
     public var volume: Float {
         get { playerController.volume }
         set { playerController.volume = newValue }
     }
-    
+
     /// Flag indicating whether the player volume is muted.
     public var isMuted: Bool {
         get { playerController.isMuted }
         set { playerController.isMuted = newValue }
     }
-    
+
     /// Contains player errors if any occur during initialization or playback.
     public var error: AKPlayerError? {
         playerController.error
     }
-    
+
     /// Configuration options governing player behavior, audio session settings,
     /// and remote controls.
     public var configuration: AKPlayerConfigurationProtocol {
         playerController.configuration
     }
-    
+
     /// Asynchronous stream of player events for Swift Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
         playerController.events
     }
-    
+
     // MARK: - Live Stream Properties
-    
+
     /// Indicates whether the active media is a live broadcast stream.
     public var isLive: Bool {
         playerController.isLive
     }
-    
+
     /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
     public var isAtLiveEdge: Bool {
         playerController.isAtLiveEdge
     }
-    
+
     // MARK: - Manager & Services
-    
+
     /// Controller managing underlying AVPlayer actions and state machine
     /// transitions.
     public let playerController: AKPlayerControllerProtocol
-    
+
     /// Snapshot storing playback and app states during interruptions for
     /// resumption logic.
     public private(set) var playerStateSnapshot: AKPlayerStateSnapshot?
-    
+
     /// Audio session service managing system category, modes, and activation
     /// state.
     public let audioSessionService: AKAudioSessionServiceProtocol
-    
+
     /// Session handling integration with system Now Playing info and lock
     /// screen controls.
     public var nowPlayingManager: (any AKNowPlayingManagerProtocol)?
-    
+
     // MARK: - Internal Observers & Tasks
-    
+
     private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
-    
+
     /// Task managing the asynchronous event stream from the player controller.
     private var playerEventsTask: Task<Void, Never>?
-    
+
     /// Tracks connection status of external audio devices (e.g., Bluetooth,
     /// headphones).
     private var isExternalAudioPlaybackDeviceConnected = false
-    
+
     /// Observer responsible for audio interruption notifications (e.g.,
     /// incoming phone calls).
     private var audioSessionInterruptionObserver: (any AKAudioSessionInterruptionObserverProtocol)!
-    
+
     /// Observer handling route changes (e.g., unplugging headphones or
     /// disconnecting Bluetooth).
     private var audioSessionRouteChangesObserver: (any AKAudioSessionRouteChangesObserverProtocol)!
-    
+
     /// Observer handling `mediaServicesWereReset` system restore notifications.
     private var audioSessionMediaServicesWereResetObserver:
-    (any AKAudioSessionMediaServicesWereResetObserverProtocol)!
-    
+        (any AKAudioSessionMediaServicesWereResetObserverProtocol)!
+
     /// Observer monitoring app lifecycle changes (entering
     /// background/foreground, resigning active).
-    private var applicationLifeCycleEventsObserver: (any AKApplicationLifeCycleEventsObserverProtocol)!
-    
+    private var applicationLifeCycleEventsObserver: (
+        any AKApplicationLifeCycleEventsObserverProtocol
+    )!
+
     private var applicationLifeCycleEventsTask: Task<Void, Never>?
     private var audioSessionInterruptionTask: Task<Void, Never>?
     private var audioSessionRouteChangesTask: Task<Void, Never>?
     private var audioSessionMediaServicesResetTask: Task<Void, Never>?
-    
+
     // MARK: - Init & Deinit
-    
+
     /// Initializes a new instance of `AKPlayerManager`.
     /// - Parameters:
     ///   - player: The `AVPlayer` instance used for playback.
@@ -194,7 +196,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         )
         self.audioSessionService = audioSessionService
         super.init()
-        
+
         audioSessionInterruptionObserver = AKAudioSessionInterruptionObserver(
             audioSession: audioSessionService.audioSession
         )
@@ -202,20 +204,20 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             audioSession: audioSessionService.audioSession
         )
         audioSessionMediaServicesWereResetObserver =
-        AKAudioSessionMediaServicesWereResetObserver(
-            audioSession: audioSessionService.audioSession
-        )
+            AKAudioSessionMediaServicesWereResetObserver(
+                audioSession: audioSessionService.audioSession
+            )
         applicationLifeCycleEventsObserver = AKApplicationLifeCycleEventsObserver()
-        
+
         if configuration.isNowPlayingEnabled {
             nowPlayingManager = AKNowPlayingManager(playerManager: self)
         }
-        
+
         startObservingPlayerEvents()
         startObservingLifeCycleEvents()
         startObservingAudioSessionEvents()
     }
-    
+
     deinit {
         defer {
             AKLogger.logDeinit(
@@ -235,9 +237,9 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         audioSessionMediaServicesResetTask = nil
         eventBroadcaster.finish()
     }
-    
+
     // MARK: - Lifecycle Preparation
-    
+
     /// Configures the audio session, prepares the player controller, activates
     /// Now Playing, and begins system observers.
     /// - Throws: `AKPlayerError` or `AVAudioSession` setup errors during
@@ -246,28 +248,28 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         try setAudioSession(true)
         try playerController.prepare()
         try await nowPlayingManager?.start()
-        
+
         startObservers()
         isExternalAudioPlaybackDeviceConnected =
-        audioSessionRouteChangesObserver.isExternalDeviceConnected()
+            audioSessionRouteChangesObserver.isExternalDeviceConnected()
     }
-    
+
     // MARK: - Boundary Observers
-    
+
     /// Adds boundary time tracking points to notify when playback reaches
     /// explicit timestamps.
     /// - Parameter times: Array of `CMTime` markers to observe.
     public func addBoundaryTimeObserver(for times: [CMTime]) {
         playerController.addBoundaryTimeObserver(for: times)
     }
-    
+
     /// Removes active boundary time observers from the underlying player.
     public func removeBoundaryTimeObserver() {
         playerController.removeBoundaryTimeObserver()
     }
-    
+
     // MARK: - Playback Commands
-    
+
     /// Loads a media item into the player controller with optional
     /// auto-playback and initial seek target.
     /// - Parameters:
@@ -289,14 +291,14 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             )
         }
     }
-    
+
     /// Initiates media playback at normal default speed.
     public func play() {
         guard canPlayInCurrentLifecycleState()
         else { return actionNotPermitted() }
         performPlaybackAction { [weak self] in self?.playerController.play() }
     }
-    
+
     /// Initiates media playback at a specified custom rate.
     /// - Parameter rate: Speed target encapsulated by `AKPlaybackRate`.
     public func play(at rate: AKPlaybackRate) {
@@ -306,12 +308,12 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             self?.playerController.play(at: rate)
         }
     }
-    
+
     /// Pauses active playback.
     public func pause() {
         playerController.pause()
     }
-    
+
     /// Toggles between play and pause states based on current state.
     public func togglePlayPause() {
         switch state {
@@ -325,13 +327,13 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             playerController.togglePlayPause()
         }
     }
-    
+
     /// Stops playback and invalidates active state resumption flags.
     public func stop() {
         playerStateSnapshot?.shouldResume = false
         playerController.stop()
     }
-    
+
     /// Asynchronously seeks to a specific time target.
     /// - Parameters:
     ///   - target: The position target defined as an `AKSeekTarget`.
@@ -341,7 +343,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
         await playerController.seek(to: target, scope: scope)
     }
-    
+
     /// Asynchronously seeks to a specific target within specified exact
     /// tolerance windows.
     /// - Parameters:
@@ -366,7 +368,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             toleranceAfter: toleranceAfter
         )
     }
-    
+
     /// Seeks to the specified target position using completion handler.
     ///
     /// - Parameters:
@@ -380,7 +382,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     ) {
         playerController.seek(to: target, scope: scope, completionHandler: completionHandler)
     }
-    
+
     /// Seeks to the specified target position with precise tolerances using completion handler.
     ///
     /// - Parameters:
@@ -404,14 +406,14 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             completionHandler: completionHandler
         )
     }
-    
+
     /// Steps forward or backward by a specific number of frames.
     /// - Parameter count: Positive integer for forward frame steps, negative
     /// for backward steps.
     public func step(by count: Int) {
         playerController.step(by: count)
     }
-    
+
     /// Fast-forwards playback using default fast rate settings.
     public func fastForward() {
         guard canPlayInCurrentLifecycleState()
@@ -420,7 +422,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             self?.playerController.fastForward()
         }
     }
-    
+
     /// Fast-forwards playback at a custom rate speed.
     /// - Parameter rate: Speed target encapsulated by `AKPlaybackRate`.
     public func fastForward(at rate: AKPlaybackRate) {
@@ -430,7 +432,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             self?.playerController.fastForward(at: rate)
         }
     }
-    
+
     /// Rewinds playback using default rewind settings.
     public func rewind() {
         guard canPlayInCurrentLifecycleState()
@@ -439,7 +441,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             self?.playerController.rewind()
         }
     }
-    
+
     /// Rewinds playback at a custom rate speed.
     /// - Parameter rate: Speed target encapsulated by `AKPlaybackRate`.
     public func rewind(at rate: AKPlaybackRate) {
@@ -449,9 +451,9 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             self?.playerController.rewind(at: rate)
         }
     }
-    
+
     // MARK: - Live Stream Navigation
-    
+
     /// Jumps directly to the live head of the stream and resumes playback at normal speed.
     @discardableResult
     public func jumpToLive() async -> Bool {
@@ -459,7 +461,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         else { actionNotPermitted(); return false }
         return await playerController.jumpToLive()
     }
-    
+
     /// Jumps directly to the live head of the stream with a completion callback.
     public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
         guard canPlayInCurrentLifecycleState()
@@ -470,9 +472,9 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         }
         playerController.jumpToLive(completionHandler: completionHandler)
     }
-    
+
     // MARK: - Internal Helper Functions
-    
+
     /// Subscribes system observers to route changes, interruptions, media
     /// resets, and lifecycle events.
     private func startObservers() {
@@ -481,7 +483,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         audioSessionMediaServicesWereResetObserver.startObserving()
         applicationLifeCycleEventsObserver.startObserving()
     }
-    
+
     /// Unsubscribes active observers from system notifications.
     private func stopObservers() {
         audioSessionInterruptionObserver.stopObserving()
@@ -489,7 +491,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         audioSessionMediaServicesWereResetObserver.stopObserving()
         applicationLifeCycleEventsObserver.stopObserving()
     }
-    
+
     /// Configures system `AVAudioSession` categories, options, and active
     /// states.
     /// - Parameter active: `true` to activate the audio session; `false` to
@@ -502,7 +504,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
                 options: configuration.audioSession.activeOptions
             )
         }
-        
+
         try audioSessionService.setCategory(
             configuration.audioSession.category,
             mode: configuration.audioSession.mode,
@@ -514,7 +516,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             options: configuration.audioSession.activeOptions
         )
     }
-    
+
     /// Verifies if app configuration rules allow playback based on the current
     /// background/inactive application state.
     /// - Returns: `true` if current lifecycle conditions allow playback to
@@ -528,7 +530,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         default: true
         }
     }
-    
+
     /// Safely executes throwing blocks and forwards errors to the delegate
     /// interface.
     /// - Parameters:
@@ -544,11 +546,11 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             return completion(true)
         } catch {
             let playerError = (error as? AKPlayerError) ?? .playerCanNoLongerPlay(error: error)
-    emit(.didFail(with: playerError))
+            emit(.didFail(with: playerError))
         }
         return completion(false)
     }
-    
+
     /// Captures the current application lifecycle and playback interruption
     /// state to handle automatic state recovery.
     /// - Parameters:
@@ -568,22 +570,22 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             )
             return
         }
-        
+
         snapshot.applicationState = applicationLifeCycleEventsObserver.state
         playerStateSnapshot = snapshot
     }
-    
+
     /// Clears any cached player state snapshot.
     private func clearPlayerStateSnapshot() {
         playerStateSnapshot = nil
     }
-    
+
     /// Notifies the delegate when an action is unavailable due to lifecycle or
     /// state restrictions.
     private func actionNotPermitted() {
         emit(.commandUnavailable(reason: .actionNotPermitted))
     }
-    
+
     /// Wraps playback operations to check audio session activation and snapshot
     /// clearance before execution.
     /// - Parameter action: Closure containing playback action commands.
@@ -604,7 +606,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         }
         clearPlayerStateSnapshot()
     }
-    
+
     /// Single entry point for dispatching all player events across the
     /// framework.
     /// Broadcasts the event to the delegate and forwards it to event listeners
@@ -613,37 +615,37 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     private func emit(_ event: AKPlayerEvent) {
         eventBroadcaster.send(event)
     }
-    
+
     private func startObservingPlayerEvents() {
         playerEventsTask?.cancel()
-        
+
         playerEventsTask = Task { [weak self] in
             guard let events = self?.playerController.events else { return }
-            
+
             for await event in events {
                 guard !Task.isCancelled, let self else { break }
-                
-                self.handleControllerEvent(event)
+
+                handleControllerEvent(event)
             }
         }
     }
-    
+
     private func handleControllerEvent(_ event: AKPlayerEvent) {
         eventBroadcaster.send(event)
     }
-    
+
     private func startObservingLifeCycleEvents() {
         applicationLifeCycleEventsTask?.cancel()
-        
+
         applicationLifeCycleEventsTask = Task { [weak self] in
             guard let stream = self?.applicationLifeCycleEventsObserver.events else { return }
             for await event in stream {
                 guard !Task.isCancelled, let self else { break }
-                self.handleApplicationLifeCycleEvent(event)
+                handleApplicationLifeCycleEvent(event)
             }
         }
     }
-    
+
     private func handleApplicationLifeCycleEvent(_ event: AKApplicationLifeCycleEvent) {
         switch event {
         case .willResignActive:
@@ -671,7 +673,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
                   snapshot.playbackInterruptionReason.isLifeCycleEvent,
                   snapshot.shouldResume
             else { return }
-            
+
             play()
         case .didEnterBackground:
             if configuration.playbackPausesWhenBackgrounded {
@@ -698,39 +700,41 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
                   snapshot.playbackInterruptionReason.isLifeCycleEvent,
                   snapshot.shouldResume
             else { return }
-            
+
             play()
         }
     }
+
     private func startObservingAudioSessionEvents() {
         audioSessionInterruptionTask?.cancel()
         audioSessionInterruptionTask = Task { [weak self] in
             guard let stream = self?.audioSessionInterruptionObserver.events else { return }
             for await event in stream {
                 guard !Task.isCancelled, let self else { break }
-                self.handleAudioSessionInterruptionEvent(event)
+                handleAudioSessionInterruptionEvent(event)
             }
         }
-        
+
         audioSessionRouteChangesTask?.cancel()
         audioSessionRouteChangesTask = Task { [weak self] in
             guard let stream = self?.audioSessionRouteChangesObserver.events else { return }
             for await event in stream {
                 guard !Task.isCancelled, let self else { break }
-                self.handleAudioSessionRouteChangeEvent(event)
+                handleAudioSessionRouteChangeEvent(event)
             }
         }
-        
+
         audioSessionMediaServicesResetTask?.cancel()
         audioSessionMediaServicesResetTask = Task { [weak self] in
-            guard let stream = self?.audioSessionMediaServicesWereResetObserver.events else { return }
+            guard let stream = self?.audioSessionMediaServicesWereResetObserver.events
+            else { return }
             for await _ in stream {
                 guard !Task.isCancelled, let self else { break }
-                self.handleMediaServicesWereReset()
+                handleMediaServicesWereReset()
             }
         }
     }
-    
+
     private func handleAudioSessionInterruptionEvent(_ event: AKAudioSessionInterruptionEvent) {
         switch event {
         case .began:
@@ -741,50 +745,48 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
                     .buffering,
                     .waitingForNetwork,
                 ]) && autoPlay)
-                    || state == .playing
+                || state == .playing
             else { return }
-            
+
             savePlayerStateSnapshot(
                 playbackInterruptionReason: .audioSessionInterruption,
                 shouldResume: true
             )
             pause()
-            
-        case .ended(let shouldResume):
+
+        case let .ended(shouldResume):
             guard configuration.playbackResumesWhenAudioSessionInterruptionEnded,
                   let snapshot = playerStateSnapshot,
                   snapshot.playbackInterruptionReason == .audioSessionInterruption,
                   snapshot.shouldResume, shouldResume
             else { return }
-            
+
             play()
         }
     }
-    
-    private func handleAudioSessionRouteChangeEvent(_ event: AKAudioSessionRouteChangeEvent) {
+
+    private func handleAudioSessionRouteChangeEvent(_: AKAudioSessionRouteChangeEvent) {
         let isExternalDeviceConnected = audioSessionRouteChangesObserver.isExternalDeviceConnected()
         defer {
             self.isExternalAudioPlaybackDeviceConnected = isExternalDeviceConnected
         }
-        
+
         guard
-            self.isExternalAudioPlaybackDeviceConnected
-                && !isExternalDeviceConnected
-                && (state.isAny(of: [
-                    .loading,
-                    .loaded,
-                    .buffering,
-                    .waitingForNetwork,
-                ]) && autoPlay)
-                || state == .playing
+            isExternalAudioPlaybackDeviceConnected
+            && !isExternalDeviceConnected
+            && (state.isAny(of: [
+                .loading,
+                .loaded,
+                .buffering,
+                .waitingForNetwork,
+            ]) && autoPlay)
+            || state == .playing
         else { return }
-        
+
         pause()
     }
-    
+
     private func handleMediaServicesWereReset() {
         stop()
     }
 }
-
-

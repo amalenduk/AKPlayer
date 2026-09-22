@@ -39,24 +39,22 @@ public enum AKPlayerAction: Equatable, Sendable {
 /// validation checks, and action handling.
 @MainActor
 public class AKBaseState: AKPlayerStateControllerProtocol {
-    
     // MARK: - Properties
-    
+
     /// Unowned reference to the parent player controller context.
     public unowned let playerController: any AKPlayerControllerProtocol
-    
+
     /// The explicit player state represented by this class instance.
     public let state: AKPlayerState
-    
+
     /// Flag indicating whether the state controller has initiated transition to a subsequent state.
     public private(set) var hasTransitioned = false
-    
+
     /// Flag indicating whether this state instance is currently active on the player controller.
     public private(set) var isActiveState = false
 
-    
     // MARK: - Initialization
-    
+
     /// Initializes a base state instance associated with a specific player
     /// controller and state classification.
     /// - Parameters:
@@ -71,33 +69,33 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         self.playerController = playerController
         self.state = state
     }
-    
-    deinit { }
-    
+
+    deinit {}
+
     // MARK: - State Lifecycle & Event Handlers
-    
+
     /// Called when the player transitions into this state. Concrete state
     /// subclasses override to perform setup.
     public func processStateChange() {
         isActiveState = true
     }
-    
+
     /// Responds to changes in the underlying `AVPlayer.Status`.
-    public func handlePlayerStatusChange(_ status: AVPlayer.Status) {}
-    
+    public func handlePlayerStatusChange(_: AVPlayer.Status) {}
+
     /// Responds to changes in the underlying `AVPlayer.TimeControlStatus`.
-    public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {}
-    
+    public func handleTimeControlStatusChange(_: AVPlayer.TimeControlStatus) {}
+
     /// Handles lifecycle and progress events forwarded from `AVPlayerItem`.
-    public func handle(_ event: AKPlayerItemNotificationEvent) {}
-    
+    public func handle(_: AKPlayerItemNotificationEvent) {}
+
     /// Responds to playback state transitions forwarded from the interstitial service.
-    open func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {}
-    
+    open func handleInterstitialPlaybackStateChange(_: AKInterstitialPlaybackState) {}
+
     // MARK: - Actions (AKPlayerActionsProtocol)
-    
+
     // MARK: 1. Loading Media
-    
+
     /// Initiates loading of a new playable media item into the player pipeline.
     /// - Parameters:
     ///   - media: The playable media target.
@@ -111,9 +109,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     ) {
         startLoad(media: media, autoPlay: autoPlay, at: position)
     }
-    
+
     // MARK: 2. Controlling Playback
-    
+
     /// Commands the player to begin media playback.
     public func play() {
         performIfAllowed(
@@ -132,7 +130,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     /// Commands the player to begin media playback at a specified speed
     /// multiplier.
     /// - Parameter rate: The targeted playback rate.
@@ -156,7 +154,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     /// Commands the player to pause active media playback.
     public func pause() {
         performIfAllowed(
@@ -172,7 +170,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     /// Toggles between play and pause states depending on current active
     /// playback state.
     public func togglePlayPause() {
@@ -182,10 +180,10 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             play()
         }
     }
-    
+
     /// Stops playback and tears down active player pipeline.
     public func stop() {
-        guard !hasTransitioned && state != .stopped else { return }
+        guard !hasTransitioned, state != .stopped else { return }
         performIfAllowed(
             check: { availability(for: .stop) },
             action: {
@@ -200,9 +198,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     // MARK: 3. Seeking Through Media
-    
+
     /// Asynchronously seeks to a given target position within current media or integrated timeline.
     @discardableResult
     public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
@@ -212,7 +210,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
         }
     }
-    
+
     /// Asynchronously seeks to a given target position with explicit tolerance parameters.
     @discardableResult
     public func seek(
@@ -232,7 +230,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
         }
     }
-    
+
     /// Seeks to a designated target position with a completion handler callback.
     public func seek(
         to target: AKSeekTarget,
@@ -247,8 +245,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             completionHandler: completionHandler
         )
     }
-    
-    /// Seeks to a designated target position with custom tolerance bounds and a completion handler callback.
+
+    /// Seeks to a designated target position with custom tolerance bounds and a completion handler
+    /// callback.
     public func seek(
         to target: AKSeekTarget,
         scope: AKSeekScope,
@@ -273,13 +272,13 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                     toleranceAfter: toleranceAfter,
                     completionHandler: completionHandler
                 )
-                
+
                 let controller = AKBufferingState(
                     playerController: playerController,
                     autoPlay: state.isPlaying || autoPlay,
                     targetSeek: seekToken
                 )
-                
+
                 change(controller)
             },
             blocked: { [weak self] reason in
@@ -290,9 +289,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     // MARK: 4. Media Navigation
-    
+
     /// Steps frame-by-frame through video media by a specified frame count
     /// offset.
     /// - Parameter count: The frame offset count (positive for forward,
@@ -314,13 +313,13 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     /// Fast-forwards playback using default fast-forward speed defined in
     /// player configuration.
     public func fastForward() {
         fastForward(at: playerController.configuration.fastForwardRate)
     }
-    
+
     /// Fast-forwards playback at a custom speed multiplier.
     /// - Parameter rate: The target fast-forward playback speed rate.
     public func fastForward(at rate: AKPlaybackRate) {
@@ -336,13 +335,13 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     /// Rewinds playback using default rewind speed defined in player
     /// configuration.
     public func rewind() {
         rewind(at: playerController.configuration.rewindRate)
     }
-    
+
     /// Rewinds playback at a custom speed multiplier.
     /// - Parameter rate: The target rewind playback speed rate.
     public func rewind(at rate: AKPlaybackRate) {
@@ -358,9 +357,9 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             fallback: ()
         )
     }
-    
+
     // MARK: - State Management & Preflight Helpers
-    
+
     /// Transitions the state machine context to a new target state instance.
     /// - Parameter controller: The target state controller to activate.
     public func change(_ controller: any AKPlayerStateControllerProtocol) {
@@ -370,7 +369,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         beforeStateChange()
         playerController.change(controller)
     }
-    
+
     /// Validates an action requirement and executes an asynchronous task if
     /// permission check succeeds.
     /// - Parameters:
@@ -397,13 +396,15 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
             return fallback
         }
-        
+
         return await action()
     }
-    
-    /// Validates an action requirement and executes a synchronous task if permission check succeeds.
+
+    /// Validates an action requirement and executes a synchronous task if permission check
+    /// succeeds.
     /// - Parameters:
-    ///   - check: Preflight verification closure evaluating action permission and returning blocking reasons on failure.
+    ///   - check: Preflight verification closure evaluating action permission and returning
+    /// blocking reasons on failure.
     ///   - action: Synchronous operation closure executed if permission check succeeds.
     ///   - blocked: Closure called on preflight failure with the associated reason.
     ///   - fallback: Fallback value returned when action execution is blocked or prohibited.
@@ -422,10 +423,10 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
             return fallback
         }
-        
+
         return action()
     }
-    
+
     /// Evaluates preflight permission and unavailable reasons for a given
     /// player action.
     /// - Parameter action: The candidate action to evaluate.
@@ -435,12 +436,14 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
         switch action {
-        case .play(at: let rate):
+        case let .play(at: rate):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
             }
             if rate != .normal {
-                if playerController.interstitialService.isPlayingInterstitial && rate.rate > 1.0 && !playerController.interstitialService.canFastForward {
+                if playerController.interstitialService.isPlayingInterstitial, rate.rate > 1.0,
+                   !playerController.interstitialService.canFastForward
+                {
                     return (false, .actionNotPermitted)
                 }
                 guard currentMedia.canPlay(at: rate) else {
@@ -448,64 +451,72 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 }
             }
             return (true, nil)
-            
+
         case let .seek(to: target):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
             }
-            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canSeek {
+            if playerController.interstitialService.isPlayingInterstitial,
+               !playerController.interstitialService.canSeek
+            {
                 return (false, .actionNotPermitted)
             }
-            
+
             let (flag, reason) = currentMedia.seekingThroughMedia
                 .canSeek(to: target)
             return (allowed: flag, reason: reason)
-            
-        case .fastForward(at: let rate):
+
+        case let .fastForward(at: rate):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
             }
-            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canFastForward {
+            if playerController.interstitialService.isPlayingInterstitial,
+               !playerController.interstitialService.canFastForward
+            {
                 return (false, .actionNotPermitted)
             }
             guard currentMedia.canPlay(at: rate) else {
                 return (false, .canNotPlayAtSpecifiedRate)
             }
             return (true, nil)
-            
-        case .rewind(at: let rate):
+
+        case let .rewind(at: rate):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
             }
-            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canSeek {
+            if playerController.interstitialService.isPlayingInterstitial,
+               !playerController.interstitialService.canSeek
+            {
                 return (false, .actionNotPermitted)
             }
             guard currentMedia.canPlay(at: rate) else {
                 return (false, .canNotPlayAtSpecifiedRate)
             }
             return (true, nil)
-            
+
         case let .step(by: count):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
             }
-            if playerController.interstitialService.isPlayingInterstitial && !playerController.interstitialService.canSeek {
+            if playerController.interstitialService.isPlayingInterstitial,
+               !playerController.interstitialService.canSeek
+            {
                 return (false, .actionNotPermitted)
             }
-            
+
             let result = currentMedia.canStep(by: count)
             return (
                 allowed: result,
                 reason: result
-                ? nil
-                : (count > 0 ? .canNotStepForward : .canNotStepBackward)
+                    ? nil
+                    : (count > 0 ? .canNotStepForward : .canNotStepBackward)
             )
-            
+
         default:
             return (true, nil)
         }
     }
-    
+
     /// Subscribes to system network status changes asynchronously.
     /// - Parameter handler: Closure invoked when network connectivity status changes.
     /// - Returns: A structured `Task` managing the observation lifetime.
@@ -518,7 +529,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         else {
             return nil
         }
-        
+
         return Task { @MainActor [weak self] in
             guard let monitor = self?.playerController.networkStatusMonitor else { return }
             for await status in monitor.networkStatus {
@@ -527,7 +538,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
         }
     }
-    
+
     /// Internal helper method executing pre-load lifecycle hooks and
     /// constructing initial loading state.
     /// - Parameters:
@@ -552,33 +563,38 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         )
         change(controller)
     }
-    
-    /// The active player item currently being rendered / buffered (interstitial item if active, otherwise primary media item).
+
+    /// The active player item currently being rendered / buffered (interstitial item if active,
+    /// otherwise primary media item).
     public var activePlayerItem: AVPlayerItem? {
         if playerController.interstitialService.isPlayingInterstitial,
-           let adItem = playerController.interstitialService.interstitialPlayer?.currentItem {
+           let adItem = playerController.interstitialService.interstitialPlayer?.currentItem
+        {
             return adItem
         }
         return playerController.currentMedia?.playerItem
     }
-    
+
     /// Determines whether the media buffer conditions are sufficient to allow playback.
     public func canPlay() -> Bool {
         guard !playerController.isSeeking else { return false }
-        
+
         if playerController.interstitialService.isPlayingInterstitial {
-            if playerController.interstitialService.interstitialPlayer?.timeControlStatus == .playing ||
-                playerController.interstitialService.playbackState == .playing {
+            if playerController.interstitialService.interstitialPlayer?
+                .timeControlStatus == .playing ||
+                playerController.interstitialService.playbackState == .playing
+            {
                 return true
             }
-            guard let adItem = playerController.interstitialService.interstitialPlayer?.currentItem else {
+            guard let adItem = playerController.interstitialService.interstitialPlayer?.currentItem
+            else {
                 return false
             }
             if adItem.isPlaybackBufferFull || adItem.isPlaybackLikelyToKeepUp {
                 return true
             }
             let currentTime = adItem.currentTime()
-            if currentTime.isValid && !currentTime.isIndefinite {
+            if currentTime.isValid, !currentTime.isIndefinite {
                 for rangeValue in adItem.loadedTimeRanges {
                     let range = rangeValue.timeRangeValue
                     if CMTimeRangeContainsTime(range, time: currentTime) {
@@ -591,16 +607,17 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
             return false
         }
-        
+
         guard let playerItem = playerController.currentMedia?.playerItem else { return false }
-        
+
         if playerItem.isPlaybackBufferFull || playerItem.isPlaybackLikelyToKeepUp {
             return true
         }
-        
-        // Also allow playback if there is at least 1.5s of loaded buffer ahead of current playback time
+
+        // Also allow playback if there is at least 1.5s of loaded buffer ahead of current playback
+        // time
         let currentTime = playerItem.currentTime()
-        if currentTime.isValid && !currentTime.isIndefinite {
+        if currentTime.isValid, !currentTime.isIndefinite {
             for rangeValue in playerItem.loadedTimeRanges {
                 let range = rangeValue.timeRangeValue
                 if CMTimeRangeContainsTime(range, time: currentTime) {
@@ -611,15 +628,15 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 }
             }
         }
-        
+
         return false
     }
-    
+
     // MARK: - Lifecycle Hooks
-    
+
     /// Hook executed immediately prior to stopping media playback.
     public func beforeStop() {}
-    
+
     /// Hook executed immediately prior to performing state transitions.
-    public func beforeStateChange() { }
+    public func beforeStateChange() {}
 }

@@ -59,7 +59,8 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     /// A Boolean value indicating whether seeking is permitted during the current interstitial.
     var canSeek: Bool { get }
 
-    /// A Boolean value indicating whether fast-forwarding is permitted during the current interstitial.
+    /// A Boolean value indicating whether fast-forwarding is permitted during the current
+    /// interstitial.
     var canFastForward: Bool { get }
 
     /// Synthesized ad markers for rendering cue points and fill segments on a progress bar.
@@ -146,11 +147,17 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     /// - Parameters:
     ///   - time: Target timestamp in seconds.
     ///   - completion: Completion closure invoked with a boolean indicating success.
-    func seekOnIntegratedTimeline(to time: TimeInterval, completion: @Sendable @escaping (Bool) -> Void)
+    func seekOnIntegratedTimeline(
+        to time: TimeInterval,
+        completion: @Sendable @escaping (Bool) -> Void
+    )
 
     /// Seeks relative to the current position along the integrated timeline by a delta in seconds.
     /// - Parameters:
     ///   - delta: Time delta in seconds to seek by.
     ///   - completion: Completion closure invoked with a boolean indicating success.
-    func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @Sendable @escaping (Bool) -> Void)
+    func seekOnIntegratedTimeline(
+        by delta: TimeInterval,
+        completion: @Sendable @escaping (Bool) -> Void
+    )
 }

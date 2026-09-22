@@ -15,8 +15,8 @@ import MediaPlayer
 /// requests from system media controls.
 /// Executes on the main actor and is thread-safe (`@Sendable`).
 public typealias AKRemoteCommandHandler =
-@MainActor @Sendable (MPRemoteCommandEvent) ->
-MPRemoteCommandHandlerStatus
+    @MainActor @Sendable (MPRemoteCommandEvent) ->
+    MPRemoteCommandHandlerStatus
 
 /// Represents the exhaustive set of remote media commands exposed by
 /// `MPRemoteCommandCenter`.
@@ -24,7 +24,7 @@ MPRemoteCommandHandlerStatus
 /// payload support.
 public enum AKRemoteCommand: Hashable, Sendable {
     // MARK: - Playback Commands
-    
+
     /// Command to resume or begin audio/video playback.
     case play
     /// Command to suspend active playback temporarily.
@@ -33,9 +33,9 @@ public enum AKRemoteCommand: Hashable, Sendable {
     case stop
     /// Command to toggle between playing and paused states.
     case togglePlayPause
-    
+
     // MARK: - Navigation Commands
-    
+
     /// Command to jump to the subsequent track or item in a queue.
     case nextTrack
     /// Command to return to the preceding track or restart the current track.
@@ -44,9 +44,9 @@ public enum AKRemoteCommand: Hashable, Sendable {
     case changeRepeatMode
     /// Command to alter the playback order configuration.
     case changeShuffleMode
-    
+
     // MARK: - Seeking Commands
-    
+
     /// Command to modify playback speed, featuring supported playback rate
     /// configurations.
     case changePlaybackRate(supportedPlaybackRates: [Float])
@@ -60,9 +60,9 @@ public enum AKRemoteCommand: Hashable, Sendable {
     case skipForward(preferredIntervals: [TimeInterval])
     /// Command to move playback instantly to a specific elapsed time position.
     case changePlaybackPosition
-    
+
     // MARK: - Rating/Feedback Commands
-    
+
     /// Command to apply a rating score to the active media item.
     case rating
     /// Command to mark the current track as favorited or liked.
@@ -71,9 +71,9 @@ public enum AKRemoteCommand: Hashable, Sendable {
     case dislike
     /// Command to save a bookmark marker within the media stream.
     case bookmark
-    
+
     // MARK: - Language Commands
-    
+
     /// Command to activate a specific audio language track or subtitle option.
     case enableLanguageOption
     /// Command to deactivate an active language or subtitle option.
@@ -93,10 +93,10 @@ public extension AKRemoteCommand {
         /// Closure block resolving the corresponding `MPRemoteCommand` instance
         /// from a target `MPRemoteCommandCenter`.
         public let getCommand:
-        @Sendable @MainActor (MPRemoteCommandCenter)
-        -> MPRemoteCommand
+            @Sendable @MainActor (MPRemoteCommandCenter)
+            -> MPRemoteCommand
     }
-    
+
     /// Retrieves full structured metadata for the current command case.
     var metadata: CommandMetadata {
         switch self {
@@ -209,12 +209,12 @@ public extension AKRemoteCommand {
             )
         }
     }
-    
+
     /// A unique string representation ID associated with the command type.
     var id: String {
         metadata.id
     }
-    
+
     /// A localized, human-friendly string label for displaying the command.
     var name: String {
         metadata.name
@@ -229,20 +229,20 @@ public extension AKRemoteCommand {
     static var playbackCommands: [AKRemoteCommand] {
         [.play, .pause, .stop, .togglePlayPause]
     }
-    
+
     /// A grouped preset configuration for track navigation (`nextTrack`,
     /// `previousTrack`, `changeRepeatMode`, `changeShuffleMode`).
     static var trackNavigationCommands: [AKRemoteCommand] {
         [.nextTrack, .previousTrack, .changeRepeatMode, .changeShuffleMode]
     }
-    
+
     /// Generates a set of seeking and jumping commands configured with custom
     /// jump intervals.
     /// - Parameter intervals: Array of skip intervals in seconds. Defaults to
     /// `[15.0]`.
     /// - Returns: An array containing configured seeking commands.
     static func seekingCommands(intervals: [TimeInterval] = [15.0])
-    -> [AKRemoteCommand]
+        -> [AKRemoteCommand]
     {
         [
             .skipBackward(preferredIntervals: intervals),
@@ -252,19 +252,19 @@ public extension AKRemoteCommand {
             .seekForward,
         ]
     }
-    
+
     /// A preset collection containing feedback actions (`like`, `dislike`,
     /// `bookmark`, `rating`).
     static var feedbackCommands: [AKRemoteCommand] {
         [.like, .dislike, .bookmark, .rating]
     }
-    
+
     /// A preset collection managing language tracks and subtitle
     /// configurations.
     static var languageCommands: [AKRemoteCommand] {
         [.enableLanguageOption, .disableLanguageOption]
     }
-    
+
     /// A comprehensive standard command preset tailored for general audio
     /// streams, podcasts, and audiobooks.
     static var standardAudioPreset: [AKRemoteCommand] {
@@ -273,10 +273,10 @@ public extension AKRemoteCommand {
             .skipBackward(preferredIntervals: [15.0]),
             .skipForward(preferredIntervals: [15.0]),
             .changePlaybackPosition,
-            .changePlaybackRate(supportedPlaybackRates: AKPlaybackRate.allCases.map({ $0.rate })),
+            .changePlaybackRate(supportedPlaybackRates: AKPlaybackRate.allCases.map(\.rate)),
         ]
     }
-    
+
     /// A standard preset option optimized for video streaming applications.
     static var standardVideoPreset: [AKRemoteCommand] {
         [
@@ -287,7 +287,7 @@ public extension AKRemoteCommand {
             .changePlaybackPosition,
         ]
     }
-    
+
     /// Returns an exhaustive array representing every defined remote command
     /// variant.
     static func all() -> [AKRemoteCommand] {

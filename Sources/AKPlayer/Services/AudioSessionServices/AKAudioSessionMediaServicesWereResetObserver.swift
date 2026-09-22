@@ -31,7 +31,8 @@ public protocol AKAudioSessionMediaServicesWereResetObserverProtocol: AnyObject,
 
 // MARK: - AKAudioSessionMediaServicesWereResetObserver
 
-/// A thread-safe observer class responsible for monitoring `AVAudioSession.mediaServicesWereResetNotification`
+/// A thread-safe observer class responsible for monitoring
+/// `AVAudioSession.mediaServicesWereResetNotification`
 /// and broadcasting events via `AsyncStream`.
 public final class AKAudioSessionMediaServicesWereResetObserver:
     AKAudioSessionMediaServicesWereResetObserverProtocol, Sendable
@@ -77,7 +78,7 @@ public final class AKAudioSessionMediaServicesWereResetObserver:
                 object: nil
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.eventBroadcaster.send(())
+                eventBroadcaster.send(())
             }
         }
 

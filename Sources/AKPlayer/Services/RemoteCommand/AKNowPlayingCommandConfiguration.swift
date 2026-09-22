@@ -208,7 +208,7 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
     }
 
     // MARK: - Query Methods
-    
+
     /// Indicates whether the configuration contains no registered commands.
     public var isEmpty: Bool {
         commands.isEmpty
@@ -249,19 +249,22 @@ public struct AKNowPlayingCommandConfiguration: Sendable {
 // MARK: - Preset Configurations
 
 public extension AKNowPlayingCommandConfiguration {
-    /// Factory creating a pre-configured audio preset instance (playback, skip intervals, scrubber, playback rate).
+    /// Factory creating a pre-configured audio preset instance (playback, skip intervals, scrubber,
+    /// playback rate).
     static func audio() -> AKNowPlayingCommandConfiguration {
         let config = AKNowPlayingCommandConfiguration()
         return config.useAudioPreset()
     }
 
-    /// Factory creating a pre-configured video preset instance (playback, seeking, skip intervals, scrubber).
+    /// Factory creating a pre-configured video preset instance (playback, seeking, skip intervals,
+    /// scrubber).
     static func video() -> AKNowPlayingCommandConfiguration {
         let config = AKNowPlayingCommandConfiguration()
         return config.useVideoPreset()
     }
-    
-    /// Factory creating a pre-configured queue / playlist preset instance (next/previous track, repeat, shuffle, scrubbing).
+
+    /// Factory creating a pre-configured queue / playlist preset instance (next/previous track,
+    /// repeat, shuffle, scrubbing).
     static func queue() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration()
             .usePlaybackCommands()

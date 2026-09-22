@@ -72,7 +72,9 @@ public protocol AKAudioSessionRouteChangesObserverProtocol: AnyObject, Sendable 
 
 /// A thread-safe observer class responsible for monitoring audio route changes
 /// and broadcasting events via `AsyncStream`.
-public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChangesObserverProtocol, Sendable {
+public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChangesObserverProtocol,
+    Sendable
+{
     // MARK: - Properties
 
     /// The `AVAudioSession` instance managed by this observer.
@@ -114,7 +116,7 @@ public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChange
                 object: audioSession
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.handleRouteChange(notification)
+                handleRouteChange(notification)
             }
         }
 
@@ -142,7 +144,8 @@ public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChange
         else {
             return
         }
-        let previousRoute = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription
+        let previousRoute =
+            userInfo[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription
         let currentRoute = audioSession.currentRoute
 
         let event = AKAudioSessionRouteChangeEvent(
@@ -180,14 +183,15 @@ public final class AKAudioSessionRouteChangesObserver: AKAudioSessionRouteChange
             .contains(where: { $0.portType == .airPlay })
     }
 
-    /// Determines whether a Bluetooth device (A2DP, LE, HFP) is currently connected as an audio output route.
+    /// Determines whether a Bluetooth device (A2DP, LE, HFP) is currently connected as an audio
+    /// output route.
     /// - Returns: `true` if a Bluetooth output port is active; otherwise, `false`.
     public func isBluetoothConnected() -> Bool {
         audioSession.currentRoute.outputs
             .contains(where: {
                 $0.portType == .bluetoothA2DP ||
-                $0.portType == .bluetoothLE ||
-                $0.portType == .bluetoothHFP
+                    $0.portType == .bluetoothLE ||
+                    $0.portType == .bluetoothHFP
             })
     }
 }

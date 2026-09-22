@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Pre-commit hook: Auto-format staged Swift files using .swiftformat
+if which swiftformat >/dev/null 2>&1; then
+  git diff --diff-filter=d --cached --name-only | grep -E '\.(swift)$' | while read -r file; do
+    if [ -f "$file" ]; then
+      swiftformat --config .swiftformat "$file"
+      git add "$file"
+    fi
+  done
+else
+  echo "⚠️ SwiftFormat not found. Install via 'brew install swiftformat' to enable automated linting."
+fi

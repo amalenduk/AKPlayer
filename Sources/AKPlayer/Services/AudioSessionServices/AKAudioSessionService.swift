@@ -67,7 +67,7 @@ public extension AKAudioSessionServiceProtocol {
     ) throws {
         try setCategory(category, mode: mode, policy: policy, options: options)
     }
-    
+
     /// Convenience overload using `routeSharingPolicy` label matching AVFoundation.
     func setCategory(
         _ category: AVAudioSession.Category,
@@ -139,7 +139,8 @@ public final class AKAudioSessionService: AKAudioSessionServiceProtocol, Sendabl
         }
     }
 
-    /// Configures the underlying audio session category using the `routeSharingPolicy` parameter label.
+    /// Configures the underlying audio session category using the `routeSharingPolicy` parameter
+    /// label.
     public func setCategory(
         _ category: AVAudioSession.Category,
         mode: AVAudioSession.Mode = .default,

@@ -17,20 +17,21 @@ import Foundation
 public protocol AKPlayerSeekingThroughMediaServiceProtocol: AnyObject, Sendable {
     /// The underlying `AVPlayer` executing media playback and underlying seek operations.
     var player: AVPlayer { get }
-    
+
     /// An ordered collection of pending seek requests queued for execution.
     var pendingSeeks: [AKSeek] { get }
-    
+
     /// The target position of the most recent seek request, if one is pending or active.
     var lastRequestedSeekTarget: AKSeekTarget? { get }
-    
+
     /// Indicates whether a seek operation is currently active or queued.
     var isSeeking: Bool { get }
-    
+
     /// Queues or executes a seek operation for the given request target.
     func seek(to seek: AKSeek)
-    
-    /// Cancels all pending and currently active seek operations, notifying callbacks of cancellation.
+
+    /// Cancels all pending and currently active seek operations, notifying callbacks of
+    /// cancellation.
     func cancelAll()
 }
 
@@ -40,31 +41,32 @@ public protocol AKPlayerSeekingThroughMediaServiceProtocol: AnyObject, Sendable 
 @MainActor
 public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
     // MARK: - Properties
-    
+
     /// The underlying `AVPlayer` instance performing media playback.
     public let player: AVPlayer
-    /// Weak reference to the interstitial coordinator service for handling integrated timeline seeks.
+    /// Weak reference to the interstitial coordinator service for handling integrated timeline
+    /// seeks.
     public weak var interstitialService: (any AKPlayerInterstitialServiceProtocol)?
     /// An ordered collection of pending seek requests queued for execution.
     public private(set) var pendingSeeks = [AKSeek]()
-    
+
     /// Currently executing seek operation.
     private var activeSeek: AKSeek?
     /// Most recent seek target position requested by a caller.
     private var requestedSeekTarget: AKSeekTarget?
-    
+
     /// The target position of the most recent seek request, if one is pending or active.
     public var lastRequestedSeekTarget: AKSeekTarget? {
         requestedSeekTarget
     }
-    
+
     /// Indicates whether a seek operation is currently active or queued.
     public var isSeeking: Bool {
         activeSeek != nil || !pendingSeeks.isEmpty
     }
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a seeking management service bound to an `AVPlayer`.
     /// - Parameters:
     ///   - player: The `AVPlayer` executing playback commands.
@@ -76,9 +78,9 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
         self.player = player
         self.interstitialService = interstitialService
     }
-    
+
     // MARK: - Public API
-    
+
     /// Enqueues or immediately executes a seek command on the player.
     /// - Parameter seek: The `AKSeek` operation to process.
     public func seek(to seek: AKSeek) {
@@ -87,57 +89,59 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             seek.complete(with: false)
             return
         }
-        
+
         requestedSeekTarget = seek.target
-        
+
         if !pendingSeeks.contains(seek) {
             pendingSeeks.append(seek)
         }
-        
+
         if activeSeek == nil {
             performNextSeek()
         }
     }
-    
-    /// Cancels all pending seek requests and cancels system seek operations on the current player item.
+
+    /// Cancels all pending seek requests and cancels system seek operations on the current player
+    /// item.
     public func cancelAll() {
         player.currentItem?.cancelPendingSeeks()
-        
+
         let currentActive = activeSeek
         activeSeek = nil
         currentActive?.complete(with: false)
-        
+
         let pending = pendingSeeks
         pendingSeeks.removeAll()
         for seek in pending {
             seek.complete(with: false)
         }
-        
+
         requestedSeekTarget = nil
     }
-    
+
     // MARK: - Private Pipeline
-    
-    /// Dequeues and begins execution of the most recent pending seek request, cancelling stale intermediate seeks.
+
+    /// Dequeues and begins execution of the most recent pending seek request, cancelling stale
+    /// intermediate seeks.
     private func performNextSeek() {
         guard let latestSeek = pendingSeeks.last else {
             activeSeek = nil
             requestedSeekTarget = nil
             return
         }
-        
+
         // Cancel intermediate skipped seeks
         let intermediateSeeks = pendingSeeks.dropLast()
         pendingSeeks.removeAll()
-        
+
         for seekToCancel in intermediateSeeks {
             seekToCancel.complete(with: false)
         }
-        
+
         activeSeek = latestSeek
         enqueue(seek: latestSeek)
     }
-    
+
     /// Executes the specified seek operation against AVPlayer or the interstitial coordinator.
     /// - Parameter seek: The seek command to execute.
     private func enqueue(seek: AKSeek) {
@@ -147,19 +151,19 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             seek.complete(with: false)
             return
         }
-        
+
         let completion: @Sendable (Bool) -> Void = { [weak self, weak seek] finished in
             Task { @MainActor in
                 guard let seek else { return }
                 self?.handleSeekCompletion(for: seek, finished: finished)
             }
         }
-        
+
         // Handle integrated timeline seek scope
         if seek.scope == .integrated,
-           let interstitialService = interstitialService,
-           interstitialService.integratedTimeline != nil {
-            
+           let interstitialService,
+           interstitialService.integratedTimeline != nil
+        {
             let timelineCurrentTime = CMTime(
                 seconds: interstitialService.integratedTimelineCurrentTime,
                 preferredTimescale: 600
@@ -168,7 +172,7 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
                 seconds: interstitialService.integratedTimelineDuration,
                 preferredTimescale: 600
             )
-            
+
             guard let targetCMTime = seek.target.resolve(
                 currentTime: timelineCurrentTime,
                 duration: timelineDuration,
@@ -180,7 +184,7 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
                 seek.complete(with: false)
                 return
             }
-            
+
             interstitialService.seekOnIntegratedTimeline(
                 to: targetCMTime,
                 toleranceBefore: seek.toleranceBefore,
@@ -189,18 +193,18 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             )
             return
         }
-        
+
         // Handle wall-clock date targets (HLS Live streams)
         if case let .date(targetDate) = seek.target {
             player.seek(to: targetDate, completionHandler: completion)
             return
         }
-        
+
         // Handle live broadcast head seek target
         if case .live = seek.target {
             let seekableRanges = currentItem.seekableTimeRanges.map(\.timeRangeValue)
             let liveEdge = seekableRanges.last?.end ?? currentItem.duration
-            if liveEdge.isValid && liveEdge.isNumeric {
+            if liveEdge.isValid, liveEdge.isNumeric {
                 player.seek(
                     to: liveEdge,
                     toleranceBefore: seek.toleranceBefore,
@@ -210,9 +214,9 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
                 return
             }
         }
-        
+
         let timescale = currentItem.duration.timescale > 0 ? currentItem.duration.timescale : 600
-        
+
         // Resolve target to CMTime using unified AKSeekTarget resolve
         guard let targetCMTime = seek.target.resolve(
             currentTime: player.currentTime(),
@@ -225,7 +229,7 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             seek.complete(with: false)
             return
         }
-        
+
         player.seek(
             to: targetCMTime,
             toleranceBefore: seek.toleranceBefore,
@@ -233,7 +237,7 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             completionHandler: completion
         )
     }
-    
+
     /// Processes the completion of a seek operation and triggers subsequent queued seeks.
     /// - Parameters:
     ///   - completedSeek: The seek that completed.
@@ -246,7 +250,7 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             activeSeek = nil
         }
         completedSeek.complete(with: finished)
-        
+
         if !pendingSeeks.isEmpty {
             performNextSeek()
         } else if activeSeek == nil {

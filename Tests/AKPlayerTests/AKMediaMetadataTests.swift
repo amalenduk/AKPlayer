@@ -1,20 +1,20 @@
 //
-//  AKMediaMetadataTests.swift
-//  AKPlayer
+//   AKMediaMetadataTests.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 18/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
+@testable import AKPlayer
 import AVFoundation
 import Foundation
 import MediaPlayer
 import Testing
-@testable import AKPlayer
 
 struct AKMediaMetadataTests {
-    
-    @Test func testMediaStaticMetadataPropertiesAndMerging() {
-        let releaseDate = Date(timeIntervalSince1970: 1600000000)
+    @Test func mediaStaticMetadataPropertiesAndMerging() throws {
+        let releaseDate = Date(timeIntervalSince1970: 1_600_000_000)
         let meta1 = AKMediaStaticMetadata(
             title: "Song Title",
             artist: "Artist Name",
@@ -29,7 +29,7 @@ struct AKMediaMetadataTests {
             releaseDate: releaseDate,
             descriptionText: "Great song"
         )
-        
+
         #expect(meta1.title == "Song Title")
         #expect(meta1.artist == "Artist Name")
         #expect(meta1.albumTitle == "Album Name")
@@ -41,11 +41,15 @@ struct AKMediaMetadataTests {
         #expect(meta1.discCount == 2)
         #expect(meta1.releaseDate == releaseDate)
         #expect(meta1.descriptionText == "Great song")
-        
+
         // Convert to NowPlayable static metadata
-        let url = URL(string: "https://example.com/audio.mp3")!
-        let nowPlayable = meta1.toNowPlayableStaticMetadata(defaultURL: url, defaultMediaType: .audio, isLive: false)
-        
+        let url = try #require(URL(string: "https://example.com/audio.mp3"))
+        let nowPlayable = meta1.toNowPlayableStaticMetadata(
+            defaultURL: url,
+            defaultMediaType: .audio,
+            isLive: false
+        )
+
         #expect(nowPlayable.title == "Song Title")
         #expect(nowPlayable.artist == "Artist Name")
         #expect(nowPlayable.albumTitle == "Album Name")
@@ -60,7 +64,7 @@ struct AKMediaMetadataTests {
         #expect(nowPlayable.assetURL == url)
         #expect(nowPlayable.mediaType == .audio)
         #expect(!nowPlayable.isLiveStream)
-        
+
         // Check dictionary generation
         let dict = nowPlayable.getNowPlayableStaticMetadata()
         #expect(dict[MPMediaItemPropertyTitle] as? String == "Song Title")
@@ -73,26 +77,29 @@ struct AKMediaMetadataTests {
         #expect(dict[MPMediaItemPropertyDiscCount] as? Int == 2)
         #expect(dict[MPMediaItemPropertyComments] as? String == "Great song")
     }
-    
-    @Test func testMediaMetadataProviderLifecycleAndUpdates() async {
-        let media = AKMedia(url: URL(string: "https://example.com/audio.mp3")!, type: .clip)
+
+    @Test func mediaMetadataProviderLifecycleAndUpdates() throws {
+        let media = try AKMedia(
+            url: #require(URL(string: "https://example.com/audio.mp3")),
+            type: .clip
+        )
         let provider = media.metadataProvider
-        
+
         #expect(provider.staticMetadata.title == nil)
         #expect(provider.timedMetadata.isEmpty)
-        
+
         // Manual update
         var update = AKMediaStaticMetadata()
         update.title = "Updated Title"
         update.artist = "Updated Artist"
         update.genre = "Rock"
-        
+
         provider.updateStaticMetadata(update)
-        
+
         #expect(provider.staticMetadata.title == "Updated Title")
         #expect(provider.staticMetadata.artist == "Updated Artist")
         #expect(provider.staticMetadata.genre == "Rock")
-        
+
         // Reset session
         provider.resetSession()
         #expect(provider.staticMetadata.title == nil)

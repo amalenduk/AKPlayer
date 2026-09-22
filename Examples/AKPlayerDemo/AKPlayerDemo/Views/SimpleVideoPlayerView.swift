@@ -1,32 +1,32 @@
 //
-//  SimpleVideoPlayerView.swift
-//  AKPlayerDemo
+//   SimpleVideoPlayerView.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import SwiftUI
 import AKPlayer
 import AVFoundation
 import Combine
 import Foundation
+import SwiftUI
 
 struct AKPlayerUIView: UIViewRepresentable {
-    
     @ObservedObject var viewModel: SimpleVideoPlayerViewModel
-    
-    func makeUIView(context: Context) -> AKPlayerView {
+
+    func makeUIView(context _: Context) -> AKPlayerView {
         let v = AKPlayerView()
         v.player = viewModel.player.player
         v.playerLayer.videoGravity = viewModel.videoGravity
-        
+
         // Setup Picture-in-Picture controller using the AKPlayerView layer
         viewModel.setupPip(with: v.playerLayer)
-        
+
         return v
     }
-    
-    func updateUIView(_ uiView: AKPlayerView, context: Context) {
+
+    func updateUIView(_ uiView: AKPlayerView, context _: Context) {
         if uiView.player != viewModel.player.player {
             uiView.player = viewModel.player.player
         }
@@ -34,28 +34,27 @@ struct AKPlayerUIView: UIViewRepresentable {
             uiView.playerLayer.videoGravity = viewModel.videoGravity
         }
     }
-    
-    static func dismantleUIView(_ uiView: AKPlayerView, coordinator: ()) {
+
+    static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
         uiView.player = nil
     }
 }
 
 public struct SimpleVideoPlayerView: View {
-    
     @StateObject public var viewModel: SimpleVideoPlayerViewModel
-    
+
     private let initialMedia: AKMedia?
     private let autoPlay: Bool
-    
+
     @State private var showingRateDialog = false
     @State private var showingSelectionSheet = false
     @State private var showingChaptersSheet = false
-    
-    @State private var isScrubbing: Bool = false
-    @State private var scrubbingProgress: Double = 0.0
-    
+
+    @State private var isScrubbing = false
+    @State private var scrubbingProgress = 0.0
+
     @Environment(\.dismiss) private var dismiss
-    
+
     public init(
         media: AKMedia? = nil,
         autoPlay: Bool = false
@@ -63,28 +62,28 @@ public struct SimpleVideoPlayerView: View {
         _viewModel = StateObject(
             wrappedValue: SimpleVideoPlayerViewModel()
         )
-        
-        self.initialMedia = media
+
+        initialMedia = media
         self.autoPlay = autoPlay
     }
-    
+
     public var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
                 playerSection()
                 statusSection()
-                
+
                 if viewModel.isInterstitialActive {
                     interstitialBanner()
                 }
-                
+
                 progressSection()
                 playbackControlsSection()
                 volumeSection()
                 additionalControlsSection()
                 mediaOptionsSection()
                 unavailableMessageView()
-                
+
                 Spacer()
             }
             .frame(maxHeight: .infinity, alignment: .top)
@@ -119,22 +118,20 @@ public struct SimpleVideoPlayerView: View {
             }
         }
     }
-    
-    @ViewBuilder
+
     private func playerSection() -> some View {
         AKPlayerUIView(viewModel: viewModel)
             .frame(height: 260)
             .background(Color.black)
             .clipped()
     }
-    
-    @ViewBuilder
+
     private func statusSection() -> some View {
         HStack(spacing: 8) {
             Text("State: " + viewModel.stateDescription)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-            
+
             ProgressView()
                 .progressViewStyle(.circular)
                 .frame(width: 20, height: 20)
@@ -143,41 +140,9 @@ public struct SimpleVideoPlayerView: View {
                     .easeInOut(duration: 0.15),
                     value: viewModel.isLoading
                 )
-            
+
             Spacer()
-            
-            // Quick Subtitle CC Button
-            Button {
-                viewModel.toggleQuickSubtitles()
-            } label: {
-                Image(systemName: viewModel.isSubtitleEnabled ? "captions.bubble.fill" : "captions.bubble")
-                    .font(.body)
-                    .foregroundColor(viewModel.isSubtitleEnabled ? .yellow : .primary)
-            }
-            .buttonStyle(.bordered)
-            
-            // Video Aspect Ratio Toggle (Fit / Fill / Stretch)
-            Button {
-                viewModel.toggleVideoGravity()
-            } label: {
-                HStack(spacing: 2) {
-                    Image(systemName: viewModel.videoGravity == .resizeAspect ? "aspectratio" : (viewModel.videoGravity == .resizeAspectFill ? "arrow.up.left.and.arrow.down.right" : "arrow.left.and.right"))
-                    Text(viewModel.videoGravity == .resizeAspect ? "Fit" : (viewModel.videoGravity == .resizeAspectFill ? "Fill" : "Stretch"))
-                        .font(.caption2)
-                }
-            }
-            .buttonStyle(.bordered)
-            
-            if viewModel.isPipPossible {
-                Button {
-                    viewModel.togglePip()
-                } label: {
-                    Image(systemName: viewModel.isPipActive ? "pip.exit" : "pip.enter")
-                        .font(.body)
-                }
-                .buttonStyle(.bordered)
-            }
-            
+
             Toggle(
                 "Auto Play",
                 isOn: Binding(
@@ -190,27 +155,30 @@ public struct SimpleVideoPlayerView: View {
         }
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
     private func interstitialBanner() -> some View {
         HStack(spacing: 8) {
             Image(systemName: "megaphone.fill")
                 .foregroundColor(.orange)
-            
+
             VStack(alignment: .leading, spacing: 2) {
-                Text("Ad: \(viewModel.interstitialIdentifier ?? "Playing") (\(viewModel.interstitialPlaybackState.description))")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                
+                Text(
+                    "Ad: \(viewModel.interstitialIdentifier ?? "Playing") (\(viewModel.interstitialPlaybackState.description))"
+                )
+                .font(.caption)
+                .fontWeight(.bold)
+
                 if let progress = viewModel.interstitialProgress {
-                    Text("Remaining: \(String(format: "%.1fs", progress.timeRemaining)) / Total: \(String(format: "%.1fs", progress.duration))")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    Text(
+                        "Remaining: \(String(format: "%.1fs", progress.timeRemaining)) / Total: \(String(format: "%.1fs", progress.duration))"
+                    )
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             Button("Skip") {
                 viewModel.cancelInterstitial()
             }
@@ -224,8 +192,7 @@ public struct SimpleVideoPlayerView: View {
         .cornerRadius(8)
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
     private func progressSection() -> some View {
         HStack {
             currentTimeLabel()
@@ -234,49 +201,46 @@ public struct SimpleVideoPlayerView: View {
         }
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
     private func currentTimeLabel() -> some View {
         Text(
             viewModel.currentTime.isFinite
-            ? String(
-                format: "%02d:%02d",
-                Int(viewModel.currentTime) / 60,
-                Int(viewModel.currentTime) % 60
-            )
-            : "--:--"
+                ? String(
+                    format: "%02d:%02d",
+                    Int(viewModel.currentTime) / 60,
+                    Int(viewModel.currentTime) % 60
+                )
+                : "--:--"
         )
         .font(.caption)
     }
-    
-    @ViewBuilder
+
     private func durationLabel() -> some View {
         Text(
             viewModel.duration.isFinite
-            ? String(
-                format: "%02d:%02d",
-                Int(viewModel.duration) / 60,
-                Int(viewModel.duration) % 60
-            )
-            : "--:--"
+                ? String(
+                    format: "%02d:%02d",
+                    Int(viewModel.duration) / 60,
+                    Int(viewModel.duration) % 60
+                )
+                : "--:--"
         )
         .font(.caption)
     }
-    
-    @ViewBuilder
+
     private func progressSlider() -> some View {
         AKProgressBar(
             currentTime: viewModel.currentTime,
             duration: viewModel.duration,
-            bufferProgress: viewModel.duration > 0 ? (viewModel.currentTime + 10) / viewModel.duration : 0.0,
+            bufferProgress: viewModel.duration > 0 ? (viewModel.currentTime + 10) / viewModel
+                .duration : 0.0,
             markers: viewModel.adMarkers,
             onSeek: { targetSeconds in
                 viewModel.seek(to: targetSeconds)
             }
         )
     }
-    
-    @ViewBuilder
+
     private func playbackControlsSection() -> some View {
         VStack(spacing: 8) {
             primaryPlaybackControls()
@@ -284,8 +248,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
     private func primaryPlaybackControls() -> some View {
         HStack(spacing: 12) {
             playButton()
@@ -293,8 +256,7 @@ public struct SimpleVideoPlayerView: View {
             stopButton()
         }
     }
-    
-    @ViewBuilder
+
     private func playButton() -> some View {
         Button {
             viewModel.play()
@@ -306,8 +268,7 @@ public struct SimpleVideoPlayerView: View {
         .buttonStyle(.borderedProminent)
         .tint(.blue)
     }
-    
-    @ViewBuilder
+
     private func pauseButton() -> some View {
         Button {
             viewModel.pause()
@@ -319,8 +280,7 @@ public struct SimpleVideoPlayerView: View {
         .buttonStyle(.borderedProminent)
         .tint(.blue)
     }
-    
-    @ViewBuilder
+
     private func stopButton() -> some View {
         Button {
             viewModel.stop()
@@ -331,8 +291,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func seekControls() -> some View {
         HStack(
             alignment: .center,
@@ -344,8 +303,7 @@ public struct SimpleVideoPlayerView: View {
             forwardTenButton()
         }
     }
-    
-    @ViewBuilder
+
     private func backwardTenButton() -> some View {
         Button {
             viewModel.seekOffset(-10)
@@ -356,8 +314,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func previousFrameButton() -> some View {
         Button {
             viewModel.step(by: -1)
@@ -368,8 +325,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func nextFrameButton() -> some View {
         Button {
             viewModel.step(by: 1)
@@ -380,8 +336,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func forwardTenButton() -> some View {
         Button {
             viewModel.seekOffset(10)
@@ -392,13 +347,12 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func volumeSection() -> some View {
         HStack {
             Text("Volume")
                 .font(.caption)
-            
+
             Slider(
                 value: Binding(
                     get: {
@@ -408,51 +362,103 @@ public struct SimpleVideoPlayerView: View {
                         viewModel.setVolume(Float($0))
                     }
                 ),
-                in: 0...1
+                in: 0 ... 1
             )
-            
+
             muteButton()
         }
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
     private func muteButton() -> some View {
         Button {
             viewModel.toggleMute()
         } label: {
             Image(
                 systemName: viewModel.isMuted
-                ? "speaker.slash.fill"
-                : "speaker.wave.2.fill"
+                    ? "speaker.slash.fill"
+                    : "speaker.wave.2.fill"
             )
             .font(.body)
             .frame(width: 30, height: 30)
         }
     }
-    
-    @ViewBuilder
+
     private func additionalControlsSection() -> some View {
         HStack(
             alignment: .center,
-            spacing: 12
+            spacing: 8
         ) {
+            aspectRatioButton()
+            subtitlesButton()
+            if viewModel.isPipPossible {
+                pipButton()
+            }
             playbackRateButton()
             loadButton()
         }
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
+    private func aspectRatioButton() -> some View {
+        Button {
+            viewModel.toggleVideoGravity()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: viewModel
+                    .videoGravity == .resizeAspect ? "aspectratio" :
+                    (viewModel
+                        .videoGravity == .resizeAspectFill ? "arrow.up.left.and.arrow.down.right" :
+                        "arrow.left.and.right"))
+                Text(viewModel
+                    .videoGravity == .resizeAspect ? "Fit" :
+                    (viewModel.videoGravity == .resizeAspectFill ? "Fill" : "Stretch"))
+                    .font(.caption2)
+            }
+        }
+        .buttonStyle(.bordered)
+    }
+
+    private func subtitlesButton() -> some View {
+        Button {
+            viewModel.toggleQuickSubtitles()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: viewModel
+                    .isSubtitleEnabled ? "captions.bubble.fill" : "captions.bubble")
+                Text(viewModel
+                    .isSubtitleEnabled ? (viewModel.activeSubtitleLanguage ?? "CC") : "CC")
+                    .font(.caption2)
+            }
+            .foregroundColor(viewModel.isSubtitleEnabled ? .yellow : .primary)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    private func pipButton() -> some View {
+        Button {
+            viewModel.togglePip()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: viewModel.isPipActive ? "pip.exit" : "pip.enter")
+                Text("PiP")
+                    .font(.caption2)
+            }
+        }
+        .buttonStyle(.bordered)
+    }
+
     private func playbackRateButton() -> some View {
         Button {
             showingRateDialog = true
         } label: {
-            HStack {
+            HStack(spacing: 3) {
                 Image(systemName: "speedometer")
                 Text(viewModel.playbackRate.rateTitle)
+                    .font(.caption2)
             }
         }
+        .buttonStyle(.bordered)
         .confirmationDialog(
             "Playback Rate",
             isPresented: $showingRateDialog,
@@ -466,21 +472,25 @@ public struct SimpleVideoPlayerView: View {
                     viewModel.setRate(rate)
                 }
             }
-            
+
             Button("Cancel", role: .cancel) {}
         }
     }
-    
-    @ViewBuilder
+
     private func loadButton() -> some View {
-        Button("Reload") {
+        Button {
             guard let initialMedia else { return }
             viewModel.load(media: initialMedia, autoPlay: viewModel.autoPlayEnabled)
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.clockwise")
+                Text("Reload")
+                    .font(.caption2)
+            }
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func mediaOptionsSection() -> some View {
         HStack(
             alignment: .center,
@@ -492,8 +502,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .padding(.horizontal)
     }
-    
-    @ViewBuilder
+
     private func chaptersButton() -> some View {
         Button {
             viewModel.refreshChapters()
@@ -501,13 +510,13 @@ public struct SimpleVideoPlayerView: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "book.pages")
-                Text(viewModel.chapters.isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
+                Text(viewModel.chapters
+                    .isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
             }
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func tracksButton() -> some View {
         Button {
             viewModel.refreshSelectionGroups()
@@ -520,8 +529,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func infoButton() -> some View {
         Button {
             let desc = viewModel.player.currentMedia?.description ?? "n/a"
@@ -534,8 +542,7 @@ public struct SimpleVideoPlayerView: View {
         }
         .buttonStyle(.bordered)
     }
-    
-    @ViewBuilder
+
     private func unavailableMessageView() -> some View {
         HStack {
             Text(viewModel.unavailableMessage ?? "")
@@ -546,7 +553,7 @@ public struct SimpleVideoPlayerView: View {
         .frame(height: 28)
         .padding(.horizontal)
     }
-    
+
     @ToolbarContentBuilder
     private func closeButton() -> some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
@@ -559,28 +566,24 @@ public struct SimpleVideoPlayerView: View {
             .accessibilityLabel("Close")
         }
     }
-    
+
     private func setupPlayer() {
-        if autoPlay {
-            if let media = initialMedia {
-                viewModel.load(
-                    media: media,
-                    autoPlay: autoPlay
-                )
-            }
+        if let media = initialMedia {
+            viewModel.load(
+                media: media,
+                autoPlay: autoPlay
+            )
         }
     }
 }
 
 extension SimpleVideoPlayerView {
-    
-    @ViewBuilder
     func infoSheet() -> some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 12) {
                 Text(viewModel.debugInfo ?? "")
                     .padding()
-                
+
                 Spacer()
             }
             .navigationTitle("Info")
@@ -596,8 +599,7 @@ extension SimpleVideoPlayerView {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
-    
-    @ViewBuilder
+
     func tracksSheet() -> some View {
         NavigationStack {
             List {
@@ -605,7 +607,9 @@ extension SimpleVideoPlayerView {
                     ContentUnavailableView(
                         "No Tracks Available",
                         systemImage: "waveform.slash",
-                        description: Text("No alternative audio or subtitle tracks were found for this media.")
+                        description: Text(
+                            "No alternative audio or subtitle tracks were found for this media."
+                        )
                     )
                 } else {
                     ForEach(viewModel.selectionGroups) { group in
@@ -633,8 +637,7 @@ extension SimpleVideoPlayerView {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
-    
-    @ViewBuilder
+
     func trackOptionRow(
         _ option: SimpleVideoPlayerViewModel.SelectionOption,
         in group: SimpleVideoPlayerViewModel.SelectionGroup
@@ -643,16 +646,16 @@ extension SimpleVideoPlayerView {
             VStack(alignment: .leading, spacing: 2) {
                 Text(option.option.title)
                     .font(.body)
-                
+
                 if !option.option.languageCode.isEmpty {
                     Text(option.option.languageCode)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             if option.isSelected {
                 Image(systemName: "checkmark")
                     .foregroundStyle(.tint)
@@ -666,8 +669,7 @@ extension SimpleVideoPlayerView {
             )
         }
     }
-    
-    @ViewBuilder
+
     func chaptersSheet() -> some View {
         NavigationStack {
             List {
@@ -684,7 +686,8 @@ extension SimpleVideoPlayerView {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle(viewModel.chapters.isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
+            .navigationTitle(viewModel.chapters
+                .isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -697,7 +700,7 @@ extension SimpleVideoPlayerView {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
-    
+
     @ViewBuilder
     func chapterRow(_ chapter: AKChapter) -> some View {
         let isCurrent = viewModel.currentChapter == chapter
@@ -713,13 +716,13 @@ extension SimpleVideoPlayerView {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(isCurrent ? Color.accentColor.opacity(0.15) : Color(.systemGray5))
                         .frame(width: 40, height: 40)
-                    
+
                     Text("\(chapter.id)")
                         .font(.headline)
                         .foregroundColor(isCurrent ? .accentColor : .secondary)
                 }
             }
-            
+
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(chapter.title)
@@ -727,25 +730,25 @@ extension SimpleVideoPlayerView {
                         .fontWeight(isCurrent ? .bold : .regular)
                         .foregroundColor(isCurrent ? .accentColor : .primary)
                         .lineLimit(2)
-                    
+
                     Spacer()
                 }
-                
+
                 HStack(spacing: 8) {
                     Text("\(formatTime(chapter.startTime)) - \(formatTime(chapter.endTime))")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text("•")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    
+
                     Text("Duration: \(formatTime(chapter.duration))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             if isCurrent {
                 Image(systemName: "waveform")
                     .foregroundColor(.accentColor)
@@ -757,14 +760,14 @@ extension SimpleVideoPlayerView {
             viewModel.selectChapter(chapter)
         }
     }
-    
+
     private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite && !seconds.isNaN else { return "00:00" }
+        guard seconds.isFinite, !seconds.isNaN else { return "00:00" }
         let totalSec = Int(seconds)
         let hours = totalSec / 3600
         let minutes = (totalSec % 3600) / 60
         let secs = totalSec % 60
-        
+
         if hours > 0 {
             return String(format: "%02d:%02d:%02d", hours, minutes, secs)
         } else {

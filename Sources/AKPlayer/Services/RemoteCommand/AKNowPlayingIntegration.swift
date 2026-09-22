@@ -39,22 +39,22 @@ public enum AKNowPlayingCommandPresets: Sendable {
     public static func minimal() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.minimal()
     }
-    
+
     /// Preset: Standard music streaming (next/previous track instead of skip/seek)
     public static func music() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.queue()
     }
-    
+
     /// Preset: Queue playback with next/previous track, repeat, shuffle, and scrubbing
     public static func queue() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.queue()
     }
-    
+
     /// Preset: Playlist playback
     public static func playlist() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.queue()
     }
-    
+
     /// Preset: Podcast with 15-second skip back, 30-second skip forward
     public static func podcast() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.audio()
@@ -62,19 +62,19 @@ public enum AKNowPlayingCommandPresets: Sendable {
             .add(.skipForward(preferredIntervals: [30.0]))
             .disable(.changeShuffleMode)
     }
-    
+
     /// Preset: Audiobook with bookmarking
     public static func audiobook() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.audio()
             .add(.bookmark)
             .disable(.changeShuffleMode)
     }
-    
+
     /// Preset: Standard video playback
     public static func video() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.video()
     }
-    
+
     /// Preset: Live stream (no seeking)
     public static func livestream() -> AKNowPlayingCommandConfiguration {
         AKNowPlayingCommandConfiguration.audio()

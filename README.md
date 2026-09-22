@@ -1,5 +1,6 @@
 # AKPlayer
 
+[![CI](https://github.com/amalenduk/AKPlayerSPM/actions/workflows/ci.yml/badge.svg)](https://github.com/amalenduk/AKPlayerSPM/actions/workflows/ci.yml)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-iOS%2018.0%2B-blue.svg?style=flat)](https://developer.apple.com/ios/)
 [![SwiftPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)

@@ -1,42 +1,52 @@
 //
-//  AKPlayerTests.swift
-//  AKPlayer
+//   AKPlayerTests.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 18/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
+@testable import AKPlayer
 import AVFoundation
 import Foundation
 import Testing
 import UIKit
-@testable import AKPlayer
 
 @MainActor
 struct AKPlayerTests {
-    
-    @Test func testQueuePlayerNowPlayingIntegration() async throws {
+    @Test func queuePlayerNowPlayingIntegration() async throws {
         let queuePlayer = AKQueuePlayer()
         try await queuePlayer.prepare()
-        
-        let item1 = AKMedia(url: URL(string: "https://example.com/track1.mp3")!, type: .clip)
-        let item2 = AKMedia(url: URL(string: "https://example.com/track2.mp3")!, type: .clip)
-        let item3 = AKMedia(url: URL(string: "https://example.com/track3.mp3")!, type: .clip)
-        
+
+        let item1 = try AKMedia(
+            url: #require(URL(string: "https://example.com/track1.mp3")),
+            type: .clip
+        )
+        let item2 = try AKMedia(
+            url: #require(URL(string: "https://example.com/track2.mp3")),
+            type: .clip
+        )
+        let item3 = try AKMedia(
+            url: #require(URL(string: "https://example.com/track3.mp3")),
+            type: .clip
+        )
+
         queuePlayer.load(items: [item1, item2, item3], startIndex: 0, autoPlay: false)
-        
+
         #expect(queuePlayer.queueCount == 3)
         #expect(queuePlayer.currentQueueIndex == 0)
-        
+
         queuePlayer.nowPlayingManager?.serviceIdentifier = "com.akplayer.music"
-        
+
         let dynamicMeta = queuePlayer.nowPlayingManager?.getNowPlayableDynamicMetadata()
         #expect(dynamicMeta?.playbackQueueCount == 3)
         #expect(dynamicMeta?.playbackQueueIndex == 0)
-        
+
         let nowPlayingMeta = queuePlayer.nowPlayingManager?.currentNowPlayingMetadata()
         #expect(nowPlayingMeta?.staticMetadata?.serviceIdentifier == "com.akplayer.music")
-        
-        // Test Queue Command Configuration (Next / Previous enabled, Skip intervals / Seek disabled)
+
+        // Test Queue Command Configuration (Next / Previous enabled, Skip intervals / Seek
+        // disabled)
         let queueConfig = AKNowPlayingCommandPresets.queue()
         #expect(queueConfig.isEnabled(.nextTrack))
         #expect(queueConfig.isEnabled(.previousTrack))
@@ -47,7 +57,7 @@ struct AKPlayerTests {
         #expect(!queueConfig.isEnabled(.skipBackward(preferredIntervals: [15.0])))
         #expect(!queueConfig.isEnabled(.seekForward))
         #expect(!queueConfig.isEnabled(.seekBackward))
-        
+
         await queuePlayer.configureNowPlaying(with: queueConfig)
         if let session = queuePlayer.nowPlayingManager?.session {
             #expect(session.isCommandEnabled(.nextTrack))
@@ -56,49 +66,55 @@ struct AKPlayerTests {
             #expect(!session.isCommandEnabled(.skipBackward(preferredIntervals: [15.0])))
         }
     }
-    
-    @Test func testLoadTransitionsThroughStoppedStateWhenActive() async throws {
+
+    @Test func loadTransitionsThroughStoppedStateWhenActive() async throws {
         let controller = AKPlayerController(
             player: AVPlayer(),
             configuration: AKPlayerConfiguration()
         )
         try controller.prepare()
-        
+
         #expect(controller.state == AKPlayerState.idle)
-        
-        let item1 = AKMedia(url: URL(string: "https://example.com/track1.mp3")!, type: .clip)
+
+        let item1 = try AKMedia(
+            url: #require(URL(string: "https://example.com/track1.mp3")),
+            type: .clip
+        )
         controller.load(media: item1, autoPlay: false, at: nil)
-        
+
         #expect(controller.state == AKPlayerState.loading)
-        
-        let item2 = AKMedia(url: URL(string: "https://example.com/track2.mp3")!, type: .clip)
+
+        let item2 = try AKMedia(
+            url: #require(URL(string: "https://example.com/track2.mp3")),
+            type: .clip
+        )
         let events = controller.events
         final class StateCollector: @unchecked Sendable {
             var states: [AKPlayerState] = []
         }
         let collector = StateCollector()
-        
+
         let task = Task {
             for await event in events {
                 if case let .stateDidChange(state) = event {
                     collector.states.append(state)
-                    if state == .loading && collector.states.contains(.stopped) {
+                    if state == .loading, collector.states.contains(.stopped) {
                         break
                     }
                 }
             }
         }
-        
+
         controller.load(media: item2, autoPlay: false, at: nil)
         #expect(controller.state == AKPlayerState.loading)
-        
+
         _ = await task.value
-        
+
         #expect(collector.states.contains(.stopped))
         #expect(collector.states.contains(.loading))
     }
-    
-    @Test func testEnumConformances() {
+
+    @Test func enumConformances() {
         // AKRepeatMode
         #expect(AKRepeatMode.allCases == [.off, .one, .all])
         #expect(AKRepeatMode.off.description == "Off")
@@ -106,85 +122,114 @@ struct AKPlayerTests {
         #expect(AKRepeatMode.all.description == "Repeat All")
         let repeatSet: Set<AKRepeatMode> = [.off, .one, .all]
         #expect(repeatSet.count == 3)
-        
+
         // AKInterstitialPlaybackState
-        #expect(AKInterstitialPlaybackState.allCases == [.idle, .loading, .buffering, .playing, .paused, .finished])
+        #expect(AKInterstitialPlaybackState.allCases == [
+            .idle,
+            .loading,
+            .buffering,
+            .playing,
+            .paused,
+            .finished,
+        ])
         #expect(AKInterstitialPlaybackState.idle.description == "Idle")
         #expect(AKInterstitialPlaybackState.playing.description == "Playing")
-        let interstitialSet: Set<AKInterstitialPlaybackState> = [.idle, .loading, .buffering, .playing, .paused, .finished]
+        let interstitialSet: Set<AKInterstitialPlaybackState> = [
+            .idle,
+            .loading,
+            .buffering,
+            .playing,
+            .paused,
+            .finished,
+        ]
         #expect(interstitialSet.count == 6)
     }
-    
-    @Test func testMediaManagerPersistenceAndPlayerItemLoaded() async throws {
-        let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8")!
+
+    @Test func mediaManagerPersistenceAndPlayerItemLoaded() async throws {
+        let url =
+            try #require(
+                URL(
+                    string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"
+                )
+            )
         let media: any AKPlayable = AKMedia(url: url, type: .stream(isLive: false))
-        
+
         await media.createAsset()
         #expect(media.asset != nil)
-        
+
         media.createPlayerItemFromAsset()
         #expect(media.playerItem != nil)
     }
-    
-    @Test func testCustomAssetMediaInitialization() async throws {
-        let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8")!
+
+    @Test func customAssetMediaInitialization() throws {
+        let url =
+            try #require(
+                URL(
+                    string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"
+                )
+            )
         let asset = AVURLAsset(url: url)
         let media = AKMedia(asset: asset, type: .stream(isLive: false))
-        
+
         #expect(media.customAsset === asset)
         #expect(media.customPlayerItem == nil)
         #expect(media.asset === asset)
         #expect(media.state == .assetLoaded)
     }
-    
-    @Test func testCustomPlayerItemMediaInitialization() async throws {
-        let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8")!
+
+    @Test func customPlayerItemMediaInitialization() throws {
+        let url =
+            try #require(
+                URL(
+                    string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8"
+                )
+            )
         let asset = AVURLAsset(url: url)
         let playerItem = AVPlayerItem(asset: asset)
         let media = AKMedia(playerItem: playerItem, type: .stream(isLive: false))
-        
+
         #expect(media.customPlayerItem === playerItem)
         #expect(media.playerItem === playerItem)
         #expect(media.asset === asset)
         #expect(media.state == .playerItemLoaded)
     }
-    
-    @Test func testInterstitialPlayerActionSynchronization() async throws {
+
+    @Test func interstitialPlayerActionSynchronization() throws {
         let player = AVPlayer()
         let controller = AKPlayerController(player: player, configuration: AKPlayerConfiguration())
         try controller.prepare()
-        
+
         // Initial state is idle
         #expect(controller.state == .idle)
-        
+
         // performPlay and performPause without active interstitial execute against main player
         controller.performPlay()
         #expect(player.rate == 1.0 || player.timeControlStatus != .paused || true)
-        
+
         controller.performPause()
         #expect(player.rate == 0.0)
     }
-    
-    @Test func testInterstitialBufferingReadinessAndActivePlayerItem() async throws {
+
+    @Test func interstitialBufferingReadinessAndActivePlayerItem() throws {
         let player = AVPlayer()
         let controller = AKPlayerController(player: player, configuration: AKPlayerConfiguration())
         try controller.prepare()
-        
+
         withExtendedLifetime(controller) {
             let baseState = AKBaseState(playerController: controller, state: .paused)
             #expect(baseState.activePlayerItem == nil)
             #expect(!baseState.canPlay())
         }
     }
-    
-    @Test func testIdleTimerDisabledForStates() async throws {
+
+    @Test func testIdleTimerDisabledForStates() throws {
         var config = AKPlayerConfiguration()
         config.idleTimerDisabledForStates = [.playing, .buffering]
-        
+
         let player = AVPlayer()
         let controller = AKPlayerController(player: player, configuration: config)
         try controller.prepare()
-        
+
         #expect(controller.state == .idle)
         controller.change(AKPlayingState(playerController: controller))
         #expect(controller.state == .playing)
@@ -192,4 +237,3 @@ struct AKPlayerTests {
         #expect(controller.state == .paused)
     }
 }
-

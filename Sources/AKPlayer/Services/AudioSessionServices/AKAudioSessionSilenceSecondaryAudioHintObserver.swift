@@ -41,7 +41,8 @@ public protocol AKAudioSessionSilenceSecondaryAudioHintObserverProtocol: AnyObje
 
 // MARK: - AKAudioSessionSilenceSecondaryAudioHintObserver
 
-/// A thread-safe observer class responsible for monitoring `AVAudioSession.silenceSecondaryAudioHintNotification`
+/// A thread-safe observer class responsible for monitoring
+/// `AVAudioSession.silenceSecondaryAudioHintNotification`
 /// and broadcasting events via `AsyncStream`.
 public final class AKAudioSessionSilenceSecondaryAudioHintObserver:
     AKAudioSessionSilenceSecondaryAudioHintObserverProtocol, Sendable
@@ -52,7 +53,8 @@ public final class AKAudioSessionSilenceSecondaryAudioHintObserver:
     public let audioSession: AVAudioSession
 
     /// Broadcaster managing the asynchronous stream of secondary audio hint events.
-    private let eventBroadcaster = AKEventBroadcaster<AKAudioSessionSilenceSecondaryAudioHintEvent>()
+    private let eventBroadcaster =
+        AKEventBroadcaster<AKAudioSessionSilenceSecondaryAudioHintEvent>()
 
     /// Asynchronous stream of secondary audio hint events for Swift Concurrency.
     public var events: AsyncStream<AKAudioSessionSilenceSecondaryAudioHintEvent> {
@@ -87,7 +89,7 @@ public final class AKAudioSessionSilenceSecondaryAudioHintObserver:
                 object: audioSession
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.handleSilenceSecondaryAudioHintNotification(notification)
+                handleSilenceSecondaryAudioHintNotification(notification)
             }
         }
 

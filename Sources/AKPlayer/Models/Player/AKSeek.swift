@@ -1,3 +1,11 @@
+//
+//   AKSeek.swift
+//   AKPlayer
+//
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
+//
+
 import CoreMedia
 import Foundation
 import Synchronization
@@ -50,7 +58,7 @@ public final class AKSeek: Equatable, Hashable, Identifiable, @unchecked Sendabl
         self.scope = scope
         self.toleranceBefore = toleranceBefore
         self.toleranceAfter = toleranceAfter
-        self.completionStorage = Mutex(completionHandler)
+        completionStorage = Mutex(completionHandler)
     }
 
     // MARK: - Completion Execution
@@ -68,7 +76,8 @@ public final class AKSeek: Equatable, Hashable, Identifiable, @unchecked Sendabl
 
     // MARK: - Equatable & Hashable
 
-    /// Returns a boolean value indicating whether two seek objects are equal based on unique identifiers.
+    /// Returns a boolean value indicating whether two seek objects are equal based on unique
+    /// identifiers.
     public static func == (lhs: AKSeek, rhs: AKSeek) -> Bool {
         lhs.id == rhs.id
     }

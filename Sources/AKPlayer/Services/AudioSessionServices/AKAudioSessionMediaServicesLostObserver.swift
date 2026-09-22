@@ -29,7 +29,8 @@ public protocol AKAudioSessionMediaServicesLostObserverProtocol: AnyObject, Send
 
 // MARK: - AKAudioSessionMediaServicesLostObserver
 
-/// A thread-safe observer class responsible for monitoring `AVAudioSession.mediaServicesWereLostNotification`
+/// A thread-safe observer class responsible for monitoring
+/// `AVAudioSession.mediaServicesWereLostNotification`
 /// and broadcasting events via `AsyncStream`.
 public final class AKAudioSessionMediaServicesLostObserver:
     AKAudioSessionMediaServicesLostObserverProtocol, Sendable
@@ -75,7 +76,7 @@ public final class AKAudioSessionMediaServicesLostObserver:
                 object: audioSession
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.eventBroadcaster.send(())
+                eventBroadcaster.send(())
             }
         }
 

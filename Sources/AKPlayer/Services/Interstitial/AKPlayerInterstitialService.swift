@@ -13,7 +13,9 @@ import Foundation
 
 /// A concrete implementation of `AKPlayerInterstitialServiceProtocol` managing interstitial ad
 /// observation, scheduling, ad markers, and integrated timeline coordination.
-public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialServiceProtocol, @unchecked Sendable {
+public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialServiceProtocol,
+    @unchecked Sendable
+{
     // MARK: - Properties
 
     /// Asynchronous stream of interstitial lifecycle, marker, and timeline events.
@@ -62,13 +64,13 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     public private(set) var integratedTimelineFillSegments: [AVPlayerItemSegment] = []
 
     /// The current playback position in seconds along the integrated timeline.
-    public private(set) var integratedTimelineCurrentTime: Double = 0.0
+    public private(set) var integratedTimelineCurrentTime = 0.0
 
     /// The start timestamp in seconds along the integrated timeline.
-    public private(set) var integratedTimelineStartTime: Double = 0.0
+    public private(set) var integratedTimelineStartTime = 0.0
 
     /// The total duration in seconds of the integrated timeline.
-    public private(set) var integratedTimelineDuration: Double = 0.0
+    public private(set) var integratedTimelineDuration = 0.0
 
     /// Playback restrictions currently applied by the active interstitial event.
     public var currentRestrictions: AVPlayerInterstitialEvent.Restrictions {
@@ -80,7 +82,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         !currentRestrictions.contains(.constrainsSeekingForwardInPrimaryContent)
     }
 
-    /// A Boolean value indicating whether fast-forwarding is permitted during the current interstitial.
+    /// A Boolean value indicating whether fast-forwarding is permitted during the current
+    /// interstitial.
     public var canFastForward: Bool {
         !currentRestrictions.contains(.constrainsSeekingForwardInPrimaryContent) &&
             !currentRestrictions.contains(.requiresPlaybackAtPreferredRateForAdvancement)
@@ -141,7 +144,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         defer {
             AKLogger.logInit(self)
         }
-        self.primaryPlayer = player
+        primaryPlayer = player
         super.init()
 
         monitor = AVPlayerInterstitialEventMonitor(primaryPlayer: player)
@@ -186,7 +189,10 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     // MARK: - Ad Markers
 
     /// Finds the ad marker closest to the specified time within the given tolerance.
-    public func marker(at time: TimeInterval, tolerance: TimeInterval = 1.0) -> AKInterstitialMarker? {
+    public func marker(
+        at time: TimeInterval,
+        tolerance: TimeInterval = 1.0
+    ) -> AKInterstitialMarker? {
         markers.first { abs($0.time - time) <= tolerance }
     }
 
@@ -297,7 +303,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
 
         let snapshotDur = CMTimeGetSeconds(timeline.currentSnapshot.duration)
-        let dur = (integratedTimelineDuration > 0) ? integratedTimelineDuration : ((snapshotDur.isFinite && snapshotDur > 0) ? snapshotDur : 0.0)
+        let dur = (integratedTimelineDuration > 0) ? integratedTimelineDuration :
+            ((snapshotDur.isFinite && snapshotDur > 0) ? snapshotDur : 0.0)
 
         let clampedTarget: CMTime
         if dur > 0 {
@@ -317,7 +324,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 if success {
-                    self.integratedTimelineCurrentTime = CMTimeGetSeconds(timeline.currentTime)
+                    integratedTimelineCurrentTime = CMTimeGetSeconds(timeline.currentTime)
                 }
                 completion(success)
             }
@@ -325,7 +332,10 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
 
     /// Seeks to a target time interval in seconds along the integrated timeline.
-    public func seekOnIntegratedTimeline(to time: TimeInterval, completion: @Sendable @escaping (Bool) -> Void) {
+    public func seekOnIntegratedTimeline(
+        to time: TimeInterval,
+        completion: @Sendable @escaping (Bool) -> Void
+    ) {
         let targetTime = CMTime(seconds: time, preferredTimescale: 600)
         seekOnIntegratedTimeline(
             to: targetTime,
@@ -336,27 +346,34 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
 
     /// Seeks relative to the current position along the integrated timeline by a delta in seconds.
-    public func seekOnIntegratedTimeline(by delta: TimeInterval, completion: @Sendable @escaping (Bool) -> Void) {
+    public func seekOnIntegratedTimeline(
+        by delta: TimeInterval,
+        completion: @Sendable @escaping (Bool) -> Void
+    ) {
         seekOnIntegratedTimeline(to: integratedTimelineCurrentTime + delta, completion: completion)
     }
 
     // MARK: - Private Setup & Observers
 
-    /// Registers KVO and notification observers for the primary player and interstitial event monitor.
+    /// Registers KVO and notification observers for the primary player and interstitial event
+    /// monitor.
     private func setupObservers() {
         guard let primaryPlayer, let monitor else { return }
 
         // 1. Observe primary player's current item via KVO
         playerObservations.append(
-            primaryPlayer.observe(\.currentItem, options: [.initial, .new]) { [weak self] player, _ in
+            primaryPlayer.observe(\.currentItem, options: [
+                .initial,
+                .new,
+            ]) { [weak self] player, _ in
                 let newItem = player.currentItem
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    self.currentItem = newItem
+                    currentItem = newItem
                     if let newItem {
-                        self.observeTimeline(for: newItem)
+                        observeTimeline(for: newItem)
                     } else {
-                        self.stopObservingTimeline()
+                        stopObservingTimeline()
                     }
                 }
             }
@@ -406,7 +423,10 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
 
         // KVO on currentSnapshot
         timelineObservations.append(
-            timeline.observe(\.currentSnapshot, options: [.initial, .new]) { [weak self] observedTimeline, _ in
+            timeline.observe(\.currentSnapshot, options: [
+                .initial,
+                .new,
+            ]) { [weak self] observedTimeline, _ in
                 let snapshot = observedTimeline.currentSnapshot
                 Task { @MainActor [weak self] in
                     self?.syncSnapshot(snapshot)
@@ -435,7 +455,9 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                 guard !Task.isCancelled, let self, let timeline else { break }
                 await MainActor.run {
                     let currentSec = CMTimeGetSeconds(timeline.currentTime)
-                    if !currentSec.isNaN, !currentSec.isInfinite, abs(self.integratedTimelineCurrentTime - currentSec) > 0.05 {
+                    if !currentSec.isNaN, !currentSec.isInfinite,
+                       abs(self.integratedTimelineCurrentTime - currentSec) > 0.05
+                    {
                         self.integratedTimelineCurrentTime = currentSec
                         self.emit(.integratedTimeline(.timeUpdated(
                             currentTime: self.integratedTimelineCurrentTime,
@@ -583,7 +605,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
 
         let snapshotDuration = CMTimeGetSeconds(snapshot.duration)
-        integratedTimelineDuration = (snapshotDuration.isNaN || snapshotDuration.isInfinite) ? 0.0 : snapshotDuration
+        integratedTimelineDuration = (snapshotDuration.isNaN || snapshotDuration.isInfinite) ? 0.0 :
+            snapshotDuration
 
         let currentSec = CMTimeGetSeconds(timeline.currentTime)
         if !currentSec.isNaN, !currentSec.isInfinite {
@@ -604,7 +627,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         )))
     }
 
-    /// Re-synthesizes all timeline markers combining scheduled events and integrated timeline segments.
+    /// Re-synthesizes all timeline markers combining scheduled events and integrated timeline
+    /// segments.
     private func refreshMarkers() {
         var newMarkers: [AKInterstitialMarker] = []
         let currentEventID = currentEvent?.identifier
@@ -612,7 +636,9 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         // Build map of interstitial segments from integrated timeline snapshots
         var segmentsByEventID: [String: AVPlayerItemSegment] = [:]
         if let currentItem {
-            for segment in currentItem.integratedTimeline.currentSnapshot.segments where segment.segmentType == .interstitial {
+            for segment in currentItem.integratedTimeline.currentSnapshot.segments
+                where segment.segmentType == .interstitial
+            {
                 if let event = segment.interstitialEvent {
                     segmentsByEventID[event.identifier] = segment
                 }
@@ -633,7 +659,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             let isCurrent = (id == currentEventID) && isPlayingInterstitial
             let isPlayed = playedEventIDs.contains(id)
             let segment = segmentsByEventID[id]
-            newMarkers.append(AKInterstitialMarker(event: event, segment: segment, isPlayed: isPlayed, isCurrent: isCurrent))
+            newMarkers.append(AKInterstitialMarker(
+                event: event,
+                segment: segment,
+                isPlayed: isPlayed,
+                isCurrent: isCurrent
+            ))
             processedIDs.insert(id)
         }
 
@@ -642,7 +673,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             if let event = segment.interstitialEvent {
                 let isCurrent = (id == currentEventID) && isPlayingInterstitial
                 let isPlayed = playedEventIDs.contains(id)
-                newMarkers.append(AKInterstitialMarker(event: event, segment: segment, isPlayed: isPlayed, isCurrent: isCurrent))
+                newMarkers.append(AKInterstitialMarker(
+                    event: event,
+                    segment: segment,
+                    isPlayed: isPlayed,
+                    isCurrent: isCurrent
+                ))
                 processedIDs.insert(id)
             }
         }
@@ -673,12 +709,15 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
 
         // currentItem
         interstitialStatusObservations.append(
-            player.observe(\.currentItem, options: [.initial, .new]) { [weak self] observedPlayer, _ in
+            player.observe(\.currentItem, options: [
+                .initial,
+                .new,
+            ]) { [weak self] observedPlayer, _ in
                 let newItem = observedPlayer.currentItem
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    self.observeItemBufferFlags(newItem)
-                    self.updatePlaybackState()
+                    observeItemBufferFlags(newItem)
+                    updatePlaybackState()
                 }
             }
         )
@@ -691,7 +730,10 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         guard let item else { return }
 
         interstitialItemObservations.append(
-            item.observe(\.isPlaybackLikelyToKeepUp, options: [.initial, .new]) { [weak self] _, _ in
+            item.observe(\.isPlaybackLikelyToKeepUp, options: [
+                .initial,
+                .new,
+            ]) { [weak self] _, _ in
                 Task { @MainActor [weak self] in self?.updatePlaybackState() }
             }
         )
@@ -739,7 +781,9 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
 
         // 2. If buffer is likely to keep up or full, or actively playing
-        if item?.isPlaybackLikelyToKeepUp == true || item?.isPlaybackBufferFull == true || player.timeControlStatus == .playing {
+        if item?.isPlaybackLikelyToKeepUp == true || item?.isPlaybackBufferFull == true || player
+            .timeControlStatus == .playing
+        {
             if player.timeControlStatus == .paused {
                 setPlaybackState(.paused)
             } else {
@@ -749,7 +793,9 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
 
         // 3. If buffer is empty or waiting to play -> Buffering
-        if item?.isPlaybackBufferEmpty == true || player.timeControlStatus == .waitingToPlayAtSpecifiedRate {
+        if item?.isPlaybackBufferEmpty == true || player
+            .timeControlStatus == .waitingToPlayAtSpecifiedRate
+        {
             if player.reasonForWaitingToPlay == .noItemToPlay {
                 setPlaybackState(.idle)
             } else {

@@ -1,28 +1,28 @@
 //
-//  TestMediaListView.swift
-//  AKPlayerDemo
+//   TestMediaListView.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import SwiftUI
 import AKPlayer
+import SwiftUI
 
 public struct TestMediaListView: View {
-    
     public var medias: [TestMedia]
-    
+
     @State private var selectedMedia: TestMedia?
     @State private var playerMedia: TestMedia?
     @State private var livePlayerMedia: TestMedia?
     @State private var audiobookPlayerMedia: TestMedia?
-    @State private var isQueuePlayerPresented: Bool = false
-    @State private var queueStartIndex: Int = 0
-    
+    @State private var isQueuePlayerPresented = false
+    @State private var queueStartIndex = 0
+
     public init(medias: [TestMedia] = sampleTestMedia) {
         self.medias = medias
     }
-    
+
     public var body: some View {
         NavigationStack {
             List(Array(medias.enumerated()), id: \.element.id) { index, media in
@@ -32,7 +32,7 @@ public struct TestMediaListView: View {
                             HStack(spacing: 6) {
                                 Text(media.name)
                                     .font(.headline)
-                                
+
                                 if media.kind == .live {
                                     Text("LIVE")
                                         .font(.caption2.bold())
@@ -43,37 +43,40 @@ public struct TestMediaListView: View {
                                         .clipShape(Capsule())
                                 }
                             }
-                            
+
                             if let subtitle = media.subtitle {
                                 Text(subtitle)
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
                         }
-                        
+
                         Spacer()
-                        
+
                         Menu {
                             if media.kind == .live {
                                 Button {
                                     livePlayerMedia = media
                                 } label: {
-                                    Label("Play in Live Player (Jump to Live)", systemImage: "dot.radiowaves.left.and.right")
+                                    Label(
+                                        "Play in Live Player (Jump to Live)",
+                                        systemImage: "dot.radiowaves.left.and.right"
+                                    )
                                 }
                             }
-                            
+
                             Button {
                                 playerMedia = media
                             } label: {
                                 Label("Play Video", systemImage: "play.circle")
                             }
-                            
+
                             Button {
                                 audiobookPlayerMedia = media
                             } label: {
                                 Label("Play as Audiobook / Podcast", systemImage: "book.fill")
                             }
-                            
+
                             Button {
                                 queueStartIndex = index
                                 isQueuePlayerPresented = true
@@ -81,19 +84,21 @@ public struct TestMediaListView: View {
                                 Label("Play in Queue", systemImage: "play.square.stack")
                             }
                         } label: {
-                            Image(systemName: media.kind == .live ? "dot.radiowaves.left.and.right" : "play.circle.fill")
+                            Image(systemName: media
+                                .kind == .live ? "dot.radiowaves.left.and.right" :
+                                "play.circle.fill")
                                 .font(.title2)
                                 .foregroundColor(media.kind == .live ? .red : .accentColor)
                         }
                     }
-                    
+
                     if let capabilities = media.testCapabilities, !capabilities.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Test Focus:")
                                 .font(.caption2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.secondary)
-                            
+
                             ForEach(capabilities.prefix(3), id: \.self) { cap in
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark.circle.fill")
@@ -108,7 +113,7 @@ public struct TestMediaListView: View {
                         }
                         .padding(.top, 2)
                     }
-                    
+
                     HStack {
                         if let langs = media.audioLanguages, !langs.isEmpty {
                             Text("Audio: " + langs.joined(separator: ", ").uppercased())
@@ -118,7 +123,7 @@ public struct TestMediaListView: View {
                                 .background(Color.blue.opacity(0.1))
                                 .cornerRadius(4)
                         }
-                        
+
                         if let subs = media.subtitleLanguages, !subs.isEmpty {
                             Text("Subs: " + subs.joined(separator: ", ").uppercased())
                                 .font(.caption2)
@@ -127,9 +132,9 @@ public struct TestMediaListView: View {
                                 .background(Color.purple.opacity(0.1))
                                 .cornerRadius(4)
                         }
-                        
+
                         Spacer()
-                        
+
                         Button("Full Details") {
                             selectedMedia = media
                         }
@@ -143,22 +148,25 @@ public struct TestMediaListView: View {
                         Button {
                             livePlayerMedia = media
                         } label: {
-                            Label("Play in Live Player (Jump to Live)", systemImage: "dot.radiowaves.left.and.right")
+                            Label(
+                                "Play in Live Player (Jump to Live)",
+                                systemImage: "dot.radiowaves.left.and.right"
+                            )
                         }
                     }
-                    
+
                     Button {
                         playerMedia = media
                     } label: {
                         Label("Play Video", systemImage: "play.circle")
                     }
-                    
+
                     Button {
                         audiobookPlayerMedia = media
                     } label: {
                         Label("Play as Audiobook / Podcast", systemImage: "book.fill")
                     }
-                    
+
                     Button {
                         queueStartIndex = index
                         isQueuePlayerPresented = true
@@ -183,7 +191,7 @@ public struct TestMediaListView: View {
                             }
                             .foregroundColor(.red)
                         }
-                        
+
                         Button {
                             queueStartIndex = 0
                             isQueuePlayerPresented = true
@@ -204,19 +212,19 @@ public struct TestMediaListView: View {
                                 Text(media.name)
                                     .font(.title2)
                                     .bold()
-                                
+
                                 if let subtitle = media.subtitle {
                                     Text(subtitle)
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                 }
                             }
-                            
+
                             if let capabilities = media.testCapabilities, !capabilities.isEmpty {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("🎯 What You Can Test")
                                         .font(.headline)
-                                    
+
                                     VStack(alignment: .leading, spacing: 6) {
                                         ForEach(capabilities, id: \.self) { item in
                                             HStack(alignment: .top, spacing: 6) {
@@ -234,12 +242,12 @@ public struct TestMediaListView: View {
                                     .cornerRadius(10)
                                 }
                             }
-                            
+
                             if let note = media.note {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("📋 Stream Specifications")
                                         .font(.headline)
-                                    
+
                                     Text(note)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -248,9 +256,9 @@ public struct TestMediaListView: View {
                                         .cornerRadius(10)
                                 }
                             }
-                            
+
                             Spacer(minLength: 20)
-                            
+
                             if let url = media.url {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("🔗 Stream URL")
@@ -284,7 +292,7 @@ public struct TestMediaListView: View {
                                         }
                                     }
                                 }
-                                
+
                                 Button("Play Video") {
                                     let single = media
                                     selectedMedia = nil
@@ -293,7 +301,7 @@ public struct TestMediaListView: View {
                                         playerMedia = single
                                     }
                                 }
-                                
+
                                 Button("Play as Audiobook / Podcast") {
                                     let audio = media
                                     selectedMedia = nil
@@ -302,7 +310,7 @@ public struct TestMediaListView: View {
                                         audiobookPlayerMedia = audio
                                     }
                                 }
-                                
+
                                 Button("Play in Queue") {
                                     let idx = medias.firstIndex(where: { $0.id == media.id }) ?? 0
                                     selectedMedia = nil

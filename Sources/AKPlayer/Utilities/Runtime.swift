@@ -34,4 +34,3 @@ func setRetainedAssociatedObject(
         .OBJC_ASSOCIATION_RETAIN_NONATOMIC
     )
 }
-

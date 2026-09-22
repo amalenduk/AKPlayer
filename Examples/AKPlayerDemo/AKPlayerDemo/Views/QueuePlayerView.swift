@@ -1,68 +1,69 @@
 //
-//  QueuePlayerView.swift
-//  AKPlayerDemo
+//   QueuePlayerView.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
-import SwiftUI
 import AKPlayer
 import AVFoundation
+import SwiftUI
 
 struct AKQueuePlayerUIView: UIViewRepresentable {
     @ObservedObject var viewModel: QueuePlayerViewModel
-    
-    func makeUIView(context: Context) -> AKPlayerView {
+
+    func makeUIView(context _: Context) -> AKPlayerView {
         let v = AKPlayerView()
         v.player = viewModel.queuePlayer.player
         return v
     }
-    
-    func updateUIView(_ uiView: AKPlayerView, context: Context) {
+
+    func updateUIView(_ uiView: AKPlayerView, context _: Context) {
         if uiView.player != viewModel.queuePlayer.player {
             uiView.player = viewModel.queuePlayer.player
         }
     }
-    
-    static func dismantleUIView(_ uiView: AKPlayerView, coordinator: ()) {
+
+    static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
         uiView.player = nil
     }
 }
 
 public struct QueuePlayerView: View {
     @StateObject public var viewModel = QueuePlayerViewModel()
-    
+
     public let initialMedias: [TestMedia]
     public let initialIndex: Int
-    
-    @State private var isScrubbing: Bool = false
-    @State private var scrubbingProgress: Double = 0.0
+
+    @State private var isScrubbing = false
+    @State private var scrubbingProgress = 0.0
     @Environment(\.dismiss) private var dismiss
-    
+
     public init(
         medias: [TestMedia] = sampleTestMedia,
         startIndex: Int = 0
     ) {
-        self.initialMedias = medias
-        self.initialIndex = startIndex
+        initialMedias = medias
+        initialIndex = startIndex
     }
-    
+
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Top Player Area
                 playerHeroSection()
                     .padding(.bottom, 8)
-                
+
                 // Track Info & Progress
                 nowPlayingInfoSection()
-                
+
                 // Playback & Queue Controls
                 queueControlsSection()
                     .padding(.vertical, 8)
-                
+
                 Divider()
-                
+
                 // Up Next Queue List
                 queueListSection()
             }
@@ -88,10 +89,9 @@ public struct QueuePlayerView: View {
             }
         }
     }
-    
+
     // MARK: - Player Hero
-    
-    @ViewBuilder
+
     private func playerHeroSection() -> some View {
         ZStack {
             AKQueuePlayerUIView(viewModel: viewModel)
@@ -99,7 +99,7 @@ public struct QueuePlayerView: View {
                 .background(Color.black)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
-            
+
             if viewModel.isLoading {
                 ProgressView()
                     .progressViewStyle(.circular)
@@ -108,28 +108,27 @@ public struct QueuePlayerView: View {
             }
         }
     }
-    
+
     // MARK: - Now Playing Info
-    
-    @ViewBuilder
+
     private func nowPlayingInfoSection() -> some View {
         VStack(spacing: 6) {
             let currentItem = currentTestMedia()
-            
+
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(currentItem?.name ?? "No Media Playing")
                         .font(.headline)
                         .lineLimit(1)
-                    
+
                     Text(currentItem?.subtitle ?? viewModel.stateDescription)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
-                
+
                 Text(viewModel.stateDescription)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -140,22 +139,24 @@ public struct QueuePlayerView: View {
                     .cornerRadius(6)
             }
             .padding(.horizontal)
-            
+
             // Timeline Scrubber
             HStack(spacing: 8) {
                 Text(formatTime(viewModel.currentTime))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .frame(width: 44, alignment: .leading)
-                
+
                 Slider(
                     value: Binding<Double>(
                         get: {
-                            isScrubbing ? scrubbingProgress : (viewModel.duration > 0 ? viewModel.currentTime / viewModel.duration : 0.0)
+                            isScrubbing ? scrubbingProgress :
+                                (viewModel.duration > 0 ? viewModel.currentTime / viewModel
+                                    .duration : 0.0)
                         },
                         set: { scrubbingProgress = $0 }
                     ),
-                    in: 0...1,
+                    in: 0 ... 1,
                     onEditingChanged: { editing in
                         isScrubbing = editing
                         if !editing {
@@ -165,7 +166,7 @@ public struct QueuePlayerView: View {
                     }
                 )
                 .accentColor(.blue)
-                
+
                 Text(formatTime(viewModel.duration))
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -174,10 +175,9 @@ public struct QueuePlayerView: View {
             .padding(.horizontal)
         }
     }
-    
+
     // MARK: - Queue Controls
-    
-    @ViewBuilder
+
     private func queueControlsSection() -> some View {
         HStack(spacing: 24) {
             // Shuffle Button
@@ -188,7 +188,7 @@ public struct QueuePlayerView: View {
                     .font(.title3)
                     .foregroundColor(viewModel.isShuffleEnabled ? .accentColor : .secondary)
             }
-            
+
             // Previous Track Button
             Button {
                 viewModel.previous()
@@ -198,7 +198,7 @@ public struct QueuePlayerView: View {
                     .foregroundColor(viewModel.canPlayPrevious ? .primary : .secondary.opacity(0.4))
             }
             .disabled(!viewModel.canPlayPrevious)
-            
+
             // Play / Pause Circular Button
             Button {
                 viewModel.togglePlayPause()
@@ -207,7 +207,7 @@ public struct QueuePlayerView: View {
                     .font(.system(size: 48))
                     .foregroundColor(.blue)
             }
-            
+
             // Next Track Button
             Button {
                 viewModel.next()
@@ -217,7 +217,7 @@ public struct QueuePlayerView: View {
                     .foregroundColor(viewModel.canPlayNext ? .primary : .secondary.opacity(0.4))
             }
             .disabled(!viewModel.canPlayNext)
-            
+
             // Repeat Mode Button
             Button {
                 viewModel.toggleRepeat()
@@ -228,39 +228,39 @@ public struct QueuePlayerView: View {
             }
         }
     }
-    
+
     // MARK: - Up Next Queue List
-    
-    @ViewBuilder
+
     private func queueListSection() -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("Up Next")
                     .font(.headline)
-                
+
                 Text("(\(viewModel.playlist.count) items)")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 EditButton()
                     .font(.caption)
             }
             .padding(.horizontal)
             .padding(.top, 8)
-            
+
             List {
                 ForEach(Array(viewModel.playlist.enumerated()), id: \.element.id) { index, item in
                     let isCurrent = (viewModel.currentIndex == index)
-                    
+
                     HStack(spacing: 12) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(isCurrent ? Color.accentColor.opacity(0.15) : Color(.systemGray5))
+                                .fill(isCurrent ? Color.accentColor
+                                    .opacity(0.15) : Color(.systemGray5))
                                 .frame(width: 36, height: 36)
-                            
-                            if isCurrent && viewModel.isPlaying {
+
+                            if isCurrent, viewModel.isPlaying {
                                 Image(systemName: "waveform")
                                     .font(.footnote)
                                     .foregroundColor(.accentColor)
@@ -271,14 +271,14 @@ public struct QueuePlayerView: View {
                                     .foregroundColor(isCurrent ? .accentColor : .secondary)
                             }
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.name)
                                 .font(.subheadline)
                                 .fontWeight(isCurrent ? .bold : .regular)
                                 .foregroundColor(isCurrent ? .accentColor : .primary)
                                 .lineLimit(1)
-                            
+
                             if let sub = item.subtitle {
                                 Text(sub)
                                     .font(.caption2)
@@ -286,9 +286,9 @@ public struct QueuePlayerView: View {
                                     .lineLimit(1)
                             }
                         }
-                        
+
                         Spacer()
-                        
+
                         if isCurrent {
                             Text("Playing")
                                 .font(.caption2)
@@ -317,36 +317,36 @@ public struct QueuePlayerView: View {
             .listStyle(.plain)
         }
     }
-    
+
     // MARK: - Helpers
-    
+
     private func currentTestMedia() -> TestMedia? {
         guard let idx = viewModel.currentIndex, viewModel.playlist.indices.contains(idx) else {
             return nil
         }
         return viewModel.playlist[idx]
     }
-    
+
     private func repeatIconName() -> String {
         switch viewModel.repeatMode {
-        case .off: return "repeat"
-        case .all: return "repeat"
-        case .one: return "repeat.1"
+        case .off: "repeat"
+        case .all: "repeat"
+        case .one: "repeat.1"
         }
     }
-    
+
     private func stateBadgeColor() -> Color {
         switch viewModel.queuePlayer.state {
-        case .playing: return .green
-        case .paused: return .blue
-        case .buffering, .loading: return .orange
-        case .failed: return .red
-        default: return .secondary
+        case .playing: .green
+        case .paused: .blue
+        case .buffering, .loading: .orange
+        case .failed: .red
+        default: .secondary
         }
     }
-    
+
     private func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite && !seconds.isNaN else { return "00:00" }
+        guard seconds.isFinite, !seconds.isNaN else { return "00:00" }
         let total = Int(seconds)
         let m = total / 60
         let s = total % 60

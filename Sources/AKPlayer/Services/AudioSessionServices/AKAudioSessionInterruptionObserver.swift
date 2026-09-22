@@ -22,7 +22,7 @@ import Synchronization
 public enum AKAudioSessionInterruptionEvent: Sendable, Equatable {
     /// The audio session interruption began with an optional reason.
     case began(reason: AVAudioSession.InterruptionReason?)
-    
+
     /// The audio session interruption ended, indicating if playback should resume.
     case ended(shouldResume: Bool)
 }
@@ -51,7 +51,9 @@ public protocol AKAudioSessionInterruptionObserverProtocol: AnyObject, Sendable 
 
 /// A thread-safe observer class responsible for monitoring audio session interruptions
 /// and broadcasting events via `AsyncStream`.
-public final class AKAudioSessionInterruptionObserver: AKAudioSessionInterruptionObserverProtocol, Sendable {
+public final class AKAudioSessionInterruptionObserver: AKAudioSessionInterruptionObserverProtocol,
+    Sendable
+{
     // MARK: - Properties
 
     /// The `AVAudioSession` instance managed by this observer.
@@ -101,7 +103,7 @@ public final class AKAudioSessionInterruptionObserver: AKAudioSessionInterruptio
                 object: audioSession
             ) {
                 guard !Task.isCancelled, let self else { break }
-                self.handleAudioSessionInterruption(notification)
+                handleAudioSessionInterruption(notification)
             }
         }
 

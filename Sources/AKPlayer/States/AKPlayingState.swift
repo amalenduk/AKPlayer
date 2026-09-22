@@ -15,15 +15,15 @@ import Foundation
 @MainActor
 public class AKPlayingState: AKBaseState {
     // MARK: - Properties
-    
+
     /// The target playback speed multiplier requested when entering the playing state.
     private var rate: AKPlaybackRate?
-    
+
     /// Tracks whether playback has officially commenced and timeControlStatus reached playing.
-    private var playingStarted: Bool = false
-    
+    private var playingStarted = false
+
     // MARK: - Initialization & Deinitialization
-    
+
     /// Initializes a playing state instance associated with the specified player controller.
     /// - Parameters:
     ///   - playerController: The underlying player controller driving execution.
@@ -38,32 +38,33 @@ public class AKPlayingState: AKBaseState {
         self.rate = rate
         super.init(playerController: playerController, state: .playing)
     }
-    
+
     deinit {
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
     }
-    
+
     // MARK: - State Lifecycle & Event Handlers
-    
+
     /// Entry point for playing state setup. Begins playback and applies targeted playback rate.
     override public func processStateChange() {
         super.processStateChange()
-        
+
         if playerController.player.timeControlStatus == .playing {
             playingStarted = true
         }
-        
+
         if let rate, playerController.player.rate != rate.rate {
             play(at: rate)
         } else {
             playerController.performPlay()
         }
     }
-    
-    /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if needed.
+
+    /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if
+    /// needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
         guard isActiveState else { return }
         guard status == .failed else { return }
@@ -75,9 +76,10 @@ public class AKPlayingState: AKBaseState {
         )
         change(controller)
     }
-    
-    /// Responds to changes in `AVPlayer.TimeControlStatus` to detect stalls, pause, or buffering needs.
-    override public func handleTimeControlStatusChange(_ status: AVPlayer.TimeControlStatus) {
+
+    /// Responds to changes in `AVPlayer.TimeControlStatus` to detect stalls, pause, or buffering
+    /// needs.
+    override public func handleTimeControlStatusChange(_: AVPlayer.TimeControlStatus) {
         guard isActiveState else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch playerController.player.timeControlStatus {
@@ -85,7 +87,8 @@ public class AKPlayingState: AKBaseState {
             playingStarted = true
         case .waitingToPlayAtSpecifiedRate:
             guard playingStarted else { return }
-            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay else { return }
+            guard let reasonForWaitingToPlay = playerController.player.reasonForWaitingToPlay
+            else { return }
             switch reasonForWaitingToPlay {
             case .evaluatingBufferingRate, .toMinimizeStalls, .waitingForCoordinatedPlayback:
                 guard !canPlay() else { return }
@@ -107,8 +110,9 @@ public class AKPlayingState: AKBaseState {
             break
         }
     }
-    
-    /// Handles media player item notification events such as stall, completion, and playback failures.
+
+    /// Handles media player item notification events such as stall, completion, and playback
+    /// failures.
     override public func handle(_ event: AKPlayerItemNotificationEvent) {
         guard isActiveState else { return }
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
@@ -154,9 +158,12 @@ public class AKPlayingState: AKBaseState {
             break
         }
     }
-    
-    /// Responds to interstitial ad playback state changes to pause or buffer content when ads interrupt.
-    override public func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState) {
+
+    /// Responds to interstitial ad playback state changes to pause or buffer content when ads
+    /// interrupt.
+    override public func handleInterstitialPlaybackStateChange(
+        _ playbackState: AKInterstitialPlaybackState
+    ) {
         guard isActiveState else { return }
         switch playbackState {
         case .paused:
@@ -173,9 +180,8 @@ public class AKPlayingState: AKBaseState {
         }
     }
 
-    
     // MARK: - Commands
-    
+
     /// Adjusts playback rate when supported by the current media item.
     /// - Parameter rate: The targeted playback speed multiplier.
     override public func play(at rate: AKPlaybackRate) {
@@ -192,10 +198,11 @@ public class AKPlayingState: AKBaseState {
             fallback: ()
         )
     }
-    
+
     // MARK: - Availability Overrides
-    
-    /// Evaluates preflight permission and unavailable reasons for a given player action when actively playing.
+
+    /// Evaluates preflight permission and unavailable reasons for a given player action when
+    /// actively playing.
     override public func availability(for action: AKPlayerAction) -> (
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {

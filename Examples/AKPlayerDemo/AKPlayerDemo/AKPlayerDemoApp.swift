@@ -1,8 +1,9 @@
 //
-//  AKPlayerDemoApp.swift
-//  AKPlayerDemo
+//   AKPlayerDemoApp.swift
+//   AKPlayer
 //
-//  Created by Amalendu Kar on 02/09/26.
+//   Copyright (c) 2020 Amalendu Kar. All rights reserved.
+//   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
 import SwiftUI

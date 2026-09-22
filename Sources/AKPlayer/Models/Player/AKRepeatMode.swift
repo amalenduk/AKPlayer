@@ -11,7 +11,9 @@ import Foundation
 // MARK: - AKRepeatMode
 
 /// Defines queue repeat behavior for playback queues.
-public enum AKRepeatMode: String, CaseIterable, Sendable, Equatable, Hashable, CustomStringConvertible {
+public enum AKRepeatMode: String, CaseIterable, Sendable, Equatable, Hashable,
+    CustomStringConvertible
+{
     /// Playback stops after reaching the end of the queue.
     case off
     /// The current media item repeats indefinitely.

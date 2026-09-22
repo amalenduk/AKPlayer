@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Pre-push hook: Verify all files pass swiftformat linting
+if which swiftformat >/dev/null 2>&1; then
+  echo "🔍 Running SwiftFormat lint check before push..."
+  if ! swiftformat --lint . --config .swiftformat; then
+    echo "❌ SwiftFormat lint check failed. Run 'swiftformat .' to fix style issues before pushing."
+    exit 1
+  fi
+  echo "✅ SwiftFormat lint check passed."
+fi

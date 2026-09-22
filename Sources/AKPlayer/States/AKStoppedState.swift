@@ -16,9 +16,9 @@ import Foundation
 @MainActor
 public class AKStoppedState: AKBaseState {
     // MARK: - Properties
-    
+
     // MARK: - Initialization & Deinitialization
-    
+
     /// Initializes a stopped state instance associated with the specified
     /// player controller.
     /// - Parameter playerController: The underlying player controller driving
@@ -29,25 +29,26 @@ public class AKStoppedState: AKBaseState {
         }
         super.init(playerController: playerController, state: .stopped)
     }
-    
+
     deinit {
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
     }
-    
+
     // MARK: - State Lifecycle & Event Handlers
-    
+
     /// Entry point for stopped state processing. Halts playback, cancels
     /// pending seeks, and replaces current item with nil.
     override public func processStateChange() {
         super.processStateChange()
-        
+
         playerController.performStop()
     }
-    
-    /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if needed.
+
+    /// Responds to changes in the underlying `AVPlayer.Status` to transition into failed state if
+    /// needed.
     override public func handlePlayerStatusChange(_ status: AVPlayer.Status) {
         guard isActiveState else { return }
         guard status == .failed else { return }
@@ -60,9 +61,8 @@ public class AKStoppedState: AKBaseState {
         change(controller)
     }
 
-    
     // MARK: - Availability Overrides
-    
+
     /// Evaluates preflight permission and unavailable reasons for a given
     /// player action when in stopped state.
     /// - Parameter action: The candidate action to evaluate.

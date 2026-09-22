@@ -14,61 +14,60 @@ import Foundation
 
 /// Represents an ad cue point or ad segment on the primary content timeline.
 public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable {
-    
     // MARK: - Properties
-    
+
     /// Unique identifier for this ad marker or event.
     public let id: String
-    
+
     /// Presentation timestamp in seconds along the primary media timeline.
     public let time: TimeInterval
-    
+
     /// Estimated or actual duration of the ad break in seconds, if known.
     public let duration: TimeInterval?
-    
+
     /// Indicates whether this ad is a single point cue or fills a portion of the timeline.
     public let occupancy: AVPlayerInterstitialEvent.TimelineOccupancy
-    
+
     /// Playback and seeking restrictions applied during this interstitial.
     public let restrictions: AVPlayerInterstitialEvent.Restrictions
-    
+
     /// Indicates whether this ad break has already played to completion.
     public var isPlayed: Bool
-    
+
     /// Indicates whether this ad break is actively playing right now.
     public var isCurrent: Bool
-    
+
     /// Number of ad items in this interstitial pod.
     public let templateItemCount: Int
-    
+
     /// Optional user-friendly display title or label (e.g., "Ad 1").
     public let title: String?
-    
+
     // MARK: - Computed Properties
-    
+
     /// Indicates whether seeking past or into this ad break is permitted.
     public var canSeek: Bool {
         !restrictions.contains(.constrainsSeekingForwardInPrimaryContent)
     }
-    
+
     /// Indicates whether fast-forwarding through this ad break is permitted.
     public var canFastForward: Bool {
         !restrictions.contains(.constrainsSeekingForwardInPrimaryContent) &&
-        !restrictions.contains(.requiresPlaybackAtPreferredRateForAdvancement)
+            !restrictions.contains(.requiresPlaybackAtPreferredRateForAdvancement)
     }
-    
+
     /// Indicates if the marker occupies a single point in the timeline.
     public var isSinglePoint: Bool {
         occupancy == .singlePoint
     }
-    
+
     /// Indicates if the marker occupies a fill range segment in the timeline.
     public var isFill: Bool {
         occupancy == .fill
     }
-    
+
     // MARK: - Initialization
-    
+
     /// Initializes a new interstitial cue or ad segment marker.
     /// - Parameters:
     ///   - id: Unique identifier for the marker. Defaults to a new UUID string.
@@ -101,8 +100,9 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
         self.templateItemCount = templateItemCount
         self.title = title
     }
-    
-    /// Initializes a marker from an `AVPlayerInterstitialEvent` and an optional `AVPlayerItemSegment`.
+
+    /// Initializes a marker from an `AVPlayerInterstitialEvent` and an optional
+    /// `AVPlayerItemSegment`.
     /// - Parameters:
     ///   - event: The AVPlayer interstitial event to extract metadata from.
     ///   - segment: Optional matching AVPlayer item segment.
@@ -127,7 +127,7 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
             }
             return 0.0
         }()
-        
+
         let durationSeconds: TimeInterval? = {
             if let segment {
                 let segDur = CMTimeGetSeconds(segment.timeMapping.target.duration)
@@ -141,7 +141,7 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
             }
             return nil
         }()
-        
+
         self.init(
             id: event.identifier,
             time: timeSeconds,
@@ -158,22 +158,9 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
 
 // MARK: - Equatable & Hashable
 
-extension AKInterstitialMarker {
-    /// Returns a boolean value indicating whether two interstitial markers are equal in state and timing.
-    public static func == (lhs: AKInterstitialMarker, rhs: AKInterstitialMarker) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.time == rhs.time &&
-        lhs.duration == rhs.duration &&
-        lhs.occupancy == rhs.occupancy &&
-        lhs.restrictions == rhs.restrictions &&
-        lhs.isPlayed == rhs.isPlayed &&
-        lhs.isCurrent == rhs.isCurrent &&
-        lhs.templateItemCount == rhs.templateItemCount &&
-        lhs.title == rhs.title
-    }
-    
+public extension AKInterstitialMarker {
     /// Hashes the essential components of this marker into the given hasher.
-    public func hash(into hasher: inout Hasher) {
+    func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(time)
         hasher.combine(duration)

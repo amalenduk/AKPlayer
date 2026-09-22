@@ -14,21 +14,20 @@ import Foundation
 /// Concrete implementation responsible for managing media item asset creation,
 /// status observation, preflight capability checks, and event broadcasting.
 public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked Sendable {
-    
     // MARK: - Properties
-    
+
     /// The weak reference to the backing playable media item.
     public weak var media: (any AKPlayable)?
-    
+
     /// The loaded URL asset generated from the media item (Single Source of Truth).
     public private(set) var asset: AVURLAsset?
-    
+
     /// The instantiated player item constructed from the asset (Single Source of Truth).
     public private(set) var playerItem: AVPlayerItem?
-    
+
     /// The current player error, if media loading or playback failed.
     public private(set) var error: AKPlayerError?
-    
+
     /// The current state of the playable media item.
     public private(set) var state: AKPlayableState = .idle {
         didSet {
@@ -36,44 +35,55 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             emit(.stateDidChange(state))
         }
     }
-    
-    /// Asynchronous stream of media events for Swift Concurrency (`for await event in manager.events`).
+
+    /// Asynchronous stream of media events for Swift Concurrency (`for await event in
+    /// manager.events`).
     public var events: AsyncStream<AKMediaEvent> {
         eventBroadcaster.makeStream()
     }
-    
+
     private let eventBroadcaster = AKEventBroadcaster<AKMediaEvent>()
-    
+
     // MARK: - Child Services
-    
+
     /// Service responsible for managing seek feasibility checks and execution.
-    public var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol { _seekingThroughMediaService }
-    
+    public var seekingThroughMediaService: any AKSeekingThroughMediaServiceProtocol {
+        _seekingThroughMediaService
+    }
+
     /// Service responsible for subtitle and audio track selection management.
-    public var trackSelectionService: any AKTrackSelectionServiceProtocol { _trackSelectionService }
-    
+    public var trackSelectionService: any AKTrackSelectionServiceProtocol {
+        _trackSelectionService
+    }
+
     /// Service responsible for extracting asset and item metadata.
-    public var metadataProvider: any AKMediaMetadataProviderProtocol { _metadataProvider }
-    
+    public var metadataProvider: any AKMediaMetadataProviderProtocol {
+        _metadataProvider
+    }
+
     /// Service responsible for extracting and tracking media chapters.
-    public var chapterService: any AKChapterServiceProtocol { _chapterService }
-    
+    public var chapterService: any AKChapterServiceProtocol {
+        _chapterService
+    }
+
     /// Notification observer for player item playback lifecycle events.
-    public var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol { _playerItemNotificationsObserver }
-    
+    public var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol {
+        _playerItemNotificationsObserver
+    }
+
     // MARK: - Private Storage
-    
+
     private var observations: [NSKeyValueObservation] = []
-    
+
     private let playerItemInitService: any AKPlayerItemInitServiceProtocol
     private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
     private var _trackSelectionService: (any AKTrackSelectionServiceProtocol)!
     private var _metadataProvider: (any AKMediaMetadataProviderProtocol)!
     private var _chapterService: (any AKChapterServiceProtocol)!
     private var _playerItemNotificationsObserver: (any AKPlayerItemNotificationsObserverProtocol)!
-    
+
     // MARK: - Initialization & Cleanup
-    
+
     /// Initializes a new media manager instance for the specified media item.
     /// - Parameters:
     ///   - media: The target playable media item.
@@ -87,39 +97,40 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         }
         self.media = media
         self.playerItemInitService = playerItemInitService
-        self.asset = media.customAsset
-        self.playerItem = media.customPlayerItem
+        asset = media.customAsset
+        playerItem = media.customPlayerItem
         super.init()
-        
+
         // Direct initialization of child services
         _seekingThroughMediaService = AKSeekingThroughMediaService(mediaManager: self)
         _trackSelectionService = AKTrackSelectionService(mediaManager: self)
         _metadataProvider = AKMediaMetadataProvider(mediaManager: self)
         _chapterService = AKChapterService(mediaManager: self)
         _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
-        
+
         // Configure initial lifecycle state for pre-configured media items (playerItem or asset)
         if let customItem = media.customPlayerItem {
-            self.state = .playerItemLoaded
-            
+            state = .playerItemLoaded
+
             // 1. Bind item KVO observers (duration, status, tracks, timebase)
             bindObservers(to: customItem)
-            
+
             // 2. Attach live timed metadata output
             attachMetadataOutput(to: customItem)
-            
-            // 3. Load metadata and chapters in parallel (extracting asset if not explicitly provided)
+
+            // 3. Load metadata and chapters in parallel (extracting asset if not explicitly
+            // provided)
             loadMetadataAndChapters(extractAssetFrom: customItem)
         } else if media.customAsset != nil {
-            self.state = .assetLoaded
-            
+            state = .assetLoaded
+
             // Load metadata and chapters in parallel
             loadMetadataAndChapters()
         } else {
-            self.state = .idle
+            state = .idle
         }
     }
-    
+
     deinit {
         observations.removeAll()
         eventBroadcaster.finish()
@@ -128,9 +139,9 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             pointer: Unmanaged.passUnretained(self)
         )
     }
-    
+
     // MARK: - Asset Lifecycle Operations
-    
+
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
     public func createAsset() async {
         assert(
@@ -139,13 +150,13 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         )
         guard let media else { return }
         error = nil
-        self.asset = await playerItemInitService.createAsset(for: media)
-        self.state = .assetLoaded
-        
+        asset = await playerItemInitService.createAsset(for: media)
+        state = .assetLoaded
+
         // Asynchronously load container metadata and chapters in parallel
         loadMetadataAndChapters()
     }
-    
+
     /// Asynchronously validates key asset properties (e.g., playability and DRM restrictions).
     public func validateAssetPlayability() async throws {
         assert(
@@ -157,7 +168,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         }
         try await playerItemInitService.validatePlayability(of: asset)
     }
-    
+
     /// Constructs an `AVPlayerItem` from the initialized `AVURLAsset` and binds observers.
     public func createPlayerItemFromAsset() {
         assert(
@@ -166,25 +177,25 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         )
         guard let asset, let media else { return }
         error = nil
-        
+
         // Stop any existing KVO observations
         observations.removeAll()
-        
+
         let newItem = playerItemInitService.createPlayerItem(from: asset, for: media)
-        self.playerItem = newItem
-        
+        playerItem = newItem
+
         // Reset track selection session targeting the new player item
         Task {
             await trackSelectionService.resetSession()
         }
-        
+
         // Attach live stream timed metadata output
         attachMetadataOutput(to: newItem)
-        
+
         bindObservers(to: newItem)
-        self.state = .playerItemLoaded
+        state = .playerItemLoaded
     }
-    
+
     /// Aborts active asset property loading and cancels pending operations.
     public func abortAssetInitialization() {
         observations.removeAll()
@@ -195,25 +206,25 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         metadataProvider.resetSession()
         chapterService.resetSession()
     }
-    
+
     // MARK: - Preflight Capability Checks
-    
+
     /// Evaluates if the player item can step forward or backward by a given frame count.
     public func canStep(by count: Int) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
         else { return false }
-        
+
         let isForward = count.signum() == 1
         return isForward ? playerItem.canStepForward : playerItem.canStepBackward
     }
-    
+
     /// Evaluates whether the player item supports playback at a specified rate.
     public func canPlay(at rate: AKPlaybackRate) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
         else { return false }
-        
+
         switch rate.rate {
         case 0.0...:
             switch rate.rate {
@@ -241,15 +252,18 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             return false
         }
     }
-    
+
     /// Evaluates whether seeking to a target seek target position is permitted.
     public func canSeek(to target: AKSeekTarget) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay else { return false }
         return seekingThroughMediaService.canSeek(to: target)
     }
-    
-    /// Evaluates whether seeking to a target seek target is permitted and returns an unavailability reason if disallowed.
-    public func canSeek(to target: AKSeekTarget) -> (flag: Bool, reason: AKPlayerUnavailableCommandReason?) {
+
+    /// Evaluates whether seeking to a target seek target is permitted and returns an unavailability
+    /// reason if disallowed.
+    public func canSeek(to target: AKSeekTarget)
+        -> (flag: Bool, reason: AKPlayerUnavailableCommandReason?)
+    {
         guard state.isPlayerItemLoaded || state.isReadyToPlay else {
             if state.isIdle || state.isFailed {
                 return (false, .loadMediaFirst)
@@ -259,7 +273,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         }
         return seekingThroughMediaService.canSeek(to: target)
     }
-    
+
     /// Checks if a specific playback capability is currently supported by the active player item.
     /// - Parameter capability: The playback capability to evaluate.
     /// - Returns: `true` if supported, `false` otherwise.
@@ -267,7 +281,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         guard state.isPlayerItemLoaded || state.isReadyToPlay,
               let playerItem
         else { return false }
-        
+
         switch capability {
         case .playReverse: return playerItem.canPlayReverse
         case .playFastForward: return playerItem.canPlayFastForward
@@ -278,16 +292,16 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         case .stepBackward: return playerItem.canStepBackward
         }
     }
-    
+
     // MARK: - Event Dispatch
-    
+
     /// Emits a media event to active listeners.
     public func emit(_ event: AKMediaEvent) {
         eventBroadcaster.send(event)
     }
-    
+
     // MARK: - Player Item Property Observation (Foundation KVO)
-    
+
     private func bindObservers(to item: AVPlayerItem) {
         // 1. Readiness & Status Observer
         observations.append(
@@ -295,71 +309,87 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
                 guard let self else { return }
                 switch observedItem.status {
                 case .readyToPlay:
-                    self.state = .readyToPlay
+                    state = .readyToPlay
                 case .failed:
-                    let underlyingError = observedItem.error ?? NSError(domain: "AKPlayer", code: -1, userInfo: nil)
-                    self.error = .playerItemLoadingFailed(reason: .statusLoadingFailed(error: underlyingError))
-                    self.state = .failed
+                    let underlyingError = observedItem.error ?? NSError(
+                        domain: "AKPlayer",
+                        code: -1,
+                        userInfo: nil
+                    )
+                    error =
+                        .playerItemLoadingFailed(
+                            reason: .statusLoadingFailed(error: underlyingError)
+                        )
+                    state = .failed
                 default:
                     break
                 }
             }
         )
-        
+
         // 2. Duration
         observations.append(
             item.observe(\.duration, options: [.initial, .new]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let duration = observedItem.duration
-                self.emit(.durationDidChange(duration))
+                emit(.durationDidChange(duration))
             }
         )
-        
+
         // 3. Presentation Resolution Size
         observations.append(
-            item.observe(\.presentationSize, options: [.initial, .new]) { [weak self] observedItem, _ in
+            item.observe(\.presentationSize, options: [
+                .initial,
+                .new,
+            ]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let size = observedItem.presentationSize
-                self.emit(.presentationSizeDidChange(size))
+                emit(.presentationSizeDidChange(size))
             }
         )
-        
+
         // 4. Tracks
         observations.append(
             item.observe(\.tracks, options: [.initial, .new]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let tracks = observedItem.tracks
-                self.emit(.tracksDidChange(tracks))
+                emit(.tracksDidChange(tracks))
             }
         )
-        
+
         // 5. Timebase
         observations.append(
             item.observe(\.timebase, options: [.initial, .new]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let timebase = observedItem.timebase
-                self.emit(.timebaseDidChange(timebase))
+                emit(.timebaseDidChange(timebase))
             }
         )
-        
+
         // 6. Loaded Time Ranges
         observations.append(
-            item.observe(\.loadedTimeRanges, options: [.initial, .new]) { [weak self] observedItem, _ in
+            item.observe(\.loadedTimeRanges, options: [
+                .initial,
+                .new,
+            ]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let ranges = observedItem.loadedTimeRanges.map(\.timeRangeValue)
-                self.emit(.loadedTimeRangesDidChange(ranges))
+                emit(.loadedTimeRangesDidChange(ranges))
             }
         )
-        
+
         // 7. Seekable Time Ranges
         observations.append(
-            item.observe(\.seekableTimeRanges, options: [.initial, .new]) { [weak self] observedItem, _ in
+            item.observe(\.seekableTimeRanges, options: [
+                .initial,
+                .new,
+            ]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let ranges = observedItem.seekableTimeRanges.map(\.timeRangeValue)
-                self.emit(.seekableTimeRangesDidChange(ranges))
+                emit(.seekableTimeRangesDidChange(ranges))
             }
         )
-        
+
         // 8. Playback Capabilities
         bindCapability(\.canStepForward, capability: .stepForward, on: item)
         bindCapability(\.canStepBackward, capability: .stepBackward, on: item)
@@ -369,7 +399,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         bindCapability(\.canPlaySlowForward, capability: .playSlowForward, on: item)
         bindCapability(\.canPlaySlowReverse, capability: .playSlowReverse, on: item)
     }
-    
+
     private func bindCapability(
         _ keyPath: KeyPath<AVPlayerItem, Bool>,
         capability: AKMediaCapability,
@@ -379,27 +409,27 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             item.observe(keyPath, options: [.initial, .new]) { [weak self] observedItem, _ in
                 guard let self else { return }
                 let isSupported = observedItem[keyPath: keyPath]
-                self.emit(.capabilityDidChange(capability, isSupported: isSupported))
+                emit(.capabilityDidChange(capability, isSupported: isSupported))
             }
         )
     }
-    
+
     // MARK: - Metadata & Chapter Loading
-    
+
     private func loadMetadataAndChapters(extractAssetFrom customItem: AVPlayerItem? = nil) {
         Task { [weak self] in
             guard let self else { return }
-            if self.asset == nil, let customItem {
-                self.asset = await MainActor.run { customItem.asset as? AVURLAsset }
+            if asset == nil, let customItem {
+                asset = await MainActor.run { customItem.asset as? AVURLAsset }
             }
-            async let meta: () = self.metadataProvider.loadMetadata()
-            async let chapters: () = self.chapterService.loadChapters()
+            async let meta: () = metadataProvider.loadMetadata()
+            async let chapters: () = chapterService.loadChapters()
             _ = await (meta, chapters)
         }
     }
-    
+
     // MARK: - Timed Metadata Output Attachment
-    
+
     private func attachMetadataOutput(to item: AVPlayerItem) {
         let metadataOutput = AVPlayerItemMetadataOutput(identifiers: nil)
         let queue = DispatchQueue(label: "com.akplayer.timedMetadataOutputQueue")
@@ -413,16 +443,17 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
 // MARK: - AVPlayerItemMetadataOutputPushDelegate
 
 extension AKMediaManager: AVPlayerItemMetadataOutputPushDelegate {
-    /// Receives timed metadata groups pushed from the media stream and forwards them to the metadata provider.
+    /// Receives timed metadata groups pushed from the media stream and forwards them to the
+    /// metadata provider.
     ///
     /// - Parameters:
     ///   - output: The metadata output pushing new timed metadata groups.
     ///   - groups: The list of timed metadata groups encountered in playback.
     ///   - track: The player item track from which metadata was read, if applicable.
     public func metadataOutput(
-        _ output: AVPlayerItemMetadataOutput,
+        _: AVPlayerItemMetadataOutput,
         didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
-        from track: AVPlayerItemTrack?
+        from _: AVPlayerItemTrack?
     ) {
         let items = groups.flatMap(\.items)
         guard !items.isEmpty else { return }
