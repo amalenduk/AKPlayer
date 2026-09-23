@@ -45,6 +45,7 @@ public struct LivePlayerView: View {
     @State private var scrubOffset = 0.0
     @State private var isPulseActive = false
     @State private var showCustomURLAlert = false
+    @State private var showingCustomAdsSheet = false
     @State private var customURLString = ""
     @State private var activeStreamTitle = "iReplay Live"
 
@@ -87,6 +88,13 @@ public struct LivePlayerView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
+                        Button {
+                            showingCustomAdsSheet = true
+                        } label: {
+                            Image(systemName: "badge.plus.radiowaves.right")
+                                .foregroundColor(.orange)
+                        }
+
                         Menu {
                             ForEach(sampleTestMedia.filter { $0.kind == .live }) { liveMedia in
                                 Button {
@@ -119,6 +127,9 @@ public struct LivePlayerView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showingCustomAdsSheet) {
+                CustomAdsManagerView(player: viewModel.player)
             }
             .alert("Load Custom Live Stream", isPresented: $showCustomURLAlert) {
                 TextField("https://example.com/live/master.m3u8", text: $customURLString)

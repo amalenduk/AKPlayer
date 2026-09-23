@@ -49,6 +49,7 @@ public struct SimpleVideoPlayerView: View {
     @State private var showingRateDialog = false
     @State private var showingSelectionSheet = false
     @State private var showingChaptersSheet = false
+    @State private var showingCustomAdsSheet = false
 
     @State private var isScrubbing = false
     @State private var scrubbingProgress = 0.0
@@ -115,6 +116,9 @@ public struct SimpleVideoPlayerView: View {
             }
             .sheet(isPresented: $showingChaptersSheet) {
                 chaptersSheet()
+            }
+            .sheet(isPresented: $showingCustomAdsSheet) {
+                CustomAdsManagerView(player: viewModel.player)
             }
         }
     }
@@ -492,15 +496,31 @@ public struct SimpleVideoPlayerView: View {
     }
 
     private func mediaOptionsSection() -> some View {
-        HStack(
-            alignment: .center,
-            spacing: 12
-        ) {
-            chaptersButton()
-            tracksButton()
-            infoButton()
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(
+                alignment: .center,
+                spacing: 8
+            ) {
+                customAdsButton()
+                chaptersButton()
+                tracksButton()
+                infoButton()
+            }
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
+    }
+
+    private func customAdsButton() -> some View {
+        Button {
+            showingCustomAdsSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "badge.plus.radiowaves.right")
+                Text("Add Ads")
+            }
+            .foregroundColor(.orange)
+        }
+        .buttonStyle(.bordered)
     }
 
     private func chaptersButton() -> some View {

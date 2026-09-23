@@ -23,8 +23,8 @@ public enum AKPlayerAction: Equatable, Sendable {
     case pause
     /// Action requesting playback to stop.
     case stop
-    /// Action requesting a seek to a specified target position.
-    case seek(to: AKSeekTarget)
+    /// Action requesting a seek to a specified target position within primary or integrated scope.
+    case seek(to: AKSeekTarget, scope: AKSeekScope = .primary)
     /// Action requesting a frame step by the given offset count.
     case step(by: Int)
     /// Action requesting fast forward at a specified rate.
@@ -258,7 +258,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         performIfAllowed(
             check: { [weak self] in
                 guard let self else { return (false, nil) }
-                return availability(for: .seek(to: target))
+                return availability(for: .seek(to: target, scope: scope))
             },
             action: { [weak self] in
                 guard let self else {
@@ -294,12 +294,10 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         )
     }
 
-    // MARK: 4. Media Navigation
+    // MARK: - Media Navigation
 
-    /// Steps frame-by-frame through video media by a specified frame count
-    /// offset.
-    /// - Parameter count: The frame offset count (positive for forward,
-    /// negative for reverse).
+    /// Steps frame-by-frame through video media by a specified frame count offset.
+    /// - Parameter count: The frame offset count (positive for forward, negative for reverse).
     public func step(by count: Int) {
         performIfAllowed(
             check: { [weak self] in
@@ -460,7 +458,7 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
             }
             return (true, nil)
 
-        case let .seek(to: target):
+        case let .seek(to: target, scope: scope):
             guard let currentMedia = playerController.currentMedia else {
                 return (false, .loadMediaFirst)
             }
@@ -468,6 +466,38 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                !playerController.interstitialService.canSeek
             {
                 return (false, .actionNotPermitted)
+            }
+
+            if scope == .integrated,
+               let timeline = playerController.interstitialService.integratedTimeline
+            {
+                let snapshotDur = CMTimeGetSeconds(timeline.currentSnapshot.duration)
+                let intDur = (playerController.interstitialService.integratedTimelineDuration > 0)
+                    ? playerController.interstitialService.integratedTimelineDuration
+                    : ((snapshotDur.isFinite && snapshotDur > 0) ? snapshotDur : 0.0)
+
+                if intDur > 0 {
+                    let currentSec = playerController.interstitialService
+                        .integratedTimelineCurrentTime
+                    let timescale: CMTimeScale = 600
+                    let curCM = CMTime(seconds: currentSec, preferredTimescale: timescale)
+                    let durCM = CMTime(seconds: intDur, preferredTimescale: timescale)
+                    guard let targetCM = target.resolve(
+                        currentTime: curCM,
+                        duration: durCM,
+                        preferredTimescale: timescale,
+                        clampToDuration: false
+                    ) else {
+                        return (false, .seekPositionNotAvailable)
+                    }
+                    guard targetCM.isValid, targetCM.isNumeric, targetCM >= .zero else {
+                        return (false, .seekPositionNotAvailable)
+                    }
+                    guard targetCM <= durCM else {
+                        return (false, .seekOverstepPosition)
+                    }
+                    return (true, nil)
+                }
             }
 
             let (flag, reason) = currentMedia.seekingThroughMedia

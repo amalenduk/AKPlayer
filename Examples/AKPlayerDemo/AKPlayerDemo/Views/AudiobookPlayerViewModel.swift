@@ -265,18 +265,23 @@ extension AudiobookPlayerViewModel: AKPlayerDelegate {
             self
                 .isLoading =
                 (state == .waitingForNetwork || state == .buffering || state == .loading)
+            let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
-            if dur.isFinite, dur > 0 {
-                self.duration = dur
+            let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
+            if effectiveDur > 0 {
+                self.duration = effectiveDur
             }
         }
     }
 
     public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo _: any AKPlayable) {
         DispatchQueue.main.async {
-            self.currentTime = player.currentTime.seconds
+            let intTime = player.interstitialService.integratedTimelineCurrentTime
+            self.currentTime = (intTime > 0) ? intTime : player.currentTime.seconds
+            let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
-            self.duration = (dur.isFinite && dur > 0) ? dur : 0
+            let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
+            self.duration = effectiveDur
         }
     }
 
@@ -287,14 +292,19 @@ extension AudiobookPlayerViewModel: AKPlayerDelegate {
     ) {
         let sec = currentTime.seconds
         DispatchQueue.main.async {
-            if sec.isFinite, !sec.isNaN {
+            let intTime = player.interstitialService.integratedTimelineCurrentTime
+            if intTime > 0 {
+                self.currentTime = intTime
+            } else if sec.isFinite, !sec.isNaN {
                 self.currentTime = sec
                 self.updateCurrentChapter(for: sec)
                 self.checkEndOfChapterSleepTimer(currentSeconds: sec)
             }
+            let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
-            if dur.isFinite, dur > 0, self.duration != dur {
-                self.duration = dur
+            let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
+            if effectiveDur > 0, self.duration != effectiveDur {
+                self.duration = effectiveDur
             }
             self.currentChapter = media.chapterService.currentChapter(at: currentTime)
             if self.chapters.isEmpty, !media.chapterService.chapters.isEmpty {

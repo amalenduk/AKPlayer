@@ -128,19 +128,7 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
             return 0.0
         }()
 
-        let durationSeconds: TimeInterval? = {
-            if let segment {
-                let segDur = CMTimeGetSeconds(segment.timeMapping.target.duration)
-                if !segDur.isNaN, !segDur.isInfinite, segDur > 0 {
-                    return segDur
-                }
-            }
-            let playoutLimit = CMTimeGetSeconds(event.playoutLimit)
-            if !playoutLimit.isNaN, !playoutLimit.isInfinite, playoutLimit > 0 {
-                return playoutLimit
-            }
-            return nil
-        }()
+        let durationSeconds: TimeInterval? = Self.adDuration(from: segment, event: event)
 
         self.init(
             id: event.identifier,
@@ -153,6 +141,41 @@ public struct AKInterstitialMarker: Identifiable, Sendable, Equatable, Hashable 
             templateItemCount: max(1, event.templateItems.count),
             title: event.identifier
         )
+    }
+
+    /// Extracts the effective ad duration in seconds from an optional segment or interstitial
+    /// event.
+    /// - Parameters:
+    ///   - segment: Optional matching AVPlayer item segment.
+    ///   - event: Optional AVPlayer interstitial event.
+    /// - Returns: The calculated duration in seconds if positive and finite, or `nil` otherwise.
+    public static func adDuration(
+        from segment: AVPlayerItemSegment? = nil,
+        event: AVPlayerInterstitialEvent? = nil
+    ) -> TimeInterval? {
+        if let segment {
+            let segDur = CMTimeGetSeconds(segment.timeMapping.target.duration)
+            if !segDur.isNaN, !segDur.isInfinite, segDur > 0 {
+                return segDur
+            }
+        }
+        if let event {
+            let playoutLimit = CMTimeGetSeconds(event.playoutLimit)
+            if !playoutLimit.isNaN, !playoutLimit.isInfinite, playoutLimit > 0 {
+                return playoutLimit
+            }
+            let totalTemplateDuration = event.templateItems.reduce(0.0) { total, item in
+                let itemDur = CMTimeGetSeconds(item.duration)
+                if !itemDur.isNaN, !itemDur.isInfinite, itemDur > 0 {
+                    return total + itemDur
+                }
+                return total
+            }
+            if totalTemplateDuration > 0 {
+                return totalTemplateDuration
+            }
+        }
+        return nil
     }
 }
 

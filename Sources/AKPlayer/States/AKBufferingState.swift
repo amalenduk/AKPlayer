@@ -252,7 +252,7 @@ public class AKBufferingState: AKBaseState {
         performIfAllowed(
             check: { [weak self] in
                 guard let self else { return (false, nil) }
-                return availability(for: .seek(to: target))
+                return availability(for: .seek(to: target, scope: scope))
             },
             action: { [weak self] in
                 guard let s = self else {
@@ -295,7 +295,7 @@ public class AKBufferingState: AKBaseState {
         performIfAllowed(
             check: { [weak self] in
                 guard let self else { return (false, nil) }
-                return availability(for: .seek(to: target))
+                return availability(for: .seek(to: target, scope: scope))
             },
             action: { [weak self] in
                 guard let s = self else {

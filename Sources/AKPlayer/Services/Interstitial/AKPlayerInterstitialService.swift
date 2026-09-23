@@ -90,7 +90,9 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     }
 
     /// Synthesized ad markers for rendering cue points and fill segments on a progress bar.
-    public private(set) var markers: [AKInterstitialMarker] = []
+    public var markers: [AKInterstitialMarker] {
+        buildMarkers()
+    }
 
     // MARK: - Private State
 
@@ -98,6 +100,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     private var customEvents: [AVPlayerInterstitialEvent] = []
     /// Identifiers of interstitial events that have finished playing.
     private var playedEventIDs: Set<String> = []
+    /// Last emitted ad markers list to avoid redundant change events.
+    private var lastEmittedMarkers: [AKInterstitialMarker] = []
 
     /// Weak reference to the primary content AVPlayer.
     private weak var primaryPlayer: AVPlayer?
@@ -207,14 +211,12 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     public func setEvents(_ events: [AVPlayerInterstitialEvent]) {
         customEvents = events
         controller?.events = events
-        refreshMarkers()
     }
 
     /// Appends interstitial events to the existing schedule.
     public func appendEvents(_ events: [AVPlayerInterstitialEvent]) {
         customEvents.append(contentsOf: events)
         controller?.events = customEvents
-        refreshMarkers()
     }
 
     /// Schedules multiple interstitial events from configuration objects.
@@ -244,7 +246,6 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             customEvents.append(contentsOf: newEvents)
         }
         controller.events = customEvents
-        refreshMarkers()
     }
 
     /// Schedules a single interstitial event.
@@ -408,9 +409,13 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             ) {
                 guard !Task.isCancelled, let self else { break }
                 await MainActor.run {
-                    let events = self.scheduledEvents
-                    self.refreshMarkers()
-                    self.emit(.scheduleDidChange(events))
+                    if let timeline = self.currentItem?.integratedTimeline {
+                        self.syncSnapshot(timeline.currentSnapshot)
+                    } else {
+                        self.refreshMarkers()
+                    }
+                    self.emit(.scheduleDidChange(self.scheduledEvents))
+                    self.emit(.adMarkersDidChange(self.markers))
                 }
             }
         }
@@ -427,20 +432,18 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         // Initial snapshot sync
         syncSnapshot(timeline.currentSnapshot)
 
-        // KVO on currentSnapshot
+        // Observe duration changes on primary player item to update snapshot when duration resolves
         timelineObservations.append(
-            timeline.observe(\.currentSnapshot, options: [
-                .initial,
-                .new,
-            ]) { [weak self] observedTimeline, _ in
-                let snapshot = observedTimeline.currentSnapshot
+            item.observe(\.duration, options: [.new]) { [weak self, weak timeline] _, _ in
+                guard let timeline else { return }
                 Task { @MainActor [weak self] in
-                    self?.syncSnapshot(snapshot)
+                    self?.syncSnapshot(timeline.currentSnapshot)
                 }
             }
         )
 
-        // Notification on snapshot sync out-of-order
+        // Notification when integrated timeline snapshots change / update (Apple's official
+        // notification)
         timelineEventsTask = Task { [weak self, weak timeline] in
             guard let timeline else { return }
             for await _ in NotificationCenter.default.notifications(
@@ -449,6 +452,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             ) {
                 guard !Task.isCancelled, let self else { break }
                 await MainActor.run {
+                    self.syncSnapshot(timeline.currentSnapshot)
                     self.emit(.integratedTimeline(.snapshotOutOfSync))
                 }
             }
@@ -576,7 +580,14 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     /// Synchronizes internal timeline segments and metrics with a new integrated timeline snapshot.
     /// - Parameter snapshot: The updated timeline snapshot.
     private func syncSnapshot(_ snapshot: AVPlayerItemIntegratedTimelineSnapshot) {
-        guard let timeline = currentItem?.integratedTimeline else { return }
+        let activeItem = currentItem ?? primaryPlayer?.currentItem
+        if currentItem == nil {
+            currentItem = activeItem
+        }
+        guard let timeline = activeItem?.integratedTimeline else {
+            refreshMarkers()
+            return
+        }
 
         let segments = snapshot.segments
 
@@ -635,14 +646,15 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
 
     /// Re-synthesizes all timeline markers combining scheduled events and integrated timeline
     /// segments.
-    private func refreshMarkers() {
+    private func buildMarkers() -> [AKInterstitialMarker] {
         var newMarkers: [AKInterstitialMarker] = []
         let currentEventID = currentEvent?.identifier
 
         // Build map of interstitial segments from integrated timeline snapshots
         var segmentsByEventID: [String: AVPlayerItemSegment] = [:]
-        if let currentItem {
-            for segment in currentItem.integratedTimeline.currentSnapshot.segments
+        let activeItem = currentItem ?? primaryPlayer?.currentItem
+        if let activeItem {
+            for segment in activeItem.integratedTimeline.currentSnapshot.segments
                 where segment.segmentType == .interstitial
             {
                 if let event = segment.interstitialEvent {
@@ -690,10 +702,14 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
 
         newMarkers.sort { $0.time < $1.time }
+        return newMarkers
+    }
 
-        guard markers != newMarkers else { return }
-        markers = newMarkers
-        emit(.adMarkersDidChange(markers))
+    private func refreshMarkers() {
+        let currentMarkers = buildMarkers()
+        guard lastEmittedMarkers != currentMarkers else { return }
+        lastEmittedMarkers = currentMarkers
+        emit(.adMarkersDidChange(currentMarkers))
     }
 
     // MARK: - Private Interstitial Playback State Management

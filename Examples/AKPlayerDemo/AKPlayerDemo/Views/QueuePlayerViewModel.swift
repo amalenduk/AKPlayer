@@ -162,9 +162,11 @@ extension QueuePlayerViewModel: AKPlayerDelegate {
             self.stateDescription = state.description
             self.isPlaying = (state == .playing)
             self.isLoading = state.isAny(of: [.loading, .buffering, .waitingForNetwork])
+            let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
-            if dur.isFinite, dur > 0 {
-                self.duration = dur
+            let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
+            if effectiveDur > 0 {
+                self.duration = effectiveDur
             }
             self.updateQueueProperties()
         }
@@ -173,9 +175,12 @@ extension QueuePlayerViewModel: AKPlayerDelegate {
     public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
         DispatchQueue.main.async {
             self.currentMedia = media
-            self.currentTime = player.currentTime.seconds
+            let intTime = player.interstitialService.integratedTimelineCurrentTime
+            self.currentTime = (intTime > 0) ? intTime : player.currentTime.seconds
+            let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
-            self.duration = (dur.isFinite && dur > 0) ? dur : 0
+            let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
+            self.duration = effectiveDur
             self.updateQueueProperties()
         }
     }
@@ -186,10 +191,17 @@ extension QueuePlayerViewModel: AKPlayerDelegate {
         for _: any AKPlayable
     ) {
         DispatchQueue.main.async {
-            self.currentTime = currentTime.seconds
+            let intTime = player.interstitialService.integratedTimelineCurrentTime
+            if intTime > 0 {
+                self.currentTime = intTime
+            } else {
+                self.currentTime = currentTime.seconds
+            }
+            let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
-            if dur.isFinite, dur > 0, self.duration != dur {
-                self.duration = dur
+            let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
+            if effectiveDur > 0, self.duration != effectiveDur {
+                self.duration = effectiveDur
             }
         }
     }

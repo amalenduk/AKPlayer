@@ -166,4 +166,22 @@ struct AKInterstitialMarkerTests {
         #expect(completedBox.withLock { $0 })
         #expect(successBox.withLock { $0 } == false)
     }
+
+    @MainActor
+    @Test func integratedTimelineSeekingActionAndAvailability() {
+        let target = AKSeekTarget.seconds(120)
+        let actionIntegrated = AKPlayerAction.seek(to: target, scope: .integrated)
+        let actionPrimary = AKPlayerAction.seek(to: target, scope: .primary)
+        let defaultAction = AKPlayerAction.seek(to: target)
+
+        #expect(actionPrimary == defaultAction)
+        #expect(actionIntegrated != actionPrimary)
+
+        if case let .seek(to: resolvedTarget, scope: resolvedScope) = actionIntegrated {
+            #expect(resolvedTarget == target)
+            #expect(resolvedScope == .integrated)
+        } else {
+            Issue.record("Expected .seek case with integrated scope")
+        }
+    }
 }

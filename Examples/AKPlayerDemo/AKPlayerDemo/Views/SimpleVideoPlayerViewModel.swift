@@ -130,8 +130,16 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 switch event {
                 case .scheduleDidChange:
                     adMarkers = service.markers
+                    let intDur = service.integratedTimelineDuration
+                    if intDur > 0 {
+                        duration = intDur
+                    }
                 case let .adMarkersDidChange(markers):
                     adMarkers = markers
+                    let intDur = service.integratedTimelineDuration
+                    if intDur > 0 {
+                        duration = intDur
+                    }
                 case let .willStart(event):
                     interstitialIdentifier = event.identifier
                     isInterstitialActive = true
@@ -147,16 +155,19 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                     interstitialIdentifier = nil
                     interstitialProgress = nil
                     adMarkers = service.markers
-                case let .integratedTimeline(event):
+                case let .integratedTimeline(timelineEvent):
                     adMarkers = service.markers
-                    switch event {
+                    switch timelineEvent {
                     case let .timeUpdated(current, _, dur):
                         if dur > 0 {
                             duration = dur
                         }
                         currentTime = current
                     case .segmentsUpdated, .snapshotOutOfSync:
-                        break
+                        let intDur = service.integratedTimelineDuration
+                        if intDur > 0 {
+                            duration = intDur
+                        }
                     }
                 case let .playbackStateDidChange(state):
                     interstitialPlaybackState = state
@@ -188,7 +199,9 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     }
 
     public func selectChapter(_ chapter: AKChapter) {
-        seek(to: chapter.startTime)
+        Task {
+            await player.seek(to: .seconds(chapter.startTime), scope: .primary)
+        }
     }
 
     public func refreshChapters() {
@@ -453,11 +466,10 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             let dur = player.currentItemDuration.seconds
             if intDur > 0 {
                 self.duration = intDur
-            } else if dur.isFinite, dur > 0 {
+            } else if dur.isFinite, dur > 0, self.duration == 0 {
                 self.duration = dur
             }
             self.adMarkers = self.interstitialService.markers
-            print(self.interstitialService.markers)
         }
     }
 
@@ -490,7 +502,7 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             {
                 self.currentTime = currentTime.seconds
                 let dur = player.currentItemDuration.seconds
-                if dur.isFinite, dur > 0, self.duration != dur {
+                if dur.isFinite, dur > 0, self.duration == 0 {
                     self.duration = dur
                 }
             }

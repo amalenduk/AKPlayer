@@ -38,6 +38,7 @@ public struct QueuePlayerView: View {
 
     @State private var isScrubbing = false
     @State private var scrubbingProgress = 0.0
+    @State private var showingCustomAdsSheet = false
     @Environment(\.dismiss) private var dismiss
 
     public init(
@@ -71,15 +72,27 @@ public struct QueuePlayerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.stop()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
+                    HStack(spacing: 12) {
+                        Button {
+                            showingCustomAdsSheet = true
+                        } label: {
+                            Image(systemName: "badge.plus.radiowaves.right")
+                                .foregroundColor(.orange)
+                        }
+
+                        Button {
+                            viewModel.stop()
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
+            }
+            .sheet(isPresented: $showingCustomAdsSheet) {
+                CustomAdsManagerView(player: viewModel.queuePlayer)
             }
             .onAppear {
                 viewModel.loadQueue(with: initialMedias, startIndex: initialIndex)

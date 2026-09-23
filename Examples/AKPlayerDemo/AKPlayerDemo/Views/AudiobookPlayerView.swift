@@ -18,6 +18,7 @@ public struct AudiobookPlayerView: View {
     @State private var showingChaptersSheet = false
     @State private var showingRateDialog = false
     @State private var showingSleepTimerSheet = false
+    @State private var showingCustomAdsSheet = false
     @State private var isScrubbing = false
     @State private var scrubbingValue = 0.0
 
@@ -81,6 +82,9 @@ public struct AudiobookPlayerView: View {
             }
             .sheet(isPresented: $showingSleepTimerSheet) {
                 sleepTimerSheet()
+            }
+            .sheet(isPresented: $showingCustomAdsSheet) {
+                CustomAdsManagerView(player: viewModel.player)
             }
             .confirmationDialog(
                 "Playback Speed",
@@ -331,7 +335,7 @@ public struct AudiobookPlayerView: View {
                         .fontWeight(.semibold)
                 }
                 .font(.caption)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.15))
                 .foregroundColor(.white)
@@ -350,13 +354,32 @@ public struct AudiobookPlayerView: View {
                         .fontWeight(.semibold)
                 }
                 .font(.caption)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.15))
                 .foregroundColor(.white)
                 .clipShape(Capsule())
             }
             .disabled(viewModel.chapters.isEmpty)
+
+            Spacer()
+
+            // Custom Ads Button
+            Button {
+                showingCustomAdsSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "badge.plus.radiowaves.right")
+                    Text("Ads")
+                        .fontWeight(.semibold)
+                }
+                .font(.caption)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.orange.opacity(0.25))
+                .foregroundColor(.orange)
+                .clipShape(Capsule())
+            }
 
             Spacer()
 
@@ -376,7 +399,7 @@ public struct AudiobookPlayerView: View {
                     }
                 }
                 .font(.caption)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(viewModel.sleepTimerOption == .off ? Color.white.opacity(0.15) : Color
                     .yellow.opacity(0.3))
