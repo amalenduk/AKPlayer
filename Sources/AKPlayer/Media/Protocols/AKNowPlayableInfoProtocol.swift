@@ -8,7 +8,11 @@
 
 import Foundation
 import MediaPlayer
-import UIKit
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 // MARK: - Now Playable Info Protocol
 
@@ -44,8 +48,8 @@ public extension AKNowPlayableInfoProtocol {
 
 /// Represents the visual artwork source associated with a media item.
 public enum Artwork: Equatable, @unchecked Sendable {
-    /// Standard `UIImage` asset.
-    case image(UIImage)
+    /// Standard platform image asset (`UIImage` on iOS/tvOS, `NSImage` on macOS).
+    case image(AKPlatformImage)
 
     /// Raw binary image data.
     case data(Data)
@@ -100,8 +104,12 @@ public protocol AKNowPlayableStaticMetadataProtocol: Sendable {
     /// Unique service identifier (`MPNowPlayingInfoPropertyServiceIdentifier`).
     var serviceIdentifier: String? { get set }
 
-    /// Time ranges for advertisements (`MPNowPlayingInfoPropertyAdTimeRanges`).
-    var adTimeRanges: [MPAdTimeRange]? { get set }
+    #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+        /// Time ranges for advertisements (`MPNowPlayingInfoPropertyAdTimeRanges`).
+        var adTimeRanges: [MPAdTimeRange]? {
+            get set
+        }
+    #endif
 
     /// Music / item genre (`MPMediaItemPropertyGenre`).
     var genre: String? { get set }
@@ -183,10 +191,12 @@ public extension AKNowPlayableStaticMetadataProtocol {
         get { nil } set {}
     }
 
-    /// The default ad time ranges (returns `nil`).
-    var adTimeRanges: [MPAdTimeRange]? {
-        get { nil } set {}
-    }
+    #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+        /// The default ad time ranges (returns `nil`).
+        var adTimeRanges: [MPAdTimeRange]? {
+            get { nil } set {}
+        }
+    #endif
 
     /// The default genre name (returns `nil`).
     var genre: String? {
@@ -246,7 +256,7 @@ public extension AKNowPlayableStaticMetadataProtocol {
             )
             return MPMediaItemArtwork(boundsSize: boundsSize) { _ in image }
         case let .data(data):
-            guard let image = UIImage(data: data) else { return nil }
+            guard let image = AKPlatformImage(data: data) else { return nil }
             let boundsSize = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
                 width: 300,
                 height: 300
@@ -286,9 +296,11 @@ public extension AKNowPlayableStaticMetadataProtocol {
             nowPlayingInfo[MPNowPlayingInfoPropertyServiceIdentifier] = serviceIdentifier
         }
 
-        if let adTimeRanges {
-            nowPlayingInfo[MPNowPlayingInfoPropertyAdTimeRanges] = adTimeRanges
-        }
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            if let adTimeRanges {
+                nowPlayingInfo[MPNowPlayingInfoPropertyAdTimeRanges] = adTimeRanges
+            }
+        #endif
 
         if let genre {
             nowPlayingInfo[MPMediaItemPropertyGenre] = genre

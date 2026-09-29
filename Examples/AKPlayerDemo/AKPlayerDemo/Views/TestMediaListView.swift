@@ -176,33 +176,61 @@ public struct TestMediaListView: View {
                 }
             }
             .navigationTitle("Apple Test Streams")
-            .navigationBarTitleDisplayMode(.large)
+            .adaptiveLargeNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button {
-                            if let live = medias.first(where: { $0.kind == .live }) {
-                                livePlayerMedia = live
+                #if os(iOS) || os(tvOS) || os(visionOS)
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: 12) {
+                            Button {
+                                if let live = medias.first(where: { $0.kind == .live }) {
+                                    livePlayerMedia = live
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                    Text("Live")
+                                }
+                                .foregroundColor(.red)
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "dot.radiowaves.left.and.right")
-                                Text("Live")
-                            }
-                            .foregroundColor(.red)
-                        }
 
-                        Button {
-                            queueStartIndex = 0
-                            isQueuePlayerPresented = true
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "play.square.stack")
-                                Text("Queue")
+                            Button {
+                                queueStartIndex = 0
+                                isQueuePlayerPresented = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "play.square.stack")
+                                    Text("Queue")
+                                }
                             }
                         }
                     }
-                }
+                #else
+                    ToolbarItem(placement: .primaryAction) {
+                        HStack(spacing: 12) {
+                            Button {
+                                if let live = medias.first(where: { $0.kind == .live }) {
+                                    livePlayerMedia = live
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                    Text("Live")
+                                }
+                                .foregroundColor(.red)
+                            }
+
+                            Button {
+                                queueStartIndex = 0
+                                isQueuePlayerPresented = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "play.square.stack")
+                                    Text("Queue")
+                                }
+                            }
+                        }
+                    }
+                #endif
             }
             .sheet(item: $selectedMedia) { media in
                 NavigationStack {
@@ -238,7 +266,7 @@ public struct TestMediaListView: View {
                                         }
                                     }
                                     .padding()
-                                    .background(Color(.secondarySystemBackground))
+                                    .background(Color.gray.opacity(0.12))
                                     .cornerRadius(10)
                                 }
                             }
@@ -252,7 +280,7 @@ public struct TestMediaListView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                         .padding()
-                                        .background(Color(.secondarySystemBackground))
+                                        .background(Color.gray.opacity(0.12))
                                         .cornerRadius(10)
                                 }
                             }
@@ -273,14 +301,14 @@ public struct TestMediaListView: View {
                         .padding()
                     }
                     .navigationTitle("Stream Details")
-                    .navigationBarTitleDisplayMode(.inline)
+                    .adaptiveInlineNavigationBarTitle()
                     .toolbar {
-                        ToolbarItem(placement: .topBarLeading) {
+                        ToolbarItem(placement: .cancellationAction) {
                             Button("Close") {
                                 selectedMedia = nil
                             }
                         }
-                        ToolbarItem(placement: .topBarTrailing) {
+                        ToolbarItem(placement: .confirmationAction) {
                             Menu {
                                 if media.kind == .live {
                                     Button("Play in Live Player (Jump to Live)") {
@@ -328,7 +356,7 @@ public struct TestMediaListView: View {
                     }
                 }
             }
-            .fullScreenCover(item: $playerMedia) { media in
+            .adaptiveFullScreenCover(item: $playerMedia) { media in
                 NavigationStack {
                     SimpleVideoPlayerView(
                         media: makeAKMedia(from: media),
@@ -336,13 +364,13 @@ public struct TestMediaListView: View {
                     )
                 }
             }
-            .fullScreenCover(item: $audiobookPlayerMedia) { media in
+            .adaptiveFullScreenCover(item: $audiobookPlayerMedia) { media in
                 AudiobookPlayerView(
                     media: makeAKMedia(from: media),
                     autoPlay: true
                 )
             }
-            .fullScreenCover(item: $livePlayerMedia) { media in
+            .adaptiveFullScreenCover(item: $livePlayerMedia) { media in
                 NavigationStack {
                     LivePlayerView(
                         media: makeAKMedia(from: media),
@@ -350,7 +378,7 @@ public struct TestMediaListView: View {
                     )
                 }
             }
-            .fullScreenCover(isPresented: $isQueuePlayerPresented) {
+            .adaptiveFullScreenCover(isPresented: $isQueuePlayerPresented) {
                 QueuePlayerView(
                     medias: medias,
                     startIndex: queueStartIndex

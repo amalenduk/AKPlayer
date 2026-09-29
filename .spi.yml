@@ -4,3 +4,9 @@ builder:
     - documentation_targets: [AKPlayer]
       platform: ios
       scheme: AKPlayer
+    - documentation_targets: [AKPlayer]
+      platform: macos
+      scheme: AKPlayer
+    - documentation_targets: [AKPlayer]
+      platform: tvos
+      scheme: AKPlayer

@@ -81,8 +81,10 @@ public protocol AKNowPlayingSessionProtocol: AnyObject, Sendable {
 public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     // MARK: - System
 
-    /// The underlying system MPNowPlayingSession instance for multi-player routing.
-    private var nowPlayingSession: MPNowPlayingSession?
+    #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+        /// The underlying system MPNowPlayingSession instance for multi-player routing.
+        private var nowPlayingSession: MPNowPlayingSession?
+    #endif
     /// Fallback remote command center used when MPNowPlayingSession is unavailable.
     private let fallbackRemoteCommandCenter: MPRemoteCommandCenter
     /// Fallback now playing info center used when MPNowPlayingSession is unavailable.
@@ -90,17 +92,29 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
 
     /// The remote command center associated with this session.
     public var remoteCommandCenter: MPRemoteCommandCenter {
-        nowPlayingSession?.remoteCommandCenter ?? fallbackRemoteCommandCenter
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            return nowPlayingSession?.remoteCommandCenter ?? fallbackRemoteCommandCenter
+        #else
+            return fallbackRemoteCommandCenter
+        #endif
     }
 
     /// The now playing info center associated with this session.
     public var nowPlayingInfoCenter: MPNowPlayingInfoCenter {
-        nowPlayingSession?.nowPlayingInfoCenter ?? fallbackNowPlayingInfoCenter
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            return nowPlayingSession?.nowPlayingInfoCenter ?? fallbackNowPlayingInfoCenter
+        #else
+            return fallbackNowPlayingInfoCenter
+        #endif
     }
 
     /// Indicates whether the Now Playing session is currently active.
     public var isActive: Bool {
-        nowPlayingSession?.isActive ?? false
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            return nowPlayingSession?.isActive ?? false
+        #else
+            return true
+        #endif
     }
 
     // MARK: - Local command state
@@ -123,10 +137,15 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
     /// Initializes a multi-player Now Playing session bound to the provided AVPlayer instances.
     /// - Parameter players: The player instances associated with this session.
     public init(players: [AVPlayer]) {
-        let session = MPNowPlayingSession(players: players)
-        nowPlayingSession = session
-        fallbackRemoteCommandCenter = session.remoteCommandCenter
-        fallbackNowPlayingInfoCenter = session.nowPlayingInfoCenter
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            let session = MPNowPlayingSession(players: players)
+            nowPlayingSession = session
+            fallbackRemoteCommandCenter = session.remoteCommandCenter
+            fallbackNowPlayingInfoCenter = session.nowPlayingInfoCenter
+        #else
+            fallbackRemoteCommandCenter = .shared()
+            fallbackNowPlayingInfoCenter = .default()
+        #endif
     }
 
     /// Initializes a fallback Now Playing session using shared remote command and info centers.
@@ -137,7 +156,9 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
         remoteCommandCenter: MPRemoteCommandCenter = .shared(),
         nowPlayingInfoCenter: MPNowPlayingInfoCenter = .default()
     ) {
-        nowPlayingSession = nil
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            nowPlayingSession = nil
+        #endif
         fallbackRemoteCommandCenter = remoteCommandCenter
         fallbackNowPlayingInfoCenter = nowPlayingInfoCenter
     }
@@ -239,31 +260,46 @@ public final class AKNowPlayingSession: AKNowPlayingSessionProtocol {
 
     /// Returns whether the system session can currently become active.
     public func canBecomeActive() -> Bool {
-        nowPlayingSession?.canBecomeActive ?? true
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            return nowPlayingSession?.canBecomeActive ?? true
+        #else
+            return true
+        #endif
     }
 
     /// Attempts to activate the Now Playing session.
     /// - Returns: `true` if session activation succeeded, `false` otherwise.
     public func becomeActiveIfPossible() async -> Bool {
-        guard let systemSession = nowPlayingSession else { return true }
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            guard let systemSession = nowPlayingSession else { return true }
 
-        return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
-            systemSession.becomeActiveIfPossible { success in
-                continuation.resume(returning: success)
+            return await withCheckedContinuation { (continuation: CheckedContinuation<
+                Bool,
+                Never
+            >) in
+                systemSession.becomeActiveIfPossible { success in
+                    continuation.resume(returning: success)
+                }
             }
-        }
+        #else
+            return true
+        #endif
     }
 
     /// Adds an AVPlayer instance to the multi-player session.
     /// - Parameter player: The player instance to add.
     public func addPlayer(_ player: AVPlayer) {
-        nowPlayingSession?.addPlayer(player)
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            nowPlayingSession?.addPlayer(player)
+        #endif
     }
 
     /// Removes an AVPlayer instance from the multi-player session.
     /// - Parameter player: The player instance to remove.
     public func removePlayer(_ player: AVPlayer) {
-        nowPlayingSession?.removePlayer(player)
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            nowPlayingSession?.removePlayer(player)
+        #endif
     }
 
     // MARK: - Private registration

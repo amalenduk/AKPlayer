@@ -252,7 +252,7 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
                     guard !Task.isCancelled else { return nil }
                     var chapterTitle: String?
                     var artworkData: Data?
-                    var artworkImage: UIImage?
+                    var artworkImage: AKPlatformImage?
 
                     for item in groupItem.items {
                         if item.commonKey == .commonKeyTitle || item
@@ -264,7 +264,7 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
                         {
                             if let data = try? await item.load(.dataValue) {
                                 artworkData = data
-                                artworkImage = UIImage(data: data)
+                                artworkImage = AKPlatformImage(data: data)
                             }
                         }
                     }

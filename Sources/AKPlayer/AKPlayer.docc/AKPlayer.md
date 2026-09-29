@@ -1,6 +1,6 @@
 # ``AKPlayer``
 
-A modern, highly modular, Swift 6 concurrency-ready audio/video playback framework for iOS.
+A modern, highly modular, Swift 6 concurrency-ready audio/video playback framework for iOS, iPadOS, tvOS, and macOS.
 
 @Metadata {
     @TechnologyRoot
@@ -8,10 +8,11 @@ A modern, highly modular, Swift 6 concurrency-ready audio/video playback framewo
 
 ## Overview
 
-**AKPlayer** provides an extensible, production-ready playback foundation built on top of Apple's AVFoundation framework. It features state machine architecture, stream caching, boundary time observers, audio session interruptions, Picture-in-Picture, Now Playing metadata sync, FairPlay Streaming (DRM), Apple SharePlay (`GroupActivities`), live edge synchronization, interstitial marker tracking, and high-fidelity pitch preservation for variable-speed audio.
+**AKPlayer** provides an extensible, production-ready playback foundation built on top of Apple's AVFoundation framework with native multi-platform support across **iOS 18+**, **iPadOS 18+**, **tvOS 18+**, and **macOS 15+**. It features state machine architecture, stream caching, boundary time observers, audio session interruptions, Picture-in-Picture, Now Playing metadata sync, FairPlay Streaming (DRM), Apple SharePlay (`GroupActivities`), live edge synchronization, interstitial marker tracking, and high-fidelity pitch preservation for variable-speed audio.
 
 ### Key Highlights
 
+- **Native Multi-Platform**: First-class support for iOS, iPadOS, tvOS (Apple TV), and macOS (Mac) via unified abstractions (``AKPlatformView``, ``AKPlatformImage``, ``AKPlatformColor``).
 - **Modern Concurrency**: Full Swift 6 strict concurrency compliance (`Sendable`, `@MainActor`, `AsyncStream`).
 - **Apple SharePlay Integration**: Synchronize playback with friends across FaceTime using Apple's `GroupActivities` framework and `AVPlayerPlaybackCoordinator`.
 - **FairPlay Streaming (DRM)**: Built-in `AKFairPlayHandler` to securely manage certificate loading and content key context (CKC) requests.
@@ -19,7 +20,7 @@ A modern, highly modular, Swift 6 concurrency-ready audio/video playback framewo
 - **Live Stream Edge Synchronization**: Monitor live stream drift and jump directly to the live edge with `jumpToLive()`.
 - **Timed Interstitials & Ads**: Parse HLS interstitials or synthesize local ad markers with custom action policies (`.skip`, `.freeze`, `.playAd`).
 - **Rich Media & Chapters**: Integrated chapter navigation, static artwork/metadata, and dynamic Now Playing info synchronization.
-- **Customizable UI**: Includes ready-to-use SwiftUI and UIKit progress bar components (`AKProgressBar`).
+- **Customizable UI**: Includes ready-to-use SwiftUI, UIKit, and AppKit progress bar and video player components (``AKProgressBar``, ``AKPlayerView``).
 
 ## Topics
 

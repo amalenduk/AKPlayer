@@ -61,7 +61,8 @@ struct AKFairPlayTests {
             #expect(!handler.contentKeySession.contentKeyRecipients
                 .contains { $0 as? AVURLAsset == asset })
 
-            handler.attach(to: asset)
+            let secondAsset = AVURLAsset(url: assetURL)
+            handler.attach(to: secondAsset)
             #expect(handler.contentKeySession.keySystem == .fairPlayStreaming)
 
             try await handler.preloadCertificate()
@@ -89,7 +90,7 @@ struct AKFairPlayTests {
                 },
                 extractContentIdentifier: { url in
                     box.extractorCalled = true
-                    return url.lastPathComponent.data(using: .utf8) ?? Data()
+                    return (url.host ?? url.lastPathComponent).data(using: .utf8) ?? Data()
                 },
                 fetchLicenseKey: { _, _, _ in
                     box.licenseFetchCalled = true

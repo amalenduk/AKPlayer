@@ -9,84 +9,97 @@
 import AVFoundation
 import Foundation
 
-// MARK: - AKAudioSessionConfiguration
+#if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
 
-/// Represents audio session parameters used to configure `AVAudioSession`
-/// behavior.
-public struct AKAudioSessionConfiguration: Sendable {
-    // MARK: - Properties
+    // MARK: - AKAudioSessionConfiguration
 
-    /// The audio session category defining the general audio behavior of the
-    /// app. Defaults to `.playback`.
-    public var category: AVAudioSession.Category = .playback
+    /// Represents audio session parameters used to configure `AVAudioSession`
+    /// behavior.
+    public struct AKAudioSessionConfiguration: Sendable {
+        // MARK: - Properties
 
-    /// The options applied when activating or deactivating the audio session.
-    /// Defaults to empty set `[]`.
-    public var activeOptions: AVAudioSession.SetActiveOptions = []
+        /// The audio session category defining the general audio behavior of the
+        /// app. Defaults to `.playback`.
+        public var category: AVAudioSession.Category = .playback
 
-    /// The audio session mode clarifying the intended use of the category.
-    /// Defaults to `.default`.
-    public var mode: AVAudioSession.Mode = .default
+        /// The options applied when activating or deactivating the audio session.
+        /// Defaults to empty set `[]`.
+        public var activeOptions: AVAudioSession.SetActiveOptions = []
 
-    /// Additional options refining the audio session category behavior.
-    /// Defaults to empty set `[]`.
-    public var categoryOptions: AVAudioSession.CategoryOptions = []
+        /// The audio session mode clarifying the intended use of the category.
+        /// Defaults to `.default`.
+        public var mode: AVAudioSession.Mode = .default
 
-    /// The route sharing policy for AirPlay and multi-route audio routing.
-    /// Defaults to `.default`.
-    public var routeSharingPolicy: AVAudioSession.RouteSharingPolicy = .default
+        /// Additional options refining the audio session category behavior.
+        /// Defaults to empty set `[]`.
+        public var categoryOptions: AVAudioSession.CategoryOptions = []
 
-    // MARK: - Initialization
+        /// The route sharing policy for AirPlay and multi-route audio routing.
+        /// Defaults to `.default`.
+        public var routeSharingPolicy: AVAudioSession.RouteSharingPolicy = .default
 
-    /// Initializes a new audio session configuration with customizable options.
-    /// - Parameters:
-    ///   - category: The audio session category. Defaults to `.playback`.
-    ///   - activeOptions: Options applied during session activation/deactivation. Defaults to `[]`.
-    ///   - mode: The intended operational audio session mode. Defaults to `.default`.
-    ///   - categoryOptions: Options refining audio category behavior. Defaults to `[]`.
-    ///   - routeSharingPolicy: Route sharing policy for AirPlay/multi-room audio. Defaults to
-    /// `.default`.
-    public init(
-        category: AVAudioSession.Category = .playback,
-        activeOptions: AVAudioSession.SetActiveOptions = [],
-        mode: AVAudioSession.Mode = .default,
-        categoryOptions: AVAudioSession.CategoryOptions = [],
-        routeSharingPolicy: AVAudioSession.RouteSharingPolicy = .default
-    ) {
-        self.category = category
-        self.activeOptions = activeOptions
-        self.mode = mode
-        self.categoryOptions = categoryOptions
-        self.routeSharingPolicy = routeSharingPolicy
+        // MARK: - Initialization
+
+        /// Initializes a new audio session configuration with customizable options.
+        /// - Parameters:
+        ///   - category: The audio session category. Defaults to `.playback`.
+        ///   - activeOptions: Options applied during session activation/deactivation. Defaults to
+        /// `[]`.
+        ///   - mode: The intended operational audio session mode. Defaults to `.default`.
+        ///   - categoryOptions: Options refining audio category behavior. Defaults to `[]`.
+        ///   - routeSharingPolicy: Route sharing policy for AirPlay/multi-room audio. Defaults to
+        /// `.default`.
+        public init(
+            category: AVAudioSession.Category = .playback,
+            activeOptions: AVAudioSession.SetActiveOptions = [],
+            mode: AVAudioSession.Mode = .default,
+            categoryOptions: AVAudioSession.CategoryOptions = [],
+            routeSharingPolicy: AVAudioSession.RouteSharingPolicy = .default
+        ) {
+            self.category = category
+            self.activeOptions = activeOptions
+            self.mode = mode
+            self.categoryOptions = categoryOptions
+            self.routeSharingPolicy = routeSharingPolicy
+        }
     }
-}
 
-// MARK: - Equatable & Hashable Conformance
+    // MARK: - Equatable & Hashable Conformance
 
-extension AKAudioSessionConfiguration: Equatable {
-    /// Returns a boolean value indicating whether two audio session configurations are equal.
-    public static func == (
-        lhs: AKAudioSessionConfiguration,
-        rhs: AKAudioSessionConfiguration
-    ) -> Bool {
-        lhs.category == rhs.category &&
-            lhs.activeOptions.rawValue == rhs.activeOptions.rawValue &&
-            lhs.mode == rhs.mode &&
-            lhs.categoryOptions.rawValue == rhs.categoryOptions.rawValue &&
-            lhs.routeSharingPolicy == rhs.routeSharingPolicy
+    extension AKAudioSessionConfiguration: Equatable {
+        /// Returns a boolean value indicating whether two audio session configurations are equal.
+        public static func == (
+            lhs: AKAudioSessionConfiguration,
+            rhs: AKAudioSessionConfiguration
+        ) -> Bool {
+            lhs.category == rhs.category &&
+                lhs.activeOptions.rawValue == rhs.activeOptions.rawValue &&
+                lhs.mode == rhs.mode &&
+                lhs.categoryOptions.rawValue == rhs.categoryOptions.rawValue &&
+                lhs.routeSharingPolicy == rhs.routeSharingPolicy
+        }
     }
-}
 
-extension AKAudioSessionConfiguration: Hashable {
-    /// Hashes the essential components of this configuration into the given hasher.
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(category)
-        hasher.combine(activeOptions.rawValue)
-        hasher.combine(mode)
-        hasher.combine(categoryOptions.rawValue)
-        hasher.combine(routeSharingPolicy)
+    extension AKAudioSessionConfiguration: Hashable {
+        /// Hashes the essential components of this configuration into the given hasher.
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(category)
+            hasher.combine(activeOptions.rawValue)
+            hasher.combine(mode)
+            hasher.combine(categoryOptions.rawValue)
+            hasher.combine(routeSharingPolicy)
+        }
     }
-}
+#elseif os(macOS)
+
+    // MARK: - AKAudioSessionConfiguration (macOS)
+
+    /// Represents audio session parameters on macOS where `AVAudioSession` is handled system-wide
+    /// by CoreAudio.
+    public struct AKAudioSessionConfiguration: Sendable, Equatable, Hashable {
+        public init() {}
+    }
+#endif
 
 // MARK: - AKPlayerConfigurationProtocol
 

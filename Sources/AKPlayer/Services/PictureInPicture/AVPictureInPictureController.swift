@@ -34,8 +34,18 @@ public class AKPictureInPictureController: NSObject {
 
     /// When `true`, swiping up to the Home Screen automatically transitions the video into PiP.
     public var canStartAutomatically: Bool {
-        get { pipController?.canStartPictureInPictureAutomaticallyFromInline ?? false }
-        set { pipController?.canStartPictureInPictureAutomaticallyFromInline = newValue }
+        get {
+            #if os(iOS) || os(visionOS)
+                return pipController?.canStartPictureInPictureAutomaticallyFromInline ?? false
+            #else
+                return false
+            #endif
+        }
+        set {
+            #if os(iOS) || os(visionOS)
+                pipController?.canStartPictureInPictureAutomaticallyFromInline = newValue
+            #endif
+        }
     }
 
     /// Delegate receiver for UIKit PiP events.
@@ -71,7 +81,9 @@ public class AKPictureInPictureController: NSObject {
 
         pipController = controller
         controller.delegate = self
-        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        #if os(iOS) || os(visionOS)
+            controller.canStartPictureInPictureAutomaticallyFromInline = true
+        #endif
     }
 
     deinit {

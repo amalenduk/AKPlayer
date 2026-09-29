@@ -26,8 +26,7 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
         return p
     }()
 
-    static let session = AVAudioSession.sharedInstance()
-    let audioSession = AKAudioSessionService(audioSession: session)
+    let audioSession = AKAudioSessionService()
 
     // Playback State
     @Published public var playlist: [TestMedia] = []

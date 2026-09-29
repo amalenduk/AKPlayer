@@ -9,7 +9,12 @@
 import AVFoundation
 import Foundation
 import Synchronization
-import UIKit
+
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 // MARK: - AKApplicationLifeCycleEvent
 
@@ -89,7 +94,7 @@ public protocol AKApplicationLifeCycleEventsObserverProtocol: AnyObject, Sendabl
 
 // MARK: - AKApplicationLifeCycleEventsObserver
 
-/// A thread-safe observer class responsible for listening to `UIApplication` lifecycle
+/// A thread-safe observer class responsible for listening to system application lifecycle
 /// notifications and broadcasting state changes through `AsyncStream`.
 public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleEventsObserverProtocol,
     Sendable
@@ -128,54 +133,92 @@ public final class AKApplicationLifeCycleEventsObserver: AKApplicationLifeCycleE
     // MARK: - Observation Lifecycle
 
     /// Starts observing system lifecycle notifications.
-    ///
-    /// Subscribes to `willResignActiveNotification`,
-    /// `didBecomeActiveNotification`,
-    /// `didEnterBackgroundNotification`, and `willEnterForegroundNotification`.
     public func startObserving() {
         stopObserving()
 
         let task = Task { [weak self] in
             await withTaskGroup(of: Void.self) { group in
-                // 1. Will Resign Active
-                group.addTask { [weak self] in
-                    for await _ in NotificationCenter.default
-                        .notifications(named: UIApplication.willResignActiveNotification)
-                    {
-                        guard !Task.isCancelled, let self else { break }
-                        self.handleApplicationWillResignActive()
+                #if canImport(UIKit)
+                    // 1. Will Resign Active
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: UIApplication.willResignActiveNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationWillResignActive()
+                        }
                     }
-                }
 
-                // 2. Did Become Active
-                group.addTask { [weak self] in
-                    for await _ in NotificationCenter.default
-                        .notifications(named: UIApplication.didBecomeActiveNotification)
-                    {
-                        guard !Task.isCancelled, let self else { break }
-                        self.handleApplicationDidBecomeActive()
+                    // 2. Did Become Active
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: UIApplication.didBecomeActiveNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationDidBecomeActive()
+                        }
                     }
-                }
 
-                // 3. Did Enter Background
-                group.addTask { [weak self] in
-                    for await _ in NotificationCenter.default
-                        .notifications(named: UIApplication.didEnterBackgroundNotification)
-                    {
-                        guard !Task.isCancelled, let self else { break }
-                        self.handleApplicationDidEnterBackground()
+                    // 3. Did Enter Background
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: UIApplication.didEnterBackgroundNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationDidEnterBackground()
+                        }
                     }
-                }
 
-                // 4. Will Enter Foreground
-                group.addTask { [weak self] in
-                    for await _ in NotificationCenter.default
-                        .notifications(named: UIApplication.willEnterForegroundNotification)
-                    {
-                        guard !Task.isCancelled, let self else { break }
-                        self.handleApplicationWillEnterForeground()
+                    // 4. Will Enter Foreground
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: UIApplication.willEnterForegroundNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationWillEnterForeground()
+                        }
                     }
-                }
+                #elseif canImport(AppKit)
+                    // 1. Will Resign Active
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: NSApplication.willResignActiveNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationWillResignActive()
+                        }
+                    }
+
+                    // 2. Did Become Active
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: NSApplication.didBecomeActiveNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationDidBecomeActive()
+                        }
+                    }
+
+                    // 3. Did Hide (Background)
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: NSApplication.didHideNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationDidEnterBackground()
+                        }
+                    }
+
+                    // 4. Did Unhide (Foreground)
+                    group.addTask { [weak self] in
+                        for await _ in NotificationCenter.default
+                            .notifications(named: NSApplication.didUnhideNotification)
+                        {
+                            guard !Task.isCancelled, let self else { break }
+                            self.handleApplicationWillEnterForeground()
+                        }
+                    }
+                #endif
             }
         }
 

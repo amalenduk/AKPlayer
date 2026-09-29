@@ -290,32 +290,60 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
             return .audio
         }()
 
-        let staticMetadata = AKNowPlayableStaticMetadata(
-            assetURL: custom?.assetURL ?? currentMedia.url,
-            mediaType: custom?.mediaType ?? defaultMediaType,
-            isLiveStream: custom?.isLiveStream ?? currentMedia.isLive(),
-            title: custom?.title ?? extracted.title ?? "Unknown Title",
-            artist: custom?.artist ?? extracted.artist,
-            artwork: resolvedArtwork,
-            albumArtist: custom?.albumArtist ?? extracted.albumArtist,
-            albumTitle: custom?.albumTitle ?? extracted.albumTitle,
-            collectionIdentifier: custom?.collectionIdentifier,
-            externalContentIdentifier: custom?.externalContentIdentifier,
-            externalUserProfileIdentifier: custom?.externalUserProfileIdentifier,
-            chapterCount: custom?.chapterCount ?? totalChapters,
-            creditsStartTime: resolvedCreditsStartTime,
-            serviceIdentifier: custom?.serviceIdentifier ?? serviceIdentifier,
-            adTimeRanges: custom?.adTimeRanges,
-            genre: custom?.genre ?? extracted.genre,
-            composer: custom?.composer ?? extracted.composer,
-            trackNumber: custom?.trackNumber ?? extracted.trackNumber,
-            trackCount: custom?.trackCount ?? extracted.trackCount,
-            discNumber: custom?.discNumber ?? extracted.discNumber,
-            discCount: custom?.discCount ?? extracted.discCount,
-            isExplicit: custom?.isExplicit,
-            releaseDate: custom?.releaseDate ?? extracted.releaseDate,
-            descriptionText: custom?.descriptionText ?? extracted.descriptionText
-        )
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            let staticMetadata = AKNowPlayableStaticMetadata(
+                assetURL: custom?.assetURL ?? currentMedia.url,
+                mediaType: custom?.mediaType ?? defaultMediaType,
+                isLiveStream: custom?.isLiveStream ?? currentMedia.isLive(),
+                title: custom?.title ?? extracted.title ?? "Unknown Title",
+                artist: custom?.artist ?? extracted.artist,
+                artwork: resolvedArtwork,
+                albumArtist: custom?.albumArtist ?? extracted.albumArtist,
+                albumTitle: custom?.albumTitle ?? extracted.albumTitle,
+                collectionIdentifier: custom?.collectionIdentifier,
+                externalContentIdentifier: custom?.externalContentIdentifier,
+                externalUserProfileIdentifier: custom?.externalUserProfileIdentifier,
+                chapterCount: custom?.chapterCount ?? totalChapters,
+                creditsStartTime: resolvedCreditsStartTime,
+                serviceIdentifier: custom?.serviceIdentifier ?? serviceIdentifier,
+                adTimeRanges: custom?.adTimeRanges,
+                genre: custom?.genre ?? extracted.genre,
+                composer: custom?.composer ?? extracted.composer,
+                trackNumber: custom?.trackNumber ?? extracted.trackNumber,
+                trackCount: custom?.trackCount ?? extracted.trackCount,
+                discNumber: custom?.discNumber ?? extracted.discNumber,
+                discCount: custom?.discCount ?? extracted.discCount,
+                isExplicit: custom?.isExplicit,
+                releaseDate: custom?.releaseDate ?? extracted.releaseDate,
+                descriptionText: custom?.descriptionText ?? extracted.descriptionText
+            )
+        #else
+            let staticMetadata = AKNowPlayableStaticMetadata(
+                assetURL: custom?.assetURL ?? currentMedia.url,
+                mediaType: custom?.mediaType ?? defaultMediaType,
+                isLiveStream: custom?.isLiveStream ?? currentMedia.isLive(),
+                title: custom?.title ?? extracted.title ?? "Unknown Title",
+                artist: custom?.artist ?? extracted.artist,
+                artwork: resolvedArtwork,
+                albumArtist: custom?.albumArtist ?? extracted.albumArtist,
+                albumTitle: custom?.albumTitle ?? extracted.albumTitle,
+                collectionIdentifier: custom?.collectionIdentifier,
+                externalContentIdentifier: custom?.externalContentIdentifier,
+                externalUserProfileIdentifier: custom?.externalUserProfileIdentifier,
+                chapterCount: custom?.chapterCount ?? totalChapters,
+                creditsStartTime: resolvedCreditsStartTime,
+                serviceIdentifier: custom?.serviceIdentifier ?? serviceIdentifier,
+                genre: custom?.genre ?? extracted.genre,
+                composer: custom?.composer ?? extracted.composer,
+                trackNumber: custom?.trackNumber ?? extracted.trackNumber,
+                trackCount: custom?.trackCount ?? extracted.trackCount,
+                discNumber: custom?.discNumber ?? extracted.discNumber,
+                discCount: custom?.discCount ?? extracted.discCount,
+                isExplicit: custom?.isExplicit,
+                releaseDate: custom?.releaseDate ?? extracted.releaseDate,
+                descriptionText: custom?.descriptionText ?? extracted.descriptionText
+            )
+        #endif
 
         return AKNowPlayableMetadata(
             staticMetadata: staticMetadata,

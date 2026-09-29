@@ -10,7 +10,11 @@
 import Foundation
 import MediaPlayer
 import Synchronization
-import UIKit
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 extension AVMetadataItem: @retroactive @unchecked Sendable {}
 extension AVTimedMetadataGroup: @retroactive @unchecked Sendable {}
@@ -285,7 +289,9 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             case .commonKeyAuthor:
                 meta.composer = try? await item.load(.stringValue)
             case .commonKeyArtwork:
-                if let data = try? await item.load(.dataValue), let image = UIImage(data: data) {
+                if let data = try? await item.load(.dataValue),
+                   let image = AKPlatformImage(data: data)
+                {
                     meta.artworkImage = image
                     let size = (image.size.width > 0 && image.size.height > 0) ? image
                         .size : CGSize(
@@ -401,7 +407,9 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
         case "COMM" where meta.descriptionText == nil:
             meta.descriptionText = try? await item.load(.stringValue)
         case "APIC" where meta.artworkImage == nil:
-            if let data = try? await item.load(.dataValue), let image = UIImage(data: data) {
+            if let data = try? await item.load(.dataValue),
+               let image = AKPlatformImage(data: data)
+            {
                 meta.artworkImage = image
                 let size = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
                     width: 300,
@@ -457,7 +465,9 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
         case "cprt" where meta.copyrights == nil:
             meta.copyrights = try? await item.load(.stringValue)
         case "covr" where meta.artworkImage == nil:
-            if let data = try? await item.load(.dataValue), let image = UIImage(data: data) {
+            if let data = try? await item.load(.dataValue),
+               let image = AKPlatformImage(data: data)
+            {
                 meta.artworkImage = image
                 let size = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
                     width: 300,

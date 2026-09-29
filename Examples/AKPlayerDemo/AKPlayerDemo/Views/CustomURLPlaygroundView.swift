@@ -8,7 +8,11 @@
 
 import AKPlayer
 import SwiftUI
-import UIKit
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 public struct CustomURLPlaygroundView: View {
     public enum PlayerTarget: String, CaseIterable, Identifiable {
@@ -105,8 +109,10 @@ public struct CustomURLPlaygroundView: View {
                         HStack {
                             TextField("https://example.com/stream.m3u8", text: $urlString)
                                 .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
+                                .adaptiveAutocapitalizationNever()
+                            #if os(iOS) || os(tvOS) || os(visionOS)
                                 .keyboardType(.URL)
+                            #endif
 
                             if !urlString.isEmpty {
                                 Button {
@@ -119,9 +125,17 @@ public struct CustomURLPlaygroundView: View {
                             }
 
                             Button {
-                                if let clip = UIPasteboard.general.string {
-                                    urlString = clip.trimmingCharacters(in: .whitespacesAndNewlines)
-                                }
+                                #if canImport(UIKit)
+                                    if let clip = UIPasteboard.general.string {
+                                        urlString = clip
+                                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                                    }
+                                #elseif canImport(AppKit)
+                                    if let clip = NSPasteboard.general.string(forType: .string) {
+                                        urlString = clip
+                                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                                    }
+                                #endif
                             } label: {
                                 Image(systemName: "doc.on.clipboard")
                                     .font(.body)
@@ -150,11 +164,11 @@ public struct CustomURLPlaygroundView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             TextField("User-Agent", text: $userAgent)
                                 .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
+                                .adaptiveAutocapitalizationNever()
 
                             TextField("Authorization Header (Bearer token)", text: $authHeader)
                                 .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
+                                .adaptiveAutocapitalizationNever()
                         }
                         .padding(.top, 4)
                     }
@@ -250,15 +264,15 @@ public struct CustomURLPlaygroundView: View {
                 }
             }
             .navigationTitle("URL Playground")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         dismiss()
                     }
                 }
             }
-            .fullScreenCover(item: Binding(
+            .adaptiveFullScreenCover(item: Binding(
                 get: { activePlaybackMedia.map { PlaybackPresentation(
                     media: $0.media,
                     target: $0.target

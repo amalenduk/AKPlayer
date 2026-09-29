@@ -68,7 +68,9 @@ public struct AudiobookPlayerView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            #if os(iOS) || os(tvOS) || os(visionOS)
             .navigationBarHidden(true)
+            #endif
             .onAppear {
                 if let media {
                     viewModel.load(media: media, autoPlay: autoPlay)
@@ -124,10 +126,16 @@ public struct AudiobookPlayerView: View {
             Spacer()
 
             // AirPlay / Route Picker
-            AKAirPlayRoutePickerView(
-                tintColor: .white.withAlphaComponent(0.8),
-                activeTintColor: .systemYellow
-            )
+            Group {
+                #if canImport(UIKit)
+                    AKAirPlayRoutePickerView(
+                        tintColor: .white.withAlphaComponent(0.8),
+                        activeTintColor: .systemYellow
+                    )
+                #else
+                    AKAirPlayRoutePickerView()
+                #endif
+            }
             .frame(width: 32, height: 32)
         }
         .padding(.top, 8)
@@ -448,9 +456,9 @@ public struct AudiobookPlayerView: View {
                 }
             }
             .navigationTitle("Chapters")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { showingChaptersSheet = false }
                 }
             }
@@ -483,9 +491,9 @@ public struct AudiobookPlayerView: View {
                 }
             }
             .navigationTitle("Sleep Timer")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { showingSleepTimerSheet = false }
                 }
             }

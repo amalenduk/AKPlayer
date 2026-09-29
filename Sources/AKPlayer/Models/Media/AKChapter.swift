@@ -8,12 +8,17 @@
 
 import AVFoundation
 import Foundation
-import UIKit
+
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 // MARK: - AKChapter
 
 /// A domain model representing a time-indexed chapter within audiobooks, podcasts, or video media.
-public struct AKChapter: Equatable, Identifiable, Sendable {
+public struct AKChapter: Equatable, Identifiable, @unchecked Sendable {
     // MARK: - Properties
 
     /// The 1-based chapter number (e.g. 1, 2, 3...).
@@ -29,7 +34,7 @@ public struct AKChapter: Equatable, Identifiable, Sendable {
     public let timeRange: CMTimeRange
 
     /// Chapter thumbnail or visual artwork image.
-    public let artworkImage: UIImage?
+    public let artworkImage: AKPlatformImage?
 
     /// Raw binary data of the chapter artwork image.
     public let artworkData: Data?
@@ -69,7 +74,7 @@ public struct AKChapter: Equatable, Identifiable, Sendable {
         index: Int,
         title: String,
         timeRange: CMTimeRange,
-        artworkImage: UIImage? = nil,
+        artworkImage: AKPlatformImage? = nil,
         artworkData: Data? = nil
     ) {
         self.id = id
@@ -77,7 +82,7 @@ public struct AKChapter: Equatable, Identifiable, Sendable {
         self.title = title
         self.timeRange = timeRange
         self.artworkData = artworkData
-        self.artworkImage = artworkImage ?? artworkData.flatMap { UIImage(data: $0) }
+        self.artworkImage = artworkImage ?? artworkData.flatMap { AKPlatformImage(data: $0) }
     }
 
     // MARK: - Helper Methods

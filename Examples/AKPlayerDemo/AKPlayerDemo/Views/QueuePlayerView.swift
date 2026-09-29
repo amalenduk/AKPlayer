@@ -10,25 +10,47 @@ import AKPlayer
 import AVFoundation
 import SwiftUI
 
-struct AKQueuePlayerUIView: UIViewRepresentable {
-    @ObservedObject var viewModel: QueuePlayerViewModel
+#if canImport(UIKit)
+    struct AKQueuePlayerPlatformView: UIViewRepresentable {
+        @ObservedObject var viewModel: QueuePlayerViewModel
 
-    func makeUIView(context _: Context) -> AKPlayerView {
-        let v = AKPlayerView()
-        v.player = viewModel.queuePlayer.player
-        return v
-    }
+        func makeUIView(context _: Context) -> AKPlayerView {
+            let v = AKPlayerView()
+            v.player = viewModel.queuePlayer.player
+            return v
+        }
 
-    func updateUIView(_ uiView: AKPlayerView, context _: Context) {
-        if uiView.player != viewModel.queuePlayer.player {
-            uiView.player = viewModel.queuePlayer.player
+        func updateUIView(_ uiView: AKPlayerView, context _: Context) {
+            if uiView.player != viewModel.queuePlayer.player {
+                uiView.player = viewModel.queuePlayer.player
+            }
+        }
+
+        static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
+            uiView.player = nil
         }
     }
+#elseif canImport(AppKit)
+    struct AKQueuePlayerPlatformView: NSViewRepresentable {
+        @ObservedObject var viewModel: QueuePlayerViewModel
 
-    static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
-        uiView.player = nil
+        func makeNSView(context _: Context) -> AKPlayerView {
+            let v = AKPlayerView()
+            v.player = viewModel.queuePlayer.player
+            return v
+        }
+
+        func updateNSView(_ nsView: AKPlayerView, context _: Context) {
+            if nsView.player != viewModel.queuePlayer.player {
+                nsView.player = viewModel.queuePlayer.player
+            }
+        }
+
+        static func dismantleNSView(_ nsView: AKPlayerView, coordinator _: ()) {
+            nsView.player = nil
+        }
     }
-}
+#endif
 
 public struct QueuePlayerView: View {
     @StateObject public var viewModel = QueuePlayerViewModel()
@@ -69,17 +91,38 @@ public struct QueuePlayerView: View {
                 queueListSection()
             }
             .navigationTitle("Queue Player")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
+                #if os(iOS) || os(tvOS) || os(visionOS)
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: 12) {
+                            Button {
+                                showingCustomAdsSheet = true
+                            } label: {
+                                Image(systemName: "badge.plus.radiowaves.right")
+                                    .foregroundColor(.orange)
+                            }
+
+                            Button {
+                                viewModel.stop()
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                #else
+                    ToolbarItem(placement: .primaryAction) {
                         Button {
                             showingCustomAdsSheet = true
                         } label: {
                             Image(systemName: "badge.plus.radiowaves.right")
                                 .foregroundColor(.orange)
                         }
-
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
                         Button {
                             viewModel.stop()
                             dismiss()
@@ -89,7 +132,7 @@ public struct QueuePlayerView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                }
+                #endif
             }
             .sheet(isPresented: $showingCustomAdsSheet) {
                 CustomAdsManagerView(player: viewModel.queuePlayer)
@@ -107,7 +150,7 @@ public struct QueuePlayerView: View {
 
     private func playerHeroSection() -> some View {
         ZStack {
-            AKQueuePlayerUIView(viewModel: viewModel)
+            AKQueuePlayerPlatformView(viewModel: viewModel)
                 .frame(height: 200)
                 .background(Color.black)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -254,69 +297,17 @@ public struct QueuePlayerView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Spacer()
-
-                EditButton()
-                    .font(.caption)
+                #if os(iOS) || os(visionOS)
+                    EditButton()
+                        .font(.caption)
+                #endif
             }
             .padding(.horizontal)
             .padding(.top, 8)
 
             List {
-                ForEach(Array(viewModel.playlist.enumerated()), id: \.element.id) { index, item in
-                    let isCurrent = (viewModel.currentIndex == index)
-
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(isCurrent ? Color.accentColor
-                                    .opacity(0.15) : Color(.systemGray5))
-                                .frame(width: 36, height: 36)
-
-                            if isCurrent, viewModel.isPlaying {
-                                Image(systemName: "waveform")
-                                    .font(.footnote)
-                                    .foregroundColor(.accentColor)
-                            } else {
-                                Text("\(index + 1)")
-                                    .font(.footnote)
-                                    .fontWeight(isCurrent ? .bold : .regular)
-                                    .foregroundColor(isCurrent ? .accentColor : .secondary)
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name)
-                                .font(.subheadline)
-                                .fontWeight(isCurrent ? .bold : .regular)
-                                .foregroundColor(isCurrent ? .accentColor : .primary)
-                                .lineLimit(1)
-
-                            if let sub = item.subtitle {
-                                Text(sub)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-
-                        Spacer()
-
-                        if isCurrent {
-                            Text("Playing")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.accentColor.opacity(0.15))
-                                .foregroundColor(.accentColor)
-                                .cornerRadius(4)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.jumpTo(index: index)
-                    }
+                ForEach(Array(viewModel.playlist.enumerated()), id: \.offset) { index, item in
+                    queueItemRow(index: index, item: item)
                 }
                 .onDelete { indexSet in
                     if let first = indexSet.first {
@@ -328,6 +319,62 @@ public struct QueuePlayerView: View {
                 }
             }
             .listStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func queueItemRow(index: Int, item: TestMedia) -> some View {
+        let isCurrent = (viewModel.currentIndex == index)
+
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isCurrent ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.15))
+                    .frame(width: 36, height: 36)
+
+                if isCurrent, viewModel.isPlaying {
+                    Image(systemName: "waveform")
+                        .font(.footnote)
+                        .foregroundColor(.accentColor)
+                } else {
+                    Text("\(index + 1)")
+                        .font(.footnote)
+                        .fontWeight(isCurrent ? .bold : .regular)
+                        .foregroundColor(isCurrent ? .accentColor : .secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.subheadline)
+                    .fontWeight(isCurrent ? .bold : .regular)
+                    .foregroundColor(isCurrent ? .accentColor : .primary)
+                    .lineLimit(1)
+
+                if let sub = item.subtitle {
+                    Text(sub)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            if isCurrent {
+                Text("Playing")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.accentColor.opacity(0.15))
+                    .foregroundColor(.accentColor)
+                    .cornerRadius(4)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.jumpTo(index: index)
         }
     }
 

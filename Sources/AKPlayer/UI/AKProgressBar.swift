@@ -64,8 +64,8 @@
             trackHeight: CGFloat = 4,
             activeTrackHeight: CGFloat = 6,
             thumbDiameter: CGFloat = 14,
-            trackBackgroundColor: Color = Color(.systemGray5),
-            bufferTrackColor: Color = Color(.systemGray3),
+            trackBackgroundColor: Color = Color.secondary.opacity(0.2),
+            bufferTrackColor: Color = Color.secondary.opacity(0.4),
             progressTrackColor: Color = .accentColor,
             unplayedMarkerColor: Color = Color(red: 0.98, green: 0.76, blue: 0.03),
             activeMarkerColor: Color = Color(red: 0.98, green: 0.55, blue: 0.0),
@@ -195,15 +195,17 @@
                 }
                 .frame(height: 32)
                 .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            handleDragChanged(value: value, width: width)
-                        }
-                        .onEnded { _ in
-                            handleDragEnded()
-                        }
-                )
+                #if !os(tvOS)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                handleDragChanged(value: value, width: width)
+                            }
+                            .onEnded { _ in
+                                handleDragEnded()
+                            }
+                    )
+                #endif
             }
             .frame(height: 32)
         }
@@ -349,71 +351,77 @@
             .position(x: xPosition, y: -16)
         }
 
-        // MARK: - Gesture Handling
+        #if !os(tvOS)
 
-        /// Processes drag gesture updates, applying seeking constraints and snapping logic.
-        /// - Parameters:
-        ///   - value: The drag gesture location update.
-        ///   - width: The total width of the track.
-        private func handleDragChanged(value: DragGesture.Value, width: CGFloat) {
-            guard width > 0, duration > 0 else { return }
-            isDragging = true
+            // MARK: - Gesture Handling
 
-            var rawFraction = max(0, min(1, Double(value.location.x / width)))
-            var restricted = false
-            var matchedMarker: AKInterstitialMarker?
+            /// Processes drag gesture updates, applying seeking constraints and snapping logic.
+            /// - Parameters:
+            ///   - value: The drag gesture location update.
+            ///   - width: The total width of the track.
+            private func handleDragChanged(value: DragGesture.Value, width: CGFloat) {
+                guard width > 0, duration > 0 else { return }
+                isDragging = true
 
-            // 1. Check restrictions: Cannot seek past unplayed ad with
-            // .constrainsSeekingForwardInPrimaryContent
-            if configuration.enforceRestrictions {
-                let currentSec = currentTime
-                let targetSec = rawFraction * duration
+                var rawFraction = max(0, min(1, Double(value.location.x / width)))
+                var restricted = false
+                var matchedMarker: AKInterstitialMarker?
 
-                if targetSec > currentSec {
-                    // Moving forward: Find first unplayed constrained marker between currentSec and
-                    // targetSec (excluding the currently active ad)
-                    let blockingMarker = markers.first { marker in
-                        !marker.isPlayed &&
-                            !marker.isCurrent &&
-                            !marker.canSeek &&
-                            marker.time > currentSec &&
-                            marker.time <= targetSec
-                    }
+                // 1. Check restrictions: Cannot seek past unplayed ad with
+                // .constrainsSeekingForwardInPrimaryContent
+                if configuration.enforceRestrictions {
+                    let currentSec = currentTime
+                    let targetSec = rawFraction * duration
 
-                    if let blockingMarker {
-                        let markerFraction = blockingMarker.time / duration
-                        rawFraction = markerFraction
-                        restricted = true
-                        matchedMarker = blockingMarker
-                    }
-                }
-            }
+                    if targetSec > currentSec {
+                        // Moving forward: Find first unplayed constrained marker between currentSec
+                        // and
+                        // targetSec (excluding the currently active ad)
+                        let blockingMarker = markers.first { marker in
+                            !marker.isPlayed &&
+                                !marker.isCurrent &&
+                                !marker.canSeek &&
+                                marker.time > currentSec &&
+                                marker.time <= targetSec
+                        }
 
-            // 2. Snapping: Snap to nearby discrete single-point ad markers within threshold
-            if configuration.enableSnapping, !restricted {
-                for marker in markers where marker.isSinglePoint {
-                    let markerFraction = marker.time / duration
-                    if abs(rawFraction - markerFraction) <= configuration.snapThresholdFraction {
-                        rawFraction = markerFraction
-                        matchedMarker = marker
-                        break
+                        if let blockingMarker {
+                            let markerFraction = blockingMarker.time / duration
+                            rawFraction = markerFraction
+                            restricted = true
+                            matchedMarker = blockingMarker
+                        }
                     }
                 }
+
+                // 2. Snapping: Snap to nearby discrete single-point ad markers within threshold
+                if configuration.enableSnapping, !restricted {
+                    for marker in markers where marker.isSinglePoint {
+                        let markerFraction = marker.time / duration
+                        if abs(rawFraction - markerFraction) <= configuration
+                            .snapThresholdFraction
+                        {
+                            rawFraction = markerFraction
+                            matchedMarker = marker
+                            break
+                        }
+                    }
+                }
+
+                dragFraction = rawFraction
+                hoveredMarker = matchedMarker
+                isRestrictedAtMarker = restricted
             }
 
-            dragFraction = rawFraction
-            hoveredMarker = matchedMarker
-            isRestrictedAtMarker = restricted
-        }
-
-        /// Commits final scrubbing position and invokes the seek completion callback.
-        private func handleDragEnded() {
-            isDragging = false
-            isRestrictedAtMarker = false
-            hoveredMarker = nil
-            let targetSeconds = dragFraction * duration
-            onSeek(targetSeconds)
-        }
+            /// Commits final scrubbing position and invokes the seek completion callback.
+            private func handleDragEnded() {
+                isDragging = false
+                isRestrictedAtMarker = false
+                hoveredMarker = nil
+                let targetSeconds = dragFraction * duration
+                onSeek(targetSeconds)
+            }
+        #endif
 
         // MARK: - Helpers
 

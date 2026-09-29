@@ -11,7 +11,9 @@ import AVFoundation
 import Combine
 import Foundation
 import SwiftUI
-import UIKit
+#if canImport(UIKit)
+    import UIKit
+#endif
 
 @MainActor
 public class LivePlayerViewModel: NSObject, ObservableObject {
@@ -27,8 +29,7 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
         return p
     }()
 
-    static let session = AVAudioSession.sharedInstance()
-    let audioSession = AKAudioSessionService(audioSession: session)
+    let audioSession = AKAudioSessionService()
 
     // MARK: - Published Live Playback State
 
@@ -105,9 +106,11 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
 
     /// Jumps directly to the live edge (head) of the stream and resumes normal 1.0x playback.
     public func jumpToLive() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
+        #if os(iOS)
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.prepare()
+            generator.impactOccurred()
+        #endif
 
         Task {
             await player.jumpToLive()

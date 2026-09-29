@@ -10,103 +10,107 @@ import AVFoundation
 import Foundation
 import Synchronization
 
-// MARK: - AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol
+#if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
 
-/// A protocol defining requirements for observing spatial playback capabilities changes.
-public protocol AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol: AnyObject, Sendable {
-    /// The target `AVAudioSession` instance being monitored.
-    var audioSession: AVAudioSession { get }
+    // MARK: - AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol
 
-    /// Asynchronous stream of spatial audio enablement updates.
-    var events: AsyncStream<Bool> { get }
+    /// A protocol defining requirements for observing spatial playback capabilities changes.
+    public protocol AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol: AnyObject, Sendable {
+        /// The target `AVAudioSession` instance being monitored.
+        var audioSession: AVAudioSession { get }
 
-    /// Begins observing system-level spatial playback capabilities notifications.
-    func startObserving()
+        /// Asynchronous stream of spatial audio enablement updates.
+        var events: AsyncStream<Bool> { get }
 
-    /// Stops monitoring spatial playback capabilities notifications and clears active tasks.
-    func stopObserving()
-}
+        /// Begins observing system-level spatial playback capabilities notifications.
+        func startObserving()
 
-// MARK: - AKAudioSessionSpatialPlaybackCapabilitiesObserver
-
-/// A thread-safe observer class responsible for monitoring
-/// `AVAudioSession.spatialPlaybackCapabilitiesChangedNotification`
-/// and broadcasting updates via `AsyncStream`.
-public final class AKAudioSessionSpatialPlaybackCapabilitiesObserver:
-    AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol, Sendable
-{
-    // MARK: - Properties
-
-    /// The `AVAudioSession` instance managed by this observer.
-    public let audioSession: AVAudioSession
-
-    /// Broadcaster managing the asynchronous stream of spatial playback capability changes.
-    private let eventBroadcaster = AKEventBroadcaster<Bool>()
-
-    /// Asynchronous stream of spatial playback capability events for Swift Concurrency.
-    public var events: AsyncStream<Bool> {
-        eventBroadcaster.makeStream()
+        /// Stops monitoring spatial playback capabilities notifications and clears active tasks.
+        func stopObserving()
     }
 
-    /// Mutex protecting the active notification observation task.
-    private let observationTask = Mutex<Task<Void, Never>?>(nil)
+    // MARK: - AKAudioSessionSpatialPlaybackCapabilitiesObserver
 
-    // MARK: - Init & Deinit
+    /// A thread-safe observer class responsible for monitoring
+    /// `AVAudioSession.spatialPlaybackCapabilitiesChangedNotification`
+    /// and broadcasting updates via `AsyncStream`.
+    public final class AKAudioSessionSpatialPlaybackCapabilitiesObserver:
+        AKAudioSessionSpatialPlaybackCapabilitiesObserverProtocol, Sendable
+    {
+        // MARK: - Properties
 
-    /// Initializes a new spatial playback capabilities observer with a target audio session.
-    /// - Parameter audioSession: The `AVAudioSession` instance to observe.
-    public init(audioSession: AVAudioSession) {
-        self.audioSession = audioSession
-    }
+        /// The `AVAudioSession` instance managed by this observer.
+        public let audioSession: AVAudioSession
 
-    deinit {
-        stopObserving()
-        eventBroadcaster.finish()
-    }
+        /// Broadcaster managing the asynchronous stream of spatial playback capability changes.
+        private let eventBroadcaster = AKEventBroadcaster<Bool>()
 
-    // MARK: - Observation Lifecycle
+        /// Asynchronous stream of spatial playback capability events for Swift Concurrency.
+        public var events: AsyncStream<Bool> {
+            eventBroadcaster.makeStream()
+        }
 
-    /// Starts observing spatial playback capabilities notifications.
-    public func startObserving() {
-        stopObserving()
+        /// Mutex protecting the active notification observation task.
+        private let observationTask = Mutex<Task<Void, Never>?>(nil)
 
-        let task = Task { [weak self, audioSession] in
-            for await notification in NotificationCenter.default.notifications(
-                named: AVAudioSession.spatialPlaybackCapabilitiesChangedNotification,
-                object: audioSession
-            ) {
-                guard !Task.isCancelled, let self else { break }
-                handleSpatialPlaybackCapabilitiesChangedNotification(notification)
+        // MARK: - Init & Deinit
+
+        /// Initializes a new spatial playback capabilities observer with a target audio session.
+        /// - Parameter audioSession: The `AVAudioSession` instance to observe.
+        public init(audioSession: AVAudioSession) {
+            self.audioSession = audioSession
+        }
+
+        deinit {
+            stopObserving()
+            eventBroadcaster.finish()
+        }
+
+        // MARK: - Observation Lifecycle
+
+        /// Starts observing spatial playback capabilities notifications.
+        public func startObserving() {
+            stopObserving()
+
+            let task = Task { [weak self, audioSession] in
+                for await notification in NotificationCenter.default.notifications(
+                    named: AVAudioSession.spatialPlaybackCapabilitiesChangedNotification,
+                    object: audioSession
+                ) {
+                    guard !Task.isCancelled, let self else { break }
+                    handleSpatialPlaybackCapabilitiesChangedNotification(notification)
+                }
+            }
+
+            observationTask.withLock { $0 = task }
+        }
+
+        /// Stops observing spatial playback capabilities notifications and clears active tasks.
+        public func stopObserving() {
+            observationTask.withLock {
+                $0?.cancel()
+                $0 = nil
             }
         }
 
-        observationTask.withLock { $0 = task }
-    }
+        // MARK: - Handlers
 
-    /// Stops observing spatial playback capabilities notifications and clears active tasks.
-    public func stopObserving() {
-        observationTask.withLock {
-            $0?.cancel()
-            $0 = nil
+        /// Processes incoming spatial playback capabilities changed notifications and emits stream
+        /// events.
+        /// - Parameter notification: The `Notification` object containing capability metadata.
+        private func handleSpatialPlaybackCapabilitiesChangedNotification(
+            _ notification: Notification
+        ) {
+            guard let userInfo = notification.userInfo,
+                  let isSpatialAudioEnabled =
+                  userInfo[AVAudioSessionSpatialAudioEnabledKey] as? NSNumber
+            else {
+                return
+            }
+
+            let isEnabled = isSpatialAudioEnabled.boolValue
+            eventBroadcaster.send(isEnabled)
         }
     }
 
-    // MARK: - Handlers
-
-    /// Processes incoming spatial playback capabilities changed notifications and emits stream
-    /// events.
-    /// - Parameter notification: The `Notification` object containing capability metadata.
-    private func handleSpatialPlaybackCapabilitiesChangedNotification(
-        _ notification: Notification
-    ) {
-        guard let userInfo = notification.userInfo,
-              let isSpatialAudioEnabled =
-              userInfo[AVAudioSessionSpatialAudioEnabledKey] as? NSNumber
-        else {
-            return
-        }
-
-        let isEnabled = isSpatialAudioEnabled.boolValue
-        eventBroadcaster.send(isEnabled)
-    }
-}
+#endif

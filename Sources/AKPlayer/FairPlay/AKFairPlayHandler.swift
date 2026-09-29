@@ -63,7 +63,6 @@ public final class AKFairPlayHandler: NSObject, AKFairPlayHandlerProtocol,
         for recipient in contentKeySession.contentKeyRecipients {
             contentKeySession.removeContentKeyRecipient(recipient)
         }
-        contentKeySession.setDelegate(nil, queue: nil)
     }
 
     // MARK: - AKFairPlayHandlerProtocol Implementation
@@ -90,7 +89,6 @@ public final class AKFairPlayHandler: NSObject, AKFairPlayHandlerProtocol,
         for recipient in contentKeySession.contentKeyRecipients {
             contentKeySession.removeContentKeyRecipient(recipient)
         }
-        contentKeySession.setDelegate(nil, queue: nil)
     }
 
     /// Invalidates a persistable content key and generates a server playback context (SPC) to
@@ -357,7 +355,7 @@ public final class AKFairPlayHandler: NSObject, AKFairPlayHandlerProtocol,
                 }
                 return data
             }
-            certificateTaskMutex.withLock { $0 = newTask }
+            existingTask = newTask
             return newTask
         }
 

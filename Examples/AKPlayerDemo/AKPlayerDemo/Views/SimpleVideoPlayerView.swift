@@ -12,33 +12,63 @@ import Combine
 import Foundation
 import SwiftUI
 
-struct AKPlayerUIView: UIViewRepresentable {
-    @ObservedObject var viewModel: SimpleVideoPlayerViewModel
+#if canImport(UIKit)
+    struct AKPlayerPlatformView: UIViewRepresentable {
+        @ObservedObject var viewModel: SimpleVideoPlayerViewModel
 
-    func makeUIView(context _: Context) -> AKPlayerView {
-        let v = AKPlayerView()
-        v.player = viewModel.player.player
-        v.playerLayer.videoGravity = viewModel.videoGravity
+        func makeUIView(context _: Context) -> AKPlayerView {
+            let v = AKPlayerView()
+            v.player = viewModel.player.player
+            v.playerLayer.videoGravity = viewModel.videoGravity
 
-        // Setup Picture-in-Picture controller using the AKPlayerView layer
-        viewModel.setupPip(with: v.playerLayer)
+            // Setup Picture-in-Picture controller using the AKPlayerView layer
+            viewModel.setupPip(with: v.playerLayer)
 
-        return v
-    }
-
-    func updateUIView(_ uiView: AKPlayerView, context _: Context) {
-        if uiView.player != viewModel.player.player {
-            uiView.player = viewModel.player.player
+            return v
         }
-        if uiView.playerLayer.videoGravity != viewModel.videoGravity {
-            uiView.playerLayer.videoGravity = viewModel.videoGravity
+
+        func updateUIView(_ uiView: AKPlayerView, context _: Context) {
+            if uiView.player != viewModel.player.player {
+                uiView.player = viewModel.player.player
+            }
+            if uiView.playerLayer.videoGravity != viewModel.videoGravity {
+                uiView.playerLayer.videoGravity = viewModel.videoGravity
+            }
+        }
+
+        static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
+            uiView.player = nil
         }
     }
+#elseif canImport(AppKit)
+    struct AKPlayerPlatformView: NSViewRepresentable {
+        @ObservedObject var viewModel: SimpleVideoPlayerViewModel
 
-    static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
-        uiView.player = nil
+        func makeNSView(context _: Context) -> AKPlayerView {
+            let v = AKPlayerView()
+            v.player = viewModel.player.player
+            v.playerLayer.videoGravity = viewModel.videoGravity
+
+            // Setup Picture-in-Picture controller using the AKPlayerView layer
+            viewModel.setupPip(with: v.playerLayer)
+
+            return v
+        }
+
+        func updateNSView(_ nsView: AKPlayerView, context _: Context) {
+            if nsView.player != viewModel.player.player {
+                nsView.player = viewModel.player.player
+            }
+            if nsView.playerLayer.videoGravity != viewModel.videoGravity {
+                nsView.playerLayer.videoGravity = viewModel.videoGravity
+            }
+        }
+
+        static func dismantleNSView(_ nsView: AKPlayerView, coordinator _: ()) {
+            nsView.player = nil
+        }
     }
-}
+#endif
 
 public struct SimpleVideoPlayerView: View {
     @StateObject public var viewModel: SimpleVideoPlayerViewModel
@@ -89,7 +119,7 @@ public struct SimpleVideoPlayerView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .navigationTitle("Player")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
                 closeButton()
             }
@@ -124,7 +154,7 @@ public struct SimpleVideoPlayerView: View {
     }
 
     private func playerSection() -> some View {
-        AKPlayerUIView(viewModel: viewModel)
+        AKPlayerPlatformView(viewModel: viewModel)
             .frame(height: 260)
             .background(Color.black)
             .clipped()
@@ -576,7 +606,7 @@ public struct SimpleVideoPlayerView: View {
 
     @ToolbarContentBuilder
     private func closeButton() -> some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItem(placement: .cancellationAction) {
             Button {
                 viewModel.stop()
                 dismiss()
@@ -607,9 +637,9 @@ extension SimpleVideoPlayerView {
                 Spacer()
             }
             .navigationTitle("Info")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         viewModel.debugInfo = nil
                     }
@@ -643,11 +673,13 @@ extension SimpleVideoPlayerView {
                     }
                 }
             }
+            #if os(iOS) || os(tvOS) || os(visionOS)
             .listStyle(.insetGrouped)
+            #endif
             .navigationTitle("Tracks")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         showingSelectionSheet = false
                     }
@@ -705,12 +737,14 @@ extension SimpleVideoPlayerView {
                     }
                 }
             }
+            #if os(iOS) || os(tvOS) || os(visionOS)
             .listStyle(.insetGrouped)
+            #endif
             .navigationTitle(viewModel.chapters
                 .isEmpty ? "Chapters" : "Chapters (\(viewModel.chapters.count))")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         showingChaptersSheet = false
                     }
@@ -726,7 +760,7 @@ extension SimpleVideoPlayerView {
         let isCurrent = viewModel.currentChapter == chapter
         HStack(spacing: 12) {
             if let artwork = chapter.artworkImage {
-                Image(uiImage: artwork)
+                Image(platformImage: artwork)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 44, height: 44)
@@ -734,7 +768,8 @@ extension SimpleVideoPlayerView {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isCurrent ? Color.accentColor.opacity(0.15) : Color(.systemGray5))
+                        .fill(isCurrent ? Color.accentColor.opacity(0.15) : Color.gray
+                            .opacity(0.15))
                         .frame(width: 40, height: 40)
 
                     Text("\(chapter.id)")

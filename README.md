@@ -3,12 +3,12 @@
 [![CI](https://github.com/amalenduk/AKPlayer/actions/workflows/ci.yml/badge.svg)](https://github.com/amalenduk/AKPlayer/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/Documentation-DocC-blue.svg?style=flat)](https://amalenduk.github.io/AKPlayer/documentation/akplayer)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-iOS%2018.0%2B-blue.svg?style=flat)](https://developer.apple.com/ios/)
+[![Platform](https://img.shields.io/badge/Platforms-iOS%20%7C%20iPadOS%20%7C%20tvOS%20%7C%20macOS-blue.svg?style=flat)](https://developer.apple.com)
 [![SwiftPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat)](LICENSE)
 [![Concurrency](https://img.shields.io/badge/Concurrency-Strict%20Swift%206%20Safe-purple.svg?style=flat)](https://swift.org)
 
-**AKPlayer** is a modern, enterprise-grade AVPlayer playback engine built from the ground up in **Swift 6** for **iOS 18+**. It combines a robust finite-state machine with structured async concurrency, first-class HLS live stream & interstitial ad support, automatic Lock Screen Now Playing integration, and SwiftUI components.
+**AKPlayer** is a modern, enterprise-grade AVPlayer playback engine built from the ground up in **Swift 6** with native multi-platform support for **iOS 18+**, **iPadOS 18+**, **tvOS 18+**, and **macOS 15+**. It combines a robust finite-state machine with structured async concurrency, first-class HLS live stream & interstitial ad support, automatic Lock Screen Now Playing integration, and unified SwiftUI, UIKit, and AppKit components.
 
 📖 **[Read the Full DocC API Documentation & Guides](https://amalenduk.github.io/AKPlayer/documentation/akplayer)**
 
@@ -20,8 +20,9 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-  - [SwiftUI](#swiftui-quick-start)
-  - [UIKit](#uikit-quick-start)
+  - [SwiftUI (Multi-Platform)](#swiftui-quick-start)
+  - [UIKit (iOS, iPadOS, tvOS)](#uikit-quick-start)
+  - [AppKit (macOS)](#appkit-quick-start)
 - [Architecture & State Machine](#architecture--state-machine)
 - [Key Feature Guides](#key-feature-guides)
   - [1. Playback Controls & Seeking](#1-playback-controls--seeking)
@@ -42,6 +43,7 @@
 
 ## Features
 
+- 📱🖥️ **Native Multi-Platform**: Full support for iOS, iPadOS, tvOS (Apple TV), and macOS (Mac) via unified abstractions (`AKPlatformView`, `AKPlatformImage`, `AKPlatformColor`).
 - ⚡️ **Swift 6 Strict Concurrency**: 100% thread-safe with `@MainActor`, `Sendable`, and native `Synchronization.Mutex`.
 - 🔄 **Deterministic State Machine**: Clear lifecycle transitions (`idle`, `loading`, `loaded`, `buffering`, `playing`, `paused`, `waitingForNetwork`, `failed`, `stopped`).
 - 🌐 **Automatic Network Recovery**: Seamless reconnect and resume on network recovery via `NWPathMonitor`.
@@ -64,6 +66,9 @@
 | Platform | Minimum Deployment Target | Swift Version | Xcode Version |
 | :--- | :--- | :--- | :--- |
 | **iOS** | 18.0+ | 6.0+ | 16.0+ |
+| **iPadOS** | 18.0+ | 6.0+ | 16.0+ |
+| **tvOS** | 18.0+ | 6.0+ | 16.0+ |
+| **macOS** | 15.0+ | 6.0+ | 16.0+ |
 
 ---
 
@@ -89,9 +94,9 @@ dependencies: [
 
 ## Quick Start
 
-### SwiftUI Quick Start
+### SwiftUI (Multi-Platform)
 
-Play video in SwiftUI in under 15 lines of code:
+Play video in SwiftUI across iOS, iPadOS, tvOS, and macOS in under 15 lines of code:
 
 ```swift
 import SwiftUI
@@ -128,7 +133,7 @@ struct ContentView: View {
 
 ---
 
-### UIKit Quick Start
+### UIKit Quick Start (iOS, iPadOS, tvOS)
 
 Integrate with a UIViewController:
 
@@ -158,6 +163,47 @@ final class PlayerViewController: UIViewController {
 
         // Load media
         guard let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8") else { return }
+        let media = AKMedia(url: url)
+        player.load(media: media, autoPlay: true)
+    }
+}
+```
+
+---
+
+### AppKit Quick Start (macOS)
+
+Integrate with an NSViewController on Mac:
+
+```swift
+import AppKit
+import AKPlayer
+
+final class PlayerMacViewController: NSViewController {
+    private let player = AKPlayer()
+    private let playerView = AKPlayerView()
+
+    override func loadView() {
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 450))
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Setup player view
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        playerView.player = player.player
+        view.addSubview(playerView)
+
+        NSLayoutConstraint.activate([
+            playerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            playerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            playerView.topAnchor.constraint(equalTo: view.topAnchor),
+            playerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        // Load media
+        guard let url = URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4") else { return }
         let media = AKMedia(url: url)
         player.load(media: media, autoPlay: true)
     }
@@ -346,12 +392,12 @@ var config = AKPlayerConfiguration()
 config.isNowPlayingEnabled = true
 let player = AKPlayer(configuration: config)
 
-// Attach rich metadata to your media
+// Attach rich metadata to your media (using AKPlatformImage for cross-platform UIKit/AppKit support)
 let metadata = AKMediaStaticMetadata(
     title: "WWDC Keynote",
     artist: "Apple Inc.",
     albumTitle: "Special Events",
-    artworkImage: UIImage(named: "keynote_cover")
+    artworkImage: AKPlatformImage(named: "keynote_cover")
 )
 let media = AKMedia(url: videoURL, metadata: metadata)
 player.load(media: media, autoPlay: true)

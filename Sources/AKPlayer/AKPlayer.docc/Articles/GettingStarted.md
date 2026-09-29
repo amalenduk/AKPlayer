@@ -1,6 +1,6 @@
 # Getting Started with AKPlayer
 
-Learn how to integrate and control media playback in your iOS application using AKPlayer.
+Learn how to integrate and control media playback in your iOS, iPadOS, tvOS, or macOS application using AKPlayer.
 
 ## Overview
 

@@ -26,8 +26,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     public lazy var interstitialService: AKPlayerInterstitialServiceProtocol = player
         .interstitialService
 
-    static let session = AVAudioSession.sharedInstance()
-    let audioSession = AKAudioSessionService(audioSession: session)
+    let audioSession = AKAudioSessionService()
 
     // Playback State
     @Published public var stateDescription = "Idle"

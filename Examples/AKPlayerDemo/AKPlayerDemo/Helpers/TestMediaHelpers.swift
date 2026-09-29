@@ -8,7 +8,6 @@
 
 import AKPlayer
 import Foundation
-import UIKit
 
 public func makeAKMedia(
     from test: TestMedia,

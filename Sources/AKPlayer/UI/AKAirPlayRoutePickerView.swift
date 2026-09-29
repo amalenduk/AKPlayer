@@ -12,13 +12,10 @@ import SwiftUI
 #if canImport(UIKit)
     import UIKit
 
-    // MARK: - AKAirPlayRoutePickerView
+    // MARK: - AKAirPlayRoutePickerView (UIKit)
 
     /// A SwiftUI wrapper around `AVRoutePickerView` that displays the standard system
-    /// AirPlay route picker button.
-    ///
-    /// Tapping this view triggers the native iOS AirPlay route selection menu to
-    /// route audio/video to external AirPlay, Bluetooth, or wireless speaker endpoints.
+    /// AirPlay route picker button on iOS and tvOS.
     public struct AKAirPlayRoutePickerView: UIViewRepresentable {
         // MARK: - Properties
 
@@ -65,5 +62,40 @@ import SwiftUI
             uiView.activeTintColor = activeTintColor
             uiView.prioritizesVideoDevices = prioritizesVideoDevices
         }
+    }
+
+#elseif canImport(AppKit)
+    import AppKit
+
+    // MARK: - AKAirPlayRoutePickerView (AppKit)
+
+    /// A SwiftUI wrapper around `AVRoutePickerView` that displays the standard system
+    /// AirPlay route picker button on macOS.
+    public struct AKAirPlayRoutePickerView: NSViewRepresentable {
+        // MARK: - Properties
+
+        /// Whether the route picker prioritizes video routing endpoints.
+        public var prioritizesVideoDevices: Bool
+
+        // MARK: - Initialization
+
+        /// Creates a new AirPlay route picker view for macOS.
+        public init(
+            tintColor: AKPlatformColor = .white,
+            activeTintColor: AKPlatformColor = .systemYellow,
+            prioritizesVideoDevices: Bool = false
+        ) {
+            _ = tintColor
+            _ = activeTintColor
+            self.prioritizesVideoDevices = prioritizesVideoDevices
+        }
+
+        // MARK: - NSViewRepresentable
+
+        public func makeNSView(context _: Context) -> AVRoutePickerView {
+            AVRoutePickerView()
+        }
+
+        public func updateNSView(_: AVRoutePickerView, context _: Context) {}
     }
 #endif

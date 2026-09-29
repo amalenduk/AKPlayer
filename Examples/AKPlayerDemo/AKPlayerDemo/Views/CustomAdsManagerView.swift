@@ -394,14 +394,14 @@ public struct CustomAdsManagerView: View {
                 activeScheduleSection()
             }
             .navigationTitle("Custom Ads Scheduler")
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button {
                         viewModel.scheduleCurrentImmediately()
                     } label: {
@@ -484,9 +484,11 @@ public struct CustomAdsManagerView: View {
 
             if viewModel.selectedPreset.id == "custom" {
                 TextField("https://example.com/ad.m3u8", text: $viewModel.customURLString)
-                    .textInputAutocapitalization(.never)
+                    .adaptiveAutocapitalizationNever()
                     .autocorrectionDisabled()
+                #if os(iOS) || os(tvOS) || os(visionOS)
                     .keyboardType(.URL)
+                #endif
                     .font(.caption)
             } else {
                 HStack {

@@ -10,28 +10,51 @@ import AKPlayer
 import AVFoundation
 import SwiftUI
 
-// MARK: - LivePlayerUIView
+// MARK: - LivePlayerPlatformView
 
-struct LivePlayerUIView: UIViewRepresentable {
-    @ObservedObject var viewModel: LivePlayerViewModel
+#if canImport(UIKit)
+    struct LivePlayerPlatformView: UIViewRepresentable {
+        @ObservedObject var viewModel: LivePlayerViewModel
 
-    func makeUIView(context _: Context) -> AKPlayerView {
-        let v = AKPlayerView()
-        v.player = viewModel.player.player
-        viewModel.setupPip(with: v.playerLayer)
-        return v
-    }
+        func makeUIView(context _: Context) -> AKPlayerView {
+            let v = AKPlayerView()
+            v.player = viewModel.player.player
+            viewModel.setupPip(with: v.playerLayer)
+            return v
+        }
 
-    func updateUIView(_ uiView: AKPlayerView, context _: Context) {
-        if uiView.player != viewModel.player.player {
-            uiView.player = viewModel.player.player
+        func updateUIView(_ uiView: AKPlayerView, context _: Context) {
+            if uiView.player != viewModel.player.player {
+                uiView.player = viewModel.player.player
+            }
+        }
+
+        static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
+            uiView.player = nil
         }
     }
+#elseif canImport(AppKit)
+    struct LivePlayerPlatformView: NSViewRepresentable {
+        @ObservedObject var viewModel: LivePlayerViewModel
 
-    static func dismantleUIView(_ uiView: AKPlayerView, coordinator _: ()) {
-        uiView.player = nil
+        func makeNSView(context _: Context) -> AKPlayerView {
+            let v = AKPlayerView()
+            v.player = viewModel.player.player
+            viewModel.setupPip(with: v.playerLayer)
+            return v
+        }
+
+        func updateNSView(_ nsView: AKPlayerView, context _: Context) {
+            if nsView.player != viewModel.player.player {
+                nsView.player = viewModel.player.player
+            }
+        }
+
+        static func dismantleNSView(_ nsView: AKPlayerView, coordinator _: ()) {
+            nsView.player = nil
+        }
     }
-}
+#endif
 
 // MARK: - LivePlayerView
 
@@ -78,15 +101,15 @@ public struct LivePlayerView: View {
                 .padding(.vertical, 12)
             }
             .navigationTitle(activeStreamTitle)
-            .navigationBarTitleDisplayMode(.inline)
+            .adaptiveInlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
                         viewModel.stop()
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     HStack(spacing: 12) {
                         Button {
                             showingCustomAdsSheet = true
@@ -133,7 +156,7 @@ public struct LivePlayerView: View {
             }
             .alert("Load Custom Live Stream", isPresented: $showCustomURLAlert) {
                 TextField("https://example.com/live/master.m3u8", text: $customURLString)
-                    .textInputAutocapitalization(.never)
+                    .adaptiveAutocapitalizationNever()
                     .autocorrectionDisabled()
                 Button("Load") {
                     if let url = URL(string: customURLString
@@ -169,7 +192,7 @@ public struct LivePlayerView: View {
 
     private func videoPlayerContainer() -> some View {
         ZStack(alignment: .top) {
-            LivePlayerUIView(viewModel: viewModel)
+            LivePlayerPlatformView(viewModel: viewModel)
                 .aspectRatio(16 / 9, contentMode: .fit)
                 .background(Color.black)
                 .cornerRadius(14)
@@ -295,7 +318,7 @@ public struct LivePlayerView: View {
                     .cornerRadius(6)
             }
             .padding(12)
-            .background(Color(.secondarySystemBackground))
+            .background(Color.gray.opacity(0.12))
             .cornerRadius(12)
         } else {
             HStack {
@@ -403,7 +426,7 @@ public struct LivePlayerView: View {
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.gray.opacity(0.12))
         .cornerRadius(12)
     }
 
@@ -482,7 +505,7 @@ public struct LivePlayerView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .background(isSelected ? Color
-                                .accentColor : Color(.tertiarySystemBackground))
+                                .accentColor : Color.gray.opacity(0.15))
                             .foregroundColor(isSelected ? .white : .primary)
                             .cornerRadius(8)
                     }
@@ -496,7 +519,7 @@ public struct LivePlayerView: View {
             .foregroundColor(.secondary)
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.gray.opacity(0.12))
         .cornerRadius(12)
     }
 
@@ -540,7 +563,7 @@ public struct LivePlayerView: View {
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.gray.opacity(0.12))
         .cornerRadius(12)
     }
 

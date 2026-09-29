@@ -179,6 +179,16 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Native Foundation KVO observations for AVPlayer properties.
     private var observations: [NSKeyValueObservation] = []
 
+    #if os(macOS)
+        /// Sendable wrapper for macOS ProcessInfo activity token.
+        private struct ActivityToken: @unchecked Sendable {
+            let token: any NSObjectProtocol
+        }
+
+        /// macOS ProcessInfo activity token for display sleep prevention.
+        private var displaySleepActivity: ActivityToken?
+    #endif
+
     /// Task responsible for asynchronously consuming and processing rate change
     /// events from the player stream.
     private var rateObservationTask: Task<Void, Never>?
@@ -266,6 +276,10 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         #if os(iOS) || os(tvOS) || os(visionOS)
             Task { @MainActor in
                 UIApplication.shared.isIdleTimerDisabled = false
+            }
+        #elseif os(macOS)
+            if let activity = displaySleepActivity {
+                ProcessInfo.processInfo.endActivity(activity.token)
             }
         #endif
     }
@@ -655,6 +669,18 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             let shouldDisable = configuration.idleTimerDisabledForStates.contains(state)
             if UIApplication.shared.isIdleTimerDisabled != shouldDisable {
                 UIApplication.shared.isIdleTimerDisabled = shouldDisable
+            }
+        #elseif os(macOS)
+            let shouldDisable = configuration.idleTimerDisabledForStates.contains(state)
+            if shouldDisable, displaySleepActivity == nil {
+                let token = ProcessInfo.processInfo.beginActivity(
+                    options: .idleDisplaySleepDisabled,
+                    reason: "AKPlayer Video Playback"
+                )
+                displaySleepActivity = ActivityToken(token: token)
+            } else if !shouldDisable, let activity = displaySleepActivity {
+                ProcessInfo.processInfo.endActivity(activity.token)
+                displaySleepActivity = nil
             }
         #endif
     }

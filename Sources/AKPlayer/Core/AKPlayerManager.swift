@@ -163,17 +163,23 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     /// headphones).
     private var isExternalAudioPlaybackDeviceConnected = false
 
-    /// Observer responsible for audio interruption notifications (e.g.,
-    /// incoming phone calls).
-    private var audioSessionInterruptionObserver: (any AKAudioSessionInterruptionObserverProtocol)!
+    #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+        /// Observer responsible for audio interruption notifications (e.g.,
+        /// incoming phone calls).
+        private var audioSessionInterruptionObserver: (
+            any AKAudioSessionInterruptionObserverProtocol
+        )!
 
-    /// Observer handling route changes (e.g., unplugging headphones or
-    /// disconnecting Bluetooth).
-    private var audioSessionRouteChangesObserver: (any AKAudioSessionRouteChangesObserverProtocol)!
+        /// Observer handling route changes (e.g., unplugging headphones or
+        /// disconnecting Bluetooth).
+        private var audioSessionRouteChangesObserver: (
+            any AKAudioSessionRouteChangesObserverProtocol
+        )!
 
-    /// Observer handling `mediaServicesWereReset` system restore notifications.
-    private var audioSessionMediaServicesWereResetObserver:
-        (any AKAudioSessionMediaServicesWereResetObserverProtocol)!
+        /// Observer handling `mediaServicesWereReset` system restore notifications.
+        private var audioSessionMediaServicesWereResetObserver:
+            (any AKAudioSessionMediaServicesWereResetObserverProtocol)!
+    #endif
 
     /// Observer monitoring app lifecycle changes (entering
     /// background/foreground, resigning active).
@@ -193,8 +199,7 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     ///   - player: The `AVPlayer` instance used for playback.
     ///   - configuration: Configuration settings for player audio and control
     /// parameters.
-    ///   - audioSessionService: Service interface for managing
-    /// `AVAudioSession`.
+    ///   - audioSessionService: Service interface for managing audio sessions.
     public init(
         player: AVPlayer,
         configuration: AKPlayerConfigurationProtocol,
@@ -210,16 +215,18 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         self.audioSessionService = audioSessionService
         super.init()
 
-        audioSessionInterruptionObserver = AKAudioSessionInterruptionObserver(
-            audioSession: audioSessionService.audioSession
-        )
-        audioSessionRouteChangesObserver = AKAudioSessionRouteChangesObserver(
-            audioSession: audioSessionService.audioSession
-        )
-        audioSessionMediaServicesWereResetObserver =
-            AKAudioSessionMediaServicesWereResetObserver(
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            audioSessionInterruptionObserver = AKAudioSessionInterruptionObserver(
                 audioSession: audioSessionService.audioSession
             )
+            audioSessionRouteChangesObserver = AKAudioSessionRouteChangesObserver(
+                audioSession: audioSessionService.audioSession
+            )
+            audioSessionMediaServicesWereResetObserver =
+                AKAudioSessionMediaServicesWereResetObserver(
+                    audioSession: audioSessionService.audioSession
+                )
+        #endif
         applicationLifeCycleEventsObserver = AKApplicationLifeCycleEventsObserver()
 
         if configuration.isNowPlayingEnabled {
@@ -263,8 +270,10 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         try await nowPlayingManager?.start()
 
         startObservers()
-        isExternalAudioPlaybackDeviceConnected =
-            audioSessionRouteChangesObserver.isExternalDeviceConnected()
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            isExternalAudioPlaybackDeviceConnected =
+                audioSessionRouteChangesObserver.isExternalDeviceConnected()
+        #endif
     }
 
     // MARK: - Boundary Observers
@@ -491,17 +500,21 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     /// Subscribes system observers to route changes, interruptions, media
     /// resets, and lifecycle events.
     private func startObservers() {
-        audioSessionInterruptionObserver.startObserving()
-        audioSessionRouteChangesObserver.startObserving()
-        audioSessionMediaServicesWereResetObserver.startObserving()
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            audioSessionInterruptionObserver.startObserving()
+            audioSessionRouteChangesObserver.startObserving()
+            audioSessionMediaServicesWereResetObserver.startObserving()
+        #endif
         applicationLifeCycleEventsObserver.startObserving()
     }
 
     /// Unsubscribes active observers from system notifications.
     private func stopObservers() {
-        audioSessionInterruptionObserver.stopObserving()
-        audioSessionRouteChangesObserver.stopObserving()
-        audioSessionMediaServicesWereResetObserver.stopObserving()
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            audioSessionInterruptionObserver.stopObserving()
+            audioSessionRouteChangesObserver.stopObserving()
+            audioSessionMediaServicesWereResetObserver.stopObserving()
+        #endif
         applicationLifeCycleEventsObserver.stopObserving()
     }
 
@@ -511,23 +524,27 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     /// deactivate.
     /// - Throws: Session setup errors thrown by system calls.
     private func setAudioSession(_ active: Bool) throws {
-        guard active else {
-            return try audioSessionService.activate(
-                false,
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            guard active else {
+                return try audioSessionService.activate(
+                    false,
+                    options: configuration.audioSession.activeOptions
+                )
+            }
+
+            try audioSessionService.setCategory(
+                configuration.audioSession.category,
+                mode: configuration.audioSession.mode,
+                policy: configuration.audioSession.routeSharingPolicy,
+                options: configuration.audioSession.categoryOptions
+            )
+            try audioSessionService.activate(
+                true,
                 options: configuration.audioSession.activeOptions
             )
-        }
-
-        try audioSessionService.setCategory(
-            configuration.audioSession.category,
-            mode: configuration.audioSession.mode,
-            policy: configuration.audioSession.routeSharingPolicy,
-            options: configuration.audioSession.categoryOptions
-        )
-        try audioSessionService.activate(
-            true,
-            options: configuration.audioSession.activeOptions
-        )
+        #elseif os(macOS)
+            try audioSessionService.activate(active)
+        #endif
     }
 
     /// Verifies if app configuration rules allow playback based on the current
@@ -719,40 +736,79 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     }
 
     private func startObservingAudioSessionEvents() {
-        audioSessionInterruptionTask?.cancel()
-        audioSessionInterruptionTask = Task { [weak self] in
-            guard let stream = self?.audioSessionInterruptionObserver.events else { return }
-            for await event in stream {
-                guard !Task.isCancelled, let self else { break }
-                handleAudioSessionInterruptionEvent(event)
+        #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+            audioSessionInterruptionTask?.cancel()
+            audioSessionInterruptionTask = Task { [weak self] in
+                guard let stream = self?.audioSessionInterruptionObserver.events else { return }
+                for await event in stream {
+                    guard !Task.isCancelled, let self else { break }
+                    handleAudioSessionInterruptionEvent(event)
+                }
             }
-        }
 
-        audioSessionRouteChangesTask?.cancel()
-        audioSessionRouteChangesTask = Task { [weak self] in
-            guard let stream = self?.audioSessionRouteChangesObserver.events else { return }
-            for await event in stream {
-                guard !Task.isCancelled, let self else { break }
-                handleAudioSessionRouteChangeEvent(event)
+            audioSessionRouteChangesTask?.cancel()
+            audioSessionRouteChangesTask = Task { [weak self] in
+                guard let stream = self?.audioSessionRouteChangesObserver.events else { return }
+                for await event in stream {
+                    guard !Task.isCancelled, let self else { break }
+                    handleAudioSessionRouteChangeEvent(event)
+                }
             }
-        }
 
-        audioSessionMediaServicesResetTask?.cancel()
-        audioSessionMediaServicesResetTask = Task { [weak self] in
-            guard let stream = self?.audioSessionMediaServicesWereResetObserver.events
-            else { return }
-            for await _ in stream {
-                guard !Task.isCancelled, let self else { break }
-                handleMediaServicesWereReset()
+            audioSessionMediaServicesResetTask?.cancel()
+            audioSessionMediaServicesResetTask = Task { [weak self] in
+                guard let stream = self?.audioSessionMediaServicesWereResetObserver.events
+                else { return }
+                for await _ in stream {
+                    guard !Task.isCancelled, let self else { break }
+                    handleMediaServicesWereReset()
+                }
             }
-        }
+        #endif
     }
 
-    private func handleAudioSessionInterruptionEvent(_ event: AKAudioSessionInterruptionEvent) {
-        switch event {
-        case .began:
+    #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+        private func handleAudioSessionInterruptionEvent(_ event: AKAudioSessionInterruptionEvent) {
+            switch event {
+            case .began:
+                guard
+                    (state.isAny(of: [
+                        .loading,
+                        .loaded,
+                        .buffering,
+                        .waitingForNetwork,
+                    ]) && autoPlay)
+                    || state == .playing
+                else { return }
+
+                savePlayerStateSnapshot(
+                    playbackInterruptionReason: .audioSessionInterruption,
+                    shouldResume: true
+                )
+                pause()
+
+            case let .ended(shouldResume):
+                guard configuration.playbackResumesWhenAudioSessionInterruptionEnded,
+                      let snapshot = playerStateSnapshot,
+                      snapshot.playbackInterruptionReason == .audioSessionInterruption,
+                      snapshot.shouldResume, shouldResume
+                else { return }
+
+                play()
+            }
+        }
+
+        private func handleAudioSessionRouteChangeEvent(_: AKAudioSessionRouteChangeEvent) {
+            let isExternalDeviceConnected = audioSessionRouteChangesObserver
+                .isExternalDeviceConnected()
+            defer {
+                self.isExternalAudioPlaybackDeviceConnected = isExternalDeviceConnected
+            }
+
             guard
-                (state.isAny(of: [
+                isExternalAudioPlaybackDeviceConnected
+                && !isExternalDeviceConnected
+                && (state.isAny(of: [
                     .loading,
                     .loaded,
                     .buffering,
@@ -761,45 +817,11 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
                 || state == .playing
             else { return }
 
-            savePlayerStateSnapshot(
-                playbackInterruptionReason: .audioSessionInterruption,
-                shouldResume: true
-            )
             pause()
-
-        case let .ended(shouldResume):
-            guard configuration.playbackResumesWhenAudioSessionInterruptionEnded,
-                  let snapshot = playerStateSnapshot,
-                  snapshot.playbackInterruptionReason == .audioSessionInterruption,
-                  snapshot.shouldResume, shouldResume
-            else { return }
-
-            play()
-        }
-    }
-
-    private func handleAudioSessionRouteChangeEvent(_: AKAudioSessionRouteChangeEvent) {
-        let isExternalDeviceConnected = audioSessionRouteChangesObserver.isExternalDeviceConnected()
-        defer {
-            self.isExternalAudioPlaybackDeviceConnected = isExternalDeviceConnected
         }
 
-        guard
-            isExternalAudioPlaybackDeviceConnected
-            && !isExternalDeviceConnected
-            && (state.isAny(of: [
-                .loading,
-                .loaded,
-                .buffering,
-                .waitingForNetwork,
-            ]) && autoPlay)
-            || state == .playing
-        else { return }
-
-        pause()
-    }
-
-    private func handleMediaServicesWereReset() {
-        stop()
-    }
+        private func handleMediaServicesWereReset() {
+            stop()
+        }
+    #endif
 }

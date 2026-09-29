@@ -72,7 +72,7 @@ public struct MainTabView: View {
         .sheet(isPresented: $isPlaygroundPresented) {
             CustomURLPlaygroundView(initialTarget: playgroundInitialTarget)
         }
-        .fullScreenCover(isPresented: $isQueuePlayerPresented) {
+        .adaptiveFullScreenCover(isPresented: $isQueuePlayerPresented) {
             QueuePlayerView(
                 medias: sampleQueueMedia,
                 startIndex: queueStartIndex
@@ -410,29 +410,56 @@ public struct MainTabView: View {
     private func playerTabToolbar(target: CustomURLPlaygroundView
         .PlayerTarget) -> some ToolbarContent
     {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                playgroundInitialTarget = target
-                isPlaygroundPresented = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Custom URL")
-                        .font(.caption.bold())
+        #if os(iOS) || os(tvOS) || os(visionOS)
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    playgroundInitialTarget = target
+                    isPlaygroundPresented = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Custom URL")
+                            .font(.caption.bold())
+                    }
                 }
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                globalAutoPlay.toggle()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: globalAutoPlay ? "bolt.fill" : "bolt.slash")
-                    Text(globalAutoPlay ? "AutoPlay ON" : "AutoPlay OFF")
-                        .font(.caption.bold())
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    globalAutoPlay.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: globalAutoPlay ? "bolt.fill" : "bolt.slash")
+                        Text(globalAutoPlay ? "AutoPlay ON" : "AutoPlay OFF")
+                            .font(.caption.bold())
+                    }
+                    .foregroundColor(globalAutoPlay ? .blue : .secondary)
                 }
-                .foregroundColor(globalAutoPlay ? .blue : .secondary)
             }
-        }
+        #else
+            ToolbarItem(placement: .cancellationAction) {
+                Button {
+                    playgroundInitialTarget = target
+                    isPlaygroundPresented = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Custom URL")
+                            .font(.caption.bold())
+                    }
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    globalAutoPlay.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: globalAutoPlay ? "bolt.fill" : "bolt.slash")
+                        Text(globalAutoPlay ? "AutoPlay ON" : "AutoPlay OFF")
+                            .font(.caption.bold())
+                    }
+                    .foregroundColor(globalAutoPlay ? .blue : .secondary)
+                }
+            }
+        #endif
     }
 }
