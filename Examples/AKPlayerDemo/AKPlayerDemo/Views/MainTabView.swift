@@ -48,13 +48,7 @@ public struct MainTabView: View {
                     Label("Queue", systemImage: "play.square.stack.fill")
                 }
 
-            // Tab 5: IPTV Live TV
-            IPTVPlayerView()
-                .tabItem {
-                    Label("IPTV", systemImage: "tv.fill")
-                }
-
-            // Tab 6: About & GitHub
+            // Tab 5: About & GitHub
             AboutView()
                 .tabItem {
                     Label("About", systemImage: "info.circle.fill")
