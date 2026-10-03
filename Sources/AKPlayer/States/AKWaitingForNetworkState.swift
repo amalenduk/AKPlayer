@@ -33,7 +33,11 @@ public class AKWaitingForNetworkState: AKBaseState {
 
     /// Indicates whether playback should resume automatically when network connectivity is
     /// re-established.
-    public private(set) var autoPlay = false
+    override public var autoPlay: Bool {
+        _autoPlay
+    }
+
+    private(set) var _autoPlay: Bool
 
     /// The player state to transition into after buffering resolves following network restoration.
     private var stateToNavigateAfterBuffering: AKPlayerState?
@@ -78,7 +82,7 @@ public class AKWaitingForNetworkState: AKBaseState {
             AKLogger.logInit(self)
         }
         self.stateToNavigateAfterBuffering = stateToNavigateAfterBuffering
-        self.autoPlay = autoPlay
+        self._autoPlay = autoPlay
         self.rate = rate
         self.targetSeek = targetSeek
         self.reason = reason
@@ -229,14 +233,14 @@ public class AKWaitingForNetworkState: AKBaseState {
 
     /// Requests to resume playback once network connectivity is restored by enabling autoplay.
     override public func play() {
-        if autoPlay {
+        if _autoPlay {
             playerController?
                 .emit(.commandUnavailable(reason: .alreadyTryingToPlay))
         } else {
             performIfAllowed(
                 check: { availability(for: .play()) },
                 action: {
-                    autoPlay = true
+                    _autoPlay = true
                 },
                 blocked: { [weak self] reason in
                     guard let self else { return }
@@ -254,7 +258,7 @@ public class AKWaitingForNetworkState: AKBaseState {
             check: { availability(for: .play(at: rate)) },
             action: {
                 self.rate = rate
-                autoPlay = true
+                _autoPlay = true
             },
             blocked: { [weak self] reason in
                 guard let self else { return }

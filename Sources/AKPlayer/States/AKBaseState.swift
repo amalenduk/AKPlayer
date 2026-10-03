@@ -47,6 +47,10 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
     /// The explicit player state represented by this class instance.
     public let state: AKPlayerState
 
+    public var autoPlay: Bool {
+        false
+    }
+
     /// Flag indicating whether the state controller has initiated transition to a subsequent state.
     public private(set) var hasTransitioned = false
 

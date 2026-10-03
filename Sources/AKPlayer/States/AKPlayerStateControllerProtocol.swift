@@ -47,12 +47,3 @@ public protocol AKPlayerStateControllerProtocol: AnyObject, Sendable, AKPlayerAc
     /// Responds to playback state transitions forwarded from the interstitial service.
     func handleInterstitialPlaybackStateChange(_ playbackState: AKInterstitialPlaybackState)
 }
-
-// MARK: - Default Implementations
-
-public extension AKPlayerStateControllerProtocol {
-    /// Default implementation returning `false` for automatic playback behavior.
-    var autoPlay: Bool {
-        false
-    }
-}

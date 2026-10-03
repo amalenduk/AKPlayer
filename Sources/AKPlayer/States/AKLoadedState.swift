@@ -19,7 +19,11 @@ public class AKLoadedState: AKBaseState {
 
     /// Indicates whether autoplay should trigger automatically once preparation
     /// finishes.
-    public private(set) var autoPlay: Bool
+    override public var autoPlay: Bool {
+        _autoPlay // or state.autoplay
+    }
+
+    private(set) var _autoPlay: Bool
 
     /// Optional target position to navigate to upon loading.
     private let position: AKSeekTarget?
@@ -47,7 +51,7 @@ public class AKLoadedState: AKBaseState {
         defer {
             AKLogger.logInit(self)
         }
-        self.autoPlay = autoPlay
+        self._autoPlay = autoPlay
         self.position = position
         self.rate = rate
         super.init(playerController: playerController, state: .loaded)
@@ -70,7 +74,7 @@ public class AKLoadedState: AKBaseState {
         guard let playerController else { return }
         playerController.emit(.timeDidChange(playerController.currentTime))
 
-        if autoPlay {
+        if _autoPlay {
             play()
         } else if let position, let currentMedia = playerController.currentMedia {
             let (canSeek, reason) = currentMedia.seekingThroughMedia.canSeek(to: position)
@@ -146,7 +150,7 @@ public class AKLoadedState: AKBaseState {
     /// Commands the player to unpause and enter the buffering state prior to
     /// active playback.
     override public func play() {
-        var controller = if let position {
+        let controller = if let position {
             AKBufferingState(
                 playerController: playerController,
                 autoPlay: true,
@@ -171,7 +175,7 @@ public class AKLoadedState: AKBaseState {
         performIfAllowed(
             check: { availability(for: .play(at: rate)) },
             action: {
-                var controller = if let position {
+                let controller = if let position {
                     AKBufferingState(
                         playerController: playerController,
                         autoPlay: true,
@@ -198,8 +202,8 @@ public class AKLoadedState: AKBaseState {
     /// Commands the player to pause. Disables `autoPlay` if queued, or emits an
     /// `.alreadyPaused` unavailability warning.
     override public func pause() {
-        if autoPlay {
-            autoPlay = false
+        if _autoPlay {
+            _autoPlay = false
         } else {
             playerController?.emit(.commandUnavailable(reason: .alreadyPaused))
         }

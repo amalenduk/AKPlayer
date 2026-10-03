@@ -22,7 +22,11 @@ public class AKLoadingState: AKBaseState {
 
     /// Indicates whether playback should automatically start once loading
     /// completes.
-    public private(set) var autoPlay: Bool
+    override public var autoPlay: Bool {
+        _autoPlay
+    }
+
+    private(set) var _autoPlay: Bool
 
     /// An optional initial position to seek to upon entering loaded state.
     private let position: AKSeekTarget?
@@ -60,7 +64,7 @@ public class AKLoadingState: AKBaseState {
             AKLogger.logInit(self)
         }
         self.media = media
-        self.autoPlay = autoPlay
+        self._autoPlay = autoPlay
         self.position = position
         self.rate = rate
         super.init(playerController: playerController, state: .loading)
@@ -121,7 +125,7 @@ public class AKLoadingState: AKBaseState {
     /// Registers playback request while media is still loading. Sets `autoPlay`
     /// flag to true.
     override public func play() {
-        autoPlay = true
+        _autoPlay = true
     }
 
     /// Intercepts specific speed adjustments requested during loading state and
@@ -133,12 +137,12 @@ public class AKLoadingState: AKBaseState {
 
     /// Cancels queued autoplay request while media is loading.
     override public func pause() {
-        autoPlay = false
+        _autoPlay = false
     }
 
     /// Toggles autoplay behavior based on current state.
     override public func togglePlayPause() {
-        autoPlay ? pause() : play()
+        _autoPlay ? pause() : play()
     }
 
     // MARK: - Helper Functions
@@ -234,7 +238,7 @@ public class AKLoadingState: AKBaseState {
         change(
             AKLoadedState(
                 playerController: playerController,
-                autoPlay: autoPlay,
+                autoPlay: _autoPlay,
                 position: position,
                 rate: rate
             )

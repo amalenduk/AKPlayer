@@ -23,7 +23,11 @@ public class AKBufferingState: AKBaseState {
 
     /// Indicates whether playback should start automatically once buffer
     /// readiness is met.
-    public private(set) var autoPlay: Bool
+    override public var autoPlay: Bool {
+        _autoPlay
+    }
+
+    private(set) var _autoPlay: Bool
 
     /// The player state to transition into after buffering resolves if autoPlay
     /// is false.
@@ -69,7 +73,7 @@ public class AKBufferingState: AKBaseState {
         }
         self.stateToNavigateAfterBuffering = stateToNavigateAfterBuffering ?? playerController?
             .state ?? .buffering
-        self.autoPlay = autoPlay
+        self._autoPlay = autoPlay
         self.rate = rate
         self.targetSeek = targetSeek
         self.retryCount = retryCount
@@ -166,7 +170,7 @@ public class AKBufferingState: AKBaseState {
             if error is URLError {
                 let controller = AKWaitingForNetworkState(
                     playerController: playerController,
-                    autoPlay: autoPlay,
+                    autoPlay: _autoPlay,
                     rate: rate,
                     stateToNavigateAfterBuffering: stateToNavigateAfterBuffering,
                     targetSeek: targetSeek,
@@ -195,7 +199,7 @@ public class AKBufferingState: AKBaseState {
         guard isActiveState else { return }
         switch playbackState {
         case .playing:
-            if !autoPlay {
+            if !_autoPlay {
                 play()
             } else {
                 evaluateBufferingReadiness()
@@ -210,11 +214,11 @@ public class AKBufferingState: AKBaseState {
     /// Commands the player to begin media playback, updating autoplay
     /// parameters if already buffering.
     override public func play() {
-        if autoPlay {
+        if _autoPlay {
             playerController?
                 .emit(.commandUnavailable(reason: .alreadyTryingToPlay))
         } else {
-            autoPlay = true
+            _autoPlay = true
             startPlayingIfPossible()
         }
     }
@@ -227,7 +231,7 @@ public class AKBufferingState: AKBaseState {
             check: { availability(for: .play(at: rate)) },
             action: {
                 self.rate = rate
-                autoPlay = true
+                _autoPlay = true
                 startPlayingIfPossible()
             },
             blocked: { [weak self] reason in
@@ -382,7 +386,7 @@ public class AKBufferingState: AKBaseState {
     private func evaluateBufferingReadiness() {
         guard isActiveState else { return }
         guard canPlay() else { return }
-        autoPlay ? startPlayingIfPossible() : changeToPreviousState()
+        _autoPlay ? startPlayingIfPossible() : changeToPreviousState()
     }
 
     /// Cancels and restarts the buffer timeout watcher task.
@@ -433,7 +437,7 @@ public class AKBufferingState: AKBaseState {
 
             let controller = AKWaitingForNetworkState(
                 playerController: playerController,
-                autoPlay: autoPlay,
+                autoPlay: _autoPlay,
                 rate: rate,
                 stateToNavigateAfterBuffering: stateToNavigateAfterBuffering,
                 targetSeek: targetSeek,
@@ -483,7 +487,7 @@ extension AKBufferingState {
                 guard !Task.isCancelled, let self else { return }
 
                 if canPlay() {
-                    if autoPlay {
+                    if _autoPlay {
                         startPlayingIfPossible()
                     } else {
                         changeToPreviousState()
@@ -562,7 +566,7 @@ extension AKBufferingState {
         case .stalled where !madeAnyProgress:
             let controller = AKWaitingForNetworkState(
                 playerController: playerController,
-                autoPlay: autoPlay,
+                autoPlay: _autoPlay,
                 rate: rate,
                 stateToNavigateAfterBuffering: stateToNavigateAfterBuffering,
                 targetSeek: targetSeek,
@@ -591,7 +595,7 @@ extension AKBufferingState {
 
             let controller = AKWaitingForNetworkState(
                 playerController: playerController,
-                autoPlay: autoPlay,
+                autoPlay: _autoPlay,
                 rate: rate,
                 stateToNavigateAfterBuffering: stateToNavigateAfterBuffering,
                 targetSeek: targetSeek,
