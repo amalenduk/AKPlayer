@@ -54,7 +54,6 @@ struct AKChapterTests {
 
         #expect(service.chapters.isEmpty)
         #expect(service.chapterCount == 0)
-        #expect(service.currentChapter == nil)
 
         // Query non-existent chapters
         #expect(service.chapter(at: 0) == nil)
@@ -81,12 +80,11 @@ struct AKChapterTests {
         var received: [AKChapterEvent] = []
         for await event in stream {
             received.append(event)
-            if received.count == 2 {
+            if received.count == 1 {
                 break
             }
         }
 
         #expect(received.contains(.chaptersDidChange([])))
-        #expect(received.contains(.currentChapterDidChange(nil)))
     }
 }

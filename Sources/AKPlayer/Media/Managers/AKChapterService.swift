@@ -25,8 +25,6 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     private struct State {
         /// Cached list of extracted chapters.
         var chapters: [AKChapter] = []
-        /// The currently active chapter matching playback position.
-        var currentChapter: AKChapter?
         /// The asynchronous task loading chapter metadata.
         var loadTask: Task<Void, Never>?
     }
@@ -41,11 +39,6 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
     /// The total number of chapters currently available.
     public var chapterCount: Int {
         state.withLock { $0.chapters.count }
-    }
-
-    /// The chapter corresponding to the current playback position, if any.
-    public var currentChapter: AKChapter? {
-        state.withLock { $0.currentChapter }
     }
 
     /// The start time in seconds of the end credits or outro chapter if present, or `nil`.
@@ -154,27 +147,6 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         return currentChapters[active.index - 1]
     }
 
-    // MARK: - Playback Tracking
-
-    /// Updates the active chapter state for the specified playback timestamp and notifies observers
-    /// if it changed.
-    /// - Parameter time: The current playback timestamp.
-    public func updateCurrentTime(_ time: CMTime) {
-        let matchingChapter = currentChapter(at: time)
-
-        let shouldBroadcast: Bool = state.withLock { s in
-            if s.currentChapter != matchingChapter {
-                s.currentChapter = matchingChapter
-                return true
-            }
-            return false
-        }
-
-        if shouldBroadcast {
-            eventsBroadcaster.send(.currentChapterDidChange(matchingChapter))
-        }
-    }
-
     // MARK: - Lifecycle
 
     /// Asynchronously extracts chapter metadata groups from the media asset.
@@ -200,11 +172,9 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
             $0.loadTask?.cancel()
             $0.loadTask = nil
             $0.chapters = []
-            $0.currentChapter = nil
         }
 
         eventsBroadcaster.send(.chaptersDidChange([]))
-        eventsBroadcaster.send(.currentChapterDidChange(nil))
     }
 
     // MARK: - Private Extraction

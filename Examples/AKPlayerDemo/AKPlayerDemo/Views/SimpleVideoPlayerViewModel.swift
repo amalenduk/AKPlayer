@@ -181,7 +181,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     private func observeChapterEvents(for media: any AKPlayable) {
         chaptersTask?.cancel()
         chapters = media.chapterService.chapters
-        currentChapter = media.chapterService.currentChapter
+        currentChapter = media.chapterService.currentChapter(at: player.currentTime)
 
         chaptersTask = Task { [weak self] in
             guard let self else { return }

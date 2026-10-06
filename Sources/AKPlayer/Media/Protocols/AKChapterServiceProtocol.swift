@@ -21,9 +21,6 @@ public protocol AKChapterServiceProtocol: AnyObject, Sendable {
     /// Total count of chapters available.
     var chapterCount: Int { get }
 
-    /// The currently active chapter based on the latest playback time.
-    var currentChapter: AKChapter? { get }
-
     /// The start time in seconds of the credits chapter if present (e.g. titled "Credits" or
     /// "Outro").
     var creditsStartTime: Double? { get }
@@ -70,11 +67,7 @@ public protocol AKChapterServiceProtocol: AnyObject, Sendable {
     /// - Returns: The previous `AKChapter`, or `nil` if already on the first chapter.
     func previousChapter(from time: CMTime) -> AKChapter?
 
-    // MARK: - Playback Tracking & Lifecycle
-
-    /// Updates the current playback time to advance active chapter tracking.
-    /// - Parameter time: Current playback timestamp.
-    func updateCurrentTime(_ time: CMTime)
+    // MARK: - Lifecycle
 
     /// Loads chapter metadata asynchronously from the underlying media asset.
     func loadChapters() async

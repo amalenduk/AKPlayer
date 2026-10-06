@@ -441,8 +441,8 @@ Task {
     }
 }
 
-// Current active chapter
-if let currentChapter = player.currentMedia?.chapterService.currentChapter {
+// Query active chapter at current playback time
+if let currentChapter = player.currentMedia?.chapterService.currentChapter(at: player.currentTime) {
     print("Now watching: \(currentChapter.title)")
 }
 ```

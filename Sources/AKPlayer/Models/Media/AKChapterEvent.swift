@@ -10,11 +10,8 @@ import Foundation
 
 // MARK: - AKChapterEvent
 
-/// Events emitted when media chapters are extracted or the current chapter advances.
+/// Events emitted when media chapters are extracted.
 public enum AKChapterEvent: Sendable, Equatable {
     /// The complete collection of extracted chapters changed.
     case chaptersDidChange([AKChapter])
-
-    /// The active playback chapter corresponding to the playhead updated.
-    case currentChapterDidChange(AKChapter?)
 }
