@@ -6,19 +6,36 @@
 //   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
+import AVFoundation
 import CoreMedia
 
 // MARK: - AKPlayerEvent
 
-/// Playback events published by ``AKPlayer``.
+/// Comprehensive playback, media, service, and interstitial events published by ``AKPlayer``.
 ///
 /// Subscribe with `for await event in player.events`. The existing
 /// ``AKPlayerDelegate`` remains supported as a compatibility adapter.
 public enum AKPlayerEvent: Sendable {
-    // MARK: - State & Media
+    // MARK: - Media & Media Services Events
 
-    /// The player's operational state transitioned (e.g., from buffering to
-    /// playing).
+    /// The active media item lifecycle, duration, ranges, or capability event.
+    case media(AKMediaEvent)
+
+    /// Track selection event for audio, subtitle, and closed captions.
+    case trackSelection(AKTrackSelectionEvent)
+
+    /// Underlying AVPlayerItem system notification event.
+    case playerItemNotification(AKPlayerItemNotificationEvent)
+
+    /// Metadata provider event (static container metadata and dynamic timed metadata).
+    case metadata(AKMediaMetadataEvent)
+
+    /// Chapter service event (chapter markers and active chapter transitions).
+    case chapter(AKChapterEvent)
+
+    // MARK: - Core Player State & Playback
+
+    /// The player's operational state transitioned (e.g., from buffering to playing).
     case stateDidChange(AKPlayerState)
 
     /// The active playable media item was swapped or updated.
@@ -53,12 +70,16 @@ public enum AKPlayerEvent: Sendable {
 
     // MARK: - Warnings & Errors
 
-    /// A requested action was blocked because current state preconditions were
-    /// not met.
+    /// A requested action was blocked because current state preconditions were not met.
     case commandUnavailable(reason: AKPlayerUnavailableCommandReason)
 
     /// An unrecoverable pipeline failure occurred.
     case didFail(with: AKPlayerError)
+
+    // MARK: - Interstitial (Ad) Events
+
+    /// Interstitial schedule, playback state, progress, or ad markers event.
+    case interstitial(AKInterstitialEvent)
 }
 
 // MARK: - Equatable Conformance
@@ -67,6 +88,18 @@ extension AKPlayerEvent: Equatable {
     /// Compares two `AKPlayerEvent` instances for equality.
     public static func == (lhs: AKPlayerEvent, rhs: AKPlayerEvent) -> Bool {
         switch (lhs, rhs) {
+        case let (.media(l), .media(r)):
+            l == r
+        case let (.trackSelection(l), .trackSelection(r)):
+            l == r
+        case let (.playerItemNotification(l), .playerItemNotification(r)):
+            l == r
+        case let (.metadata(l), .metadata(r)):
+            l == r
+        case let (.chapter(l), .chapter(r)):
+            l == r
+        case let (.interstitial(l), .interstitial(r)):
+            l == r
         case let (.mediaDidChange(l), .mediaDidChange(r)):
             l.isEqual(to: r)
         case let (.stateDidChange(l), .stateDidChange(r)):

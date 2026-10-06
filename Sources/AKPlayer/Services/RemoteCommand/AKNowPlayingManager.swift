@@ -468,18 +468,22 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         }
 
         metadataObservationTask = Task { @MainActor [weak self, weak media] in
-            guard let stream = media?.metadataProvider.staticMetadataUpdates else { return }
-            for await _ in stream {
+            guard let stream = media?.metadataProvider.events else { return }
+            for await event in stream {
                 guard !Task.isCancelled, let self else { break }
-                updateNowPlayingInfo()
+                if case .staticMetadataDidChange = event {
+                    updateNowPlayingInfo()
+                }
             }
         }
 
         chaptersObservationTask = Task { @MainActor [weak self, weak media] in
-            guard let stream = media?.chapterService.chaptersUpdates else { return }
-            for await _ in stream {
+            guard let stream = media?.chapterService.events else { return }
+            for await event in stream {
                 guard !Task.isCancelled, let self else { break }
-                updateNowPlayingInfo()
+                if case .chaptersDidChange = event {
+                    updateNowPlayingInfo()
+                }
             }
         }
     }

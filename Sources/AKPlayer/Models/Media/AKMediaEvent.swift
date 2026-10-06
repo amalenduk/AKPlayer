@@ -67,3 +67,30 @@ public enum AKMediaEvent: Sendable {
     /// The native video pixel/presentation resolution updated.
     case presentationSizeDidChange(CGSize)
 }
+
+// MARK: - Equatable Conformance
+
+extension AKMediaEvent: Equatable {
+    public static func == (lhs: AKMediaEvent, rhs: AKMediaEvent) -> Bool {
+        switch (lhs, rhs) {
+        case let (.stateDidChange(l), .stateDidChange(r)):
+            l == r
+        case let (.durationDidChange(l), .durationDidChange(r)):
+            l == r
+        case let (.timebaseDidChange(l), .timebaseDidChange(r)):
+            l == r
+        case let (.capabilityDidChange(lCap, lSup), .capabilityDidChange(rCap, rSup)):
+            lCap == rCap && lSup == rSup
+        case let (.loadedTimeRangesDidChange(l), .loadedTimeRangesDidChange(r)):
+            l == r
+        case let (.seekableTimeRangesDidChange(l), .seekableTimeRangesDidChange(r)):
+            l == r
+        case let (.tracksDidChange(l), .tracksDidChange(r)):
+            l == r
+        case let (.presentationSizeDidChange(l), .presentationSizeDidChange(r)):
+            l == r
+        default:
+            false
+        }
+    }
+}

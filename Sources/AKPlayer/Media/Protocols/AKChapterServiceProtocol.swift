@@ -28,13 +28,10 @@ public protocol AKChapterServiceProtocol: AnyObject, Sendable {
     /// "Outro").
     var creditsStartTime: Double? { get }
 
-    // MARK: - Async Streams
+    // MARK: - Async Stream
 
-    /// Asynchronous stream emitting when chapters are loaded or changed.
-    var chaptersUpdates: AsyncStream<[AKChapter]> { get }
-
-    /// Asynchronous stream emitting when the active chapter changes during playback.
-    var currentChapterUpdates: AsyncStream<AKChapter?> { get }
+    /// Asynchronous stream emitting chapter collection and active chapter updates.
+    var events: AsyncStream<AKChapterEvent> { get }
 
     // MARK: - Chapter Queries
 

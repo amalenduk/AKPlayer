@@ -216,3 +216,32 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
         }
     }
 }
+
+// MARK: - Equatable Conformance
+
+extension AKPlayerItemNotificationEvent: Equatable {
+    public static func == (
+        lhs: AKPlayerItemNotificationEvent,
+        rhs: AKPlayerItemNotificationEvent
+    ) -> Bool {
+        switch (lhs, rhs) {
+        case let (.didPlayToEndTime(l), .didPlayToEndTime(r)):
+            l == r
+        case (.failedToPlayToEndTime, .failedToPlayToEndTime):
+            true
+        case (.playbackStalled, .playbackStalled):
+            true
+        case (.timeJumped, .timeJumped):
+            true
+        case (.mediaSelectionDidChange, .mediaSelectionDidChange):
+            true
+        case let (
+            .recommendedTimeOffsetFromLiveDidChange(l),
+            .recommendedTimeOffsetFromLiveDidChange(r)
+        ):
+            l == r
+        default:
+            false
+        }
+    }
+}

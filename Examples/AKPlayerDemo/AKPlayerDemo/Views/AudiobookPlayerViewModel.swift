@@ -120,16 +120,18 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
 
         chaptersTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            for await updatedChapters in media.chapterService.chaptersUpdates {
+            for await event in media.chapterService.events {
                 guard !Task.isCancelled else { break }
-                chapters = updatedChapters
-                currentChapter = media.chapterService.currentChapter(
-                    at: player.currentTime
-                )
-                if let current = currentChapter,
-                   let idx = chapters.firstIndex(where: { $0.title == current.title })
-                {
-                    currentChapterIndex = idx
+                if case let .chaptersDidChange(updatedChapters) = event {
+                    chapters = updatedChapters
+                    currentChapter = media.chapterService.currentChapter(
+                        at: player.currentTime
+                    )
+                    if let current = currentChapter,
+                       let idx = chapters.firstIndex(where: { $0.title == current.title })
+                    {
+                        currentChapterIndex = idx
+                    }
                 }
             }
         }

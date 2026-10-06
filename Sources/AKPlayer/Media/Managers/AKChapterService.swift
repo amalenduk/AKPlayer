@@ -56,22 +56,16 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         })?.startTime
     }
 
-    // MARK: - Async Streams
+    // MARK: - Async Stream
 
-    /// An asynchronous stream emitting updates whenever the collection of chapters changes.
-    public var chaptersUpdates: AsyncStream<[AKChapter]> {
-        chaptersBroadcaster.makeStream()
-    }
-
-    /// An asynchronous stream emitting updates whenever the active playback chapter changes.
-    public var currentChapterUpdates: AsyncStream<AKChapter?> {
-        currentChapterBroadcaster.makeStream()
+    /// An asynchronous stream emitting chapter collection and active chapter updates.
+    public var events: AsyncStream<AKChapterEvent> {
+        eventsBroadcaster.makeStream()
     }
 
     // MARK: - Broadcasters
 
-    private let chaptersBroadcaster = AKEventBroadcaster<[AKChapter]>()
-    private let currentChapterBroadcaster = AKEventBroadcaster<AKChapter?>()
+    private let eventsBroadcaster = AKEventBroadcaster<AKChapterEvent>()
 
     // MARK: - Initialization
 
@@ -87,8 +81,7 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
 
     deinit {
         state.withLock { $0.loadTask?.cancel() }
-        chaptersBroadcaster.finish()
-        currentChapterBroadcaster.finish()
+        eventsBroadcaster.finish()
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
@@ -178,7 +171,7 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
         }
 
         if shouldBroadcast {
-            currentChapterBroadcaster.send(matchingChapter)
+            eventsBroadcaster.send(.currentChapterDidChange(matchingChapter))
         }
     }
 
@@ -210,8 +203,8 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
             $0.currentChapter = nil
         }
 
-        chaptersBroadcaster.send([])
-        currentChapterBroadcaster.send(nil)
+        eventsBroadcaster.send(.chaptersDidChange([]))
+        eventsBroadcaster.send(.currentChapterDidChange(nil))
     }
 
     // MARK: - Private Extraction
@@ -296,6 +289,6 @@ public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendab
             $0.chapters = parsedChapters
         }
 
-        chaptersBroadcaster.send(parsedChapters)
+        eventsBroadcaster.send(.chaptersDidChange(parsedChapters))
     }
 }

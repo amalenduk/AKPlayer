@@ -64,8 +64,8 @@ public protocol AKTrackSelectionServiceProtocol: AnyObject, Sendable {
     /// Clears internal track caches and resets observer sessions.
     func resetSession() async
 
-    /// Creates an `AsyncStream` emitting track selection updates whenever the active track changes.
-    func selectionChanges(for type: AKTrackType) -> AsyncStream<AKMediaTrackOption?>
+    /// An asynchronous stream emitting unified track selection events.
+    var events: AsyncStream<AKTrackSelectionEvent> { get }
 }
 
 // MARK: - Implementation
@@ -75,13 +75,10 @@ public protocol AKTrackSelectionServiceProtocol: AnyObject, Sendable {
 public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @unchecked Sendable {
     // MARK: - Internal State
 
-    /// Thread-confined internal state model for track groups, continuations, and observation tasks.
+    /// Thread-confined internal state model for track groups and observation tasks.
     private struct State {
         /// Cached AVMediaSelectionGroup instances keyed by characteristic identifier.
         var groupCache: [String: AVMediaSelectionGroup] = [:]
-        /// Active continuation subscribers for selection change streams.
-        var continuations: [AKTrackType: [UUID: AsyncStream<AKMediaTrackOption?>.Continuation]] =
-            [:]
         /// Last recorded active selection for each track type.
         var lastKnownSelection: [AKTrackType: AKMediaTrackOption?] = [:]
         /// Background task observing system accessibility caption preferences.
@@ -95,6 +92,14 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
 
     /// Thread-safe state container using Swift 6 native Mutex.
     private let state = Mutex(State())
+
+    /// Broadcaster dispatching track selection lifecycle events.
+    private let eventBroadcaster = AKEventBroadcaster<AKTrackSelectionEvent>()
+
+    /// An asynchronous stream emitting unified track selection events.
+    public var events: AsyncStream<AKTrackSelectionEvent> {
+        eventBroadcaster.makeStream()
+    }
 
     /// Convenience accessor for the active `AVPlayerItem`.
     private var playerItem: AVPlayerItem? {
@@ -113,10 +118,8 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
     deinit {
         state.withLock {
             $0.observationTask?.cancel()
-            for dict in $0.continuations.values {
-                dict.values.forEach { $0.finish() }
-            }
         }
+        eventBroadcaster.finish()
     }
 
     // MARK: - 1. Group Methods
@@ -383,38 +386,6 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
         startObservingExternalChanges()
     }
 
-    /// Creates an `AsyncStream` emitting track selection updates whenever the active track changes.
-    /// - Parameter type: The track type to observe.
-    /// - Returns: An `AsyncStream` yielding optional track option updates.
-    public func selectionChanges(for type: AKTrackType) -> AsyncStream<AKMediaTrackOption?> {
-        let id = UUID()
-        return AsyncStream { continuation in
-            state.withLock {
-                $0.continuations[type, default: [:]][id] = continuation
-                if let current = $0.lastKnownSelection[type] {
-                    continuation.yield(current)
-                }
-            }
-
-            // Seed initial track asynchronously if not yet cached
-            Task { [weak self] in
-                guard let self else { return }
-                if let current = try? await selectedTrack(for: type) {
-                    recordAndBroadcastIfChanged(current, for: type)
-                }
-            }
-
-            continuation.onTermination = { [weak self] _ in
-                self?.state.withLock {
-                    $0.continuations[type]?.removeValue(forKey: id)
-                    if $0.continuations[type]?.isEmpty == true {
-                        $0.continuations.removeValue(forKey: type)
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - External Change Observation
 
     /// Sets up notification observation for system-level media selection changes.
@@ -441,7 +412,7 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
     /// Handles external media selection notifications by fetching updated selections and notifying
     /// subscribers.
     private func handleExternalChangeNotification() async {
-        let types = state.withLock { Array($0.continuations.keys) }
+        let types: [AKTrackType] = [.audio, .subtitle, .closedCaption]
         for type in types {
             guard let resolved = try? await selectedTrack(for: type) else { continue }
             recordAndBroadcastIfChanged(resolved, for: type)
@@ -546,24 +517,24 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
         }
     }
 
-    /// Updates the last known selection and broadcasts the change to all registered continuations
-    /// if it differs.
+    /// Updates the last known selection and broadcasts the event if it differs.
     /// - Parameters:
     ///   - option: The newly selected track option.
     ///   - type: The track type for which selection changed.
     private func recordAndBroadcastIfChanged(_ option: AKMediaTrackOption?, for type: AKTrackType) {
-        let continuationsToNotify: [AsyncStream<AKMediaTrackOption?>.Continuation]? = state
-            .withLock {
-                if $0.lastKnownSelection[type] == option,
-                   $0.lastKnownSelection.keys.contains(type)
-                {
-                    return nil
-                }
-                $0.lastKnownSelection[type] = option
-                return $0.continuations[type].map { Array($0.values) }
+        let shouldBroadcast = state.withLock { s -> Bool in
+            if s.lastKnownSelection[type] == option,
+               s.lastKnownSelection.keys.contains(type)
+            {
+                return false
             }
+            s.lastKnownSelection[type] = option
+            return true
+        }
 
-        continuationsToNotify?.forEach { $0.yield(option) }
+        if shouldBroadcast {
+            eventBroadcaster.send(.selectedTrackDidChange(option, for: type))
+        }
     }
 }
 

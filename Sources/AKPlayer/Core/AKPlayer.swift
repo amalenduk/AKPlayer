@@ -8,6 +8,7 @@
 
 import AVFoundation
 import GroupActivities
+import Synchronization
 
 // MARK: - AKPlayer
 
@@ -112,9 +113,12 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         set { manager.audioTimePitchAlgorithm = newValue }
     }
 
-    /// Asynchronous stream of player events for Swift Concurrency.
+    private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
+
+    /// Asynchronous stream of all player, media, service, and interstitial events for Swift
+    /// Concurrency.
     public var events: AsyncStream<AKPlayerEvent> {
-        manager.events
+        eventBroadcaster.makeStream()
     }
 
     // MARK: - SharePlay
@@ -163,6 +167,10 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
 
     /// Task managing the asynchronous event stream from the player controller.
     private var playerEventsTask: Task<Void, Never>?
+    /// Task managing the asynchronous event stream from the interstitial service.
+    private var interstitialEventsTask: Task<Void, Never>?
+    /// Tasks observing the active media item and its child services.
+    private let activeMediaTasks = Mutex<[Task<Void, Never>]>([])
 
     // MARK: - Initialization & Teardown
 
@@ -193,6 +201,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         super.init()
 
         startObservingPlayerEvents()
+        startObservingInterstitialEvents()
     }
 
     deinit {
@@ -204,6 +213,17 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         }
         playerEventsTask?.cancel()
         playerEventsTask = nil
+        interstitialEventsTask?.cancel()
+        interstitialEventsTask = nil
+        let tasks = activeMediaTasks.withLock { t -> [Task<Void, Never>] in
+            let copy = t
+            t.removeAll()
+            return copy
+        }
+        for task in tasks {
+            task.cancel()
+        }
+        eventBroadcaster.finish()
     }
 
     // MARK: - Setup
@@ -242,6 +262,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         autoPlay: Bool,
         at position: AKSeekTarget?
     ) {
+        startObservingActiveMedia(media)
         manager.load(
             media: media,
             autoPlay: autoPlay,
@@ -276,6 +297,7 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
 
     /// Stops playback and tears down active player pipeline operations.
     public func stop() {
+        stopObservingActiveMedia()
         manager.stop()
     }
 
@@ -425,8 +447,86 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
             for await event in managerEvents {
                 guard !Task.isCancelled, let self else { break }
 
+                eventBroadcaster.send(event)
                 handleControllerEvent(event)
+
+                if case let .mediaDidChange(media) = event {
+                    startObservingActiveMedia(media)
+                }
             }
+        }
+    }
+
+    private func startObservingInterstitialEvents() {
+        interstitialEventsTask?.cancel()
+
+        interstitialEventsTask = Task { [weak self] in
+            guard let interstitialEvents = self?.interstitialService.events else { return }
+
+            for await event in interstitialEvents {
+                guard !Task.isCancelled, let self else { break }
+
+                eventBroadcaster.send(.interstitial(event))
+            }
+        }
+    }
+
+    private func startObservingActiveMedia(_ media: any AKPlayable) {
+        stopObservingActiveMedia()
+
+        // 1. Media item lifecycle, ranges, capabilities, tracks
+        let mediaTask = Task { [weak self] in
+            for await event in media.events {
+                guard !Task.isCancelled, let self else { break }
+                eventBroadcaster.send(.media(event))
+            }
+        }
+
+        // 2. Track selection (audio, subtitle, cc)
+        let trackTask = Task { [weak self] in
+            for await event in media.trackSelection.events {
+                guard !Task.isCancelled, let self else { break }
+                eventBroadcaster.send(.trackSelection(event))
+            }
+        }
+
+        // 3. AVPlayerItem notifications (stalls, jumps, completion)
+        let notifTask = Task { [weak self] in
+            for await event in media.playerItemNotifications.events {
+                guard !Task.isCancelled, let self else { break }
+                eventBroadcaster.send(.playerItemNotification(event))
+            }
+        }
+
+        // 4. Metadata provider (static and timed metadata)
+        let metaTask = Task { [weak self] in
+            for await event in media.metadataProvider.events {
+                guard !Task.isCancelled, let self else { break }
+                eventBroadcaster.send(.metadata(event))
+            }
+        }
+
+        // 5. Chapter service (markers and active chapter updates)
+        let chapterTask = Task { [weak self] in
+            for await event in media.chapterService.events {
+                guard !Task.isCancelled, let self else { break }
+                eventBroadcaster.send(.chapter(event))
+            }
+        }
+
+        activeMediaTasks.withLock {
+            $0 = [mediaTask, trackTask, notifTask, metaTask, chapterTask]
+        }
+    }
+
+    private func stopObservingActiveMedia() {
+        let tasks = activeMediaTasks.withLock { t -> [Task<Void, Never>] in
+            let copy = t
+            t.removeAll()
+            return copy
+        }
+        for task in tasks {
+            task.cancel()
         }
     }
 
@@ -479,6 +579,9 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
 
         case let .didFail(error):
             delegate?.akPlayer(self, didFailWith: error)
+
+        case .media, .trackSelection, .playerItemNotification, .metadata, .chapter, .interstitial:
+            break
         }
     }
 }

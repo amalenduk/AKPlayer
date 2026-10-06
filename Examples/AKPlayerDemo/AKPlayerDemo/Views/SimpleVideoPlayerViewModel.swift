@@ -185,13 +185,15 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
 
         chaptersTask = Task { [weak self] in
             guard let self else { return }
-            for await updatedChapters in media.chapterService.chaptersUpdates {
+            for await event in media.chapterService.events {
                 guard !Task.isCancelled else { break }
-                await MainActor.run {
-                    self.chapters = updatedChapters
-                    self.currentChapter = media.chapterService.currentChapter(
-                        at: self.player.currentTime
-                    )
+                if case let .chaptersDidChange(updatedChapters) = event {
+                    await MainActor.run {
+                        self.chapters = updatedChapters
+                        self.currentChapter = media.chapterService.currentChapter(
+                            at: self.player.currentTime
+                        )
+                    }
                 }
             }
         }

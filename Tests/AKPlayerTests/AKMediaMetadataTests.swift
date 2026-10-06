@@ -105,4 +105,24 @@ struct AKMediaMetadataTests {
         #expect(provider.staticMetadata.title == nil)
         #expect(provider.timedMetadata.isEmpty)
     }
+
+    @Test func mediaMetadataProviderEvents() async throws {
+        let media = try AKMedia(
+            url: #require(URL(string: "https://example.com/audio.mp3")),
+            type: .clip
+        )
+        let provider = media.metadataProvider
+        let stream = provider.events
+
+        var update = AKMediaStaticMetadata()
+        update.title = "Live Title"
+        provider.updateStaticMetadata(update)
+
+        for await event in stream {
+            if case let .staticMetadataDidChange(meta) = event {
+                #expect(meta.title == "Live Title")
+                break
+            }
+        }
+    }
 }

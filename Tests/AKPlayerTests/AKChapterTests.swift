@@ -67,4 +67,26 @@ struct AKChapterTests {
         service.resetSession()
         #expect(service.chapters.isEmpty)
     }
+
+    @Test func chapterServiceEvents() async throws {
+        let media = try AKMedia(
+            url: #require(URL(string: "https://example.com/audiobook.m4b")),
+            type: .clip
+        )
+        let service = media.chapterService
+        let stream = service.events
+
+        service.resetSession()
+
+        var received: [AKChapterEvent] = []
+        for await event in stream {
+            received.append(event)
+            if received.count == 2 {
+                break
+            }
+        }
+
+        #expect(received.contains(.chaptersDidChange([])))
+        #expect(received.contains(.currentChapterDidChange(nil)))
+    }
 }

@@ -31,13 +31,10 @@ public protocol AKMediaMetadataProviderProtocol: AnyObject, Sendable {
     /// The latest timed metadata items received from live streams or HLS broadcasts.
     var timedMetadata: [AVMetadataItem] { get }
 
-    // MARK: - Async Streams
+    // MARK: - Async Stream
 
-    /// Stream emitting updates whenever static metadata is loaded or manually updated.
-    var staticMetadataUpdates: AsyncStream<AKMediaStaticMetadata> { get }
-
-    /// Stream emitting dynamic timed metadata updates from live streams (e.g. radio song changes).
-    var timedMetadataUpdates: AsyncStream<[AVMetadataItem]> { get }
+    /// Stream emitting unified metadata lifecycle events.
+    var events: AsyncStream<AKMediaMetadataEvent> { get }
 
     // MARK: - Metadata Operations
 
@@ -86,20 +83,16 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
         state.withLock { $0.timedMetadata }
     }
 
-    /// Asynchronous stream yielding static metadata updates whenever modified or parsed.
-    public var staticMetadataUpdates: AsyncStream<AKMediaStaticMetadata> {
-        staticMetadataBroadcaster.makeStream()
-    }
+    // MARK: - Async Stream
 
-    /// Asynchronous stream yielding newly arrived timed metadata items during live playback.
-    public var timedMetadataUpdates: AsyncStream<[AVMetadataItem]> {
-        timedMetadataBroadcaster.makeStream()
+    /// Asynchronous stream yielding unified metadata lifecycle events.
+    public var events: AsyncStream<AKMediaMetadataEvent> {
+        eventsBroadcaster.makeStream()
     }
 
     // MARK: - Broadcasters
 
-    private let staticMetadataBroadcaster = AKEventBroadcaster<AKMediaStaticMetadata>()
-    private let timedMetadataBroadcaster = AKEventBroadcaster<[AVMetadataItem]>()
+    private let eventsBroadcaster = AKEventBroadcaster<AKMediaMetadataEvent>()
 
     // MARK: - Initialization
 
@@ -114,8 +107,7 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
 
     deinit {
         state.withLock { $0.loadTask?.cancel() }
-        staticMetadataBroadcaster.finish()
-        timedMetadataBroadcaster.finish()
+        eventsBroadcaster.finish()
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
@@ -197,14 +189,14 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             return updated
         }
 
-        staticMetadataBroadcaster.send(merged)
+        eventsBroadcaster.send(.staticMetadataDidChange(merged))
     }
 
     /// Processes timed metadata items emitted by the media stream and broadcasts them.
     /// - Parameter items: The newly arrived timed metadata items.
     public func handleTimedMetadata(_ items: [AVMetadataItem]) {
         state.withLock { $0.timedMetadata = items }
-        timedMetadataBroadcaster.send(items)
+        eventsBroadcaster.send(.timedMetadataDidChange(items))
 
         // Auto-extract real-time title / artist changes for live streams (e.g. Internet radio ID3)
         Task { [weak self] in
@@ -266,8 +258,8 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             $0.timedMetadata = []
         }
 
-        staticMetadataBroadcaster.send(AKMediaStaticMetadata())
-        timedMetadataBroadcaster.send([])
+        eventsBroadcaster.send(.staticMetadataDidChange(AKMediaStaticMetadata()))
+        eventsBroadcaster.send(.timedMetadataDidChange([]))
     }
 
     // MARK: - Private Loading
