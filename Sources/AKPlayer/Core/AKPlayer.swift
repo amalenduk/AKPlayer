@@ -262,7 +262,6 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         autoPlay: Bool,
         at position: AKSeekTarget?
     ) {
-        startObservingActiveMedia(media)
         manager.load(
             media: media,
             autoPlay: autoPlay,

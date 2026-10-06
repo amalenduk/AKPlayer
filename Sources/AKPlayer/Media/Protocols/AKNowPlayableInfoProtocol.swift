@@ -54,8 +54,64 @@ public enum Artwork: Equatable, @unchecked Sendable {
     /// Raw binary image data.
     case data(Data)
 
+    /// Remote web artwork URL.
+    case url(URL)
+
     /// An explicit system `MPMediaItemArtwork` instance.
     case artwork(MPMediaItemArtwork)
+}
+
+public extension Artwork {
+    /// The underlying platform image, decoded if necessary.
+    var image: AKPlatformImage? {
+        switch self {
+        case let .image(img):
+            return img
+        case let .data(data):
+            return AKPlatformImage(data: data)
+        case let .artwork(mpArtwork):
+            #if canImport(UIKit)
+                return mpArtwork.image(at: mpArtwork.bounds.size)
+            #elseif canImport(AppKit)
+                return mpArtwork.image(at: mpArtwork.bounds.size)
+            #else
+                return nil
+            #endif
+        case .url:
+            return nil
+        }
+    }
+
+    /// The remote artwork URL if configured as a URL.
+    var url: URL? {
+        if case let .url(u) = self {
+            return u
+        }
+        return nil
+    }
+
+    /// Converts this artwork representation into an `MPMediaItemArtwork` instance if possible.
+    var mediaItemArtwork: MPMediaItemArtwork? {
+        switch self {
+        case let .artwork(mpArtwork):
+            return mpArtwork
+        case let .image(img):
+            let boundsSize = (img.size.width > 0 && img.size.height > 0) ? img.size : CGSize(
+                width: 300,
+                height: 300
+            )
+            return MPMediaItemArtwork(boundsSize: boundsSize) { _ in img }
+        case let .data(data):
+            guard let img = AKPlatformImage(data: data) else { return nil }
+            let boundsSize = (img.size.width > 0 && img.size.height > 0) ? img.size : CGSize(
+                width: 300,
+                height: 300
+            )
+            return MPMediaItemArtwork(boundsSize: boundsSize) { _ in img }
+        case .url:
+            return nil
+        }
+    }
 }
 
 // MARK: - Static Metadata Protocol
@@ -247,24 +303,7 @@ public extension AKNowPlayableStaticMetadataProtocol {
 public extension AKNowPlayableStaticMetadataProtocol {
     /// Computes or retrieves the standard `MPMediaItemArtwork` representation.
     var itemArtwork: MPMediaItemArtwork? {
-        guard let artwork else { return nil }
-        switch artwork {
-        case let .image(image):
-            let boundsSize = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
-                width: 300,
-                height: 300
-            )
-            return MPMediaItemArtwork(boundsSize: boundsSize) { _ in image }
-        case let .data(data):
-            guard let image = AKPlatformImage(data: data) else { return nil }
-            let boundsSize = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
-                width: 300,
-                height: 300
-            )
-            return MPMediaItemArtwork(boundsSize: boundsSize) { _ in image }
-        case let .artwork(artwork):
-            return artwork
-        }
+        artwork?.mediaItemArtwork
     }
 
     /// Converts all static metadata properties into key-value pairs for `MPNowPlayingInfoCenter`.

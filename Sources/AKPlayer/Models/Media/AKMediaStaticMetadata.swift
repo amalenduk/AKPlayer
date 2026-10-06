@@ -32,10 +32,33 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
     public var genre: String?
     /// The composer of the media work.
     public var composer: String?
-    /// The media artwork as an `MPMediaItemArtwork` instance.
-    public var artwork: MPMediaItemArtwork?
-    /// The raw image artwork instance.
-    public var artworkImage: AKPlatformImage?
+    /// The unified media artwork source (image, data, url, or MPMediaItemArtwork).
+    public var artwork: Artwork?
+
+    /// Convenience accessor for the underlying image.
+    public var artworkImage: AKPlatformImage? {
+        get { artwork?.image }
+        set {
+            if let newValue {
+                artwork = .image(newValue)
+            } else if case .image = artwork {
+                artwork = nil
+            }
+        }
+    }
+
+    /// Convenience accessor for the remote artwork URL.
+    public var artworkURL: URL? {
+        get { artwork?.url }
+        set {
+            if let newValue {
+                artwork = .url(newValue)
+            } else if case .url = artwork {
+                artwork = nil
+            }
+        }
+    }
+
     /// The track number within an album.
     public var trackNumber: Int?
     /// The total number of tracks in the album.
@@ -65,8 +88,7 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
         albumArtist: String? = nil,
         genre: String? = nil,
         composer: String? = nil,
-        artwork: MPMediaItemArtwork? = nil,
-        artworkImage: AKPlatformImage? = nil,
+        artwork: Artwork? = nil,
         trackNumber: Int? = nil,
         trackCount: Int? = nil,
         discNumber: Int? = nil,
@@ -85,7 +107,6 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
         self.genre = genre
         self.composer = composer
         self.artwork = artwork
-        self.artworkImage = artworkImage
         self.trackNumber = trackNumber
         self.trackCount = trackCount
         self.discNumber = discNumber
@@ -98,7 +119,97 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
         self.language = language
     }
 
+    /// Convenience initializer supporting legacy individual artwork parameters.
+    public init(
+        title: String? = nil,
+        artist: String? = nil,
+        albumTitle: String? = nil,
+        albumArtist: String? = nil,
+        genre: String? = nil,
+        composer: String? = nil,
+        artwork: MPMediaItemArtwork? = nil,
+        artworkImage: AKPlatformImage? = nil,
+        artworkURL: URL? = nil,
+        trackNumber: Int? = nil,
+        trackCount: Int? = nil,
+        discNumber: Int? = nil,
+        discCount: Int? = nil,
+        releaseDate: Date? = nil,
+        creationDate: String? = nil,
+        descriptionText: String? = nil,
+        copyrights: String? = nil,
+        publisher: String? = nil,
+        language: String? = nil
+    ) {
+        var resolvedArtwork: Artwork?
+        if let artworkImage {
+            resolvedArtwork = .image(artworkImage)
+        } else if let artwork {
+            resolvedArtwork = .artwork(artwork)
+        } else if let artworkURL {
+            resolvedArtwork = .url(artworkURL)
+        }
+
+        self.init(
+            title: title,
+            artist: artist,
+            albumTitle: albumTitle,
+            albumArtist: albumArtist,
+            genre: genre,
+            composer: composer,
+            artwork: resolvedArtwork,
+            trackNumber: trackNumber,
+            trackCount: trackCount,
+            discNumber: discNumber,
+            discCount: discCount,
+            releaseDate: releaseDate,
+            creationDate: creationDate,
+            descriptionText: descriptionText,
+            copyrights: copyrights,
+            publisher: publisher,
+            language: language
+        )
+    }
+
     // MARK: - Now Playing Bridge
+
+    private func makeNowPlayableStaticMetadata(
+        defaultURL: URL?,
+        defaultMediaType: MPNowPlayingInfoMediaType,
+        isLive: Bool,
+        defaultCollectionIdentifier: String?,
+        defaultExternalContentIdentifier: String?,
+        defaultExternalUserProfileIdentifier: String?,
+        defaultChapterCount: Int?,
+        defaultCreditsStartTime: Double?,
+        defaultServiceIdentifier: String?
+    ) -> AKNowPlayableStaticMetadata {
+        AKNowPlayableStaticMetadata(
+            assetURL: defaultURL ?? URL(fileURLWithPath: ""),
+            mediaType: defaultMediaType,
+            isLiveStream: isLive,
+            title: title ?? "Unknown Title",
+            artist: artist,
+            artwork: artwork,
+            albumArtist: albumArtist,
+            albumTitle: albumTitle,
+            collectionIdentifier: defaultCollectionIdentifier,
+            externalContentIdentifier: defaultExternalContentIdentifier,
+            externalUserProfileIdentifier: defaultExternalUserProfileIdentifier,
+            chapterCount: defaultChapterCount,
+            creditsStartTime: defaultCreditsStartTime,
+            serviceIdentifier: defaultServiceIdentifier,
+            genre: genre,
+            composer: composer,
+            trackNumber: trackNumber,
+            trackCount: trackCount,
+            discNumber: discNumber,
+            discCount: discCount,
+            isExplicit: nil,
+            releaseDate: releaseDate,
+            descriptionText: descriptionText
+        )
+    }
 
     #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
         /// Converts this static metadata payload into an `AKNowPlayableStaticMetadata` instance.
@@ -114,39 +225,19 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
             defaultServiceIdentifier: String? = nil,
             defaultAdTimeRanges: [MPAdTimeRange]? = nil
         ) -> AKNowPlayableStaticMetadata {
-            var artworkPayload: Artwork?
-            if let artworkImage {
-                artworkPayload = .image(artworkImage)
-            } else if let artwork {
-                artworkPayload = .artwork(artwork)
-            }
-
-            return AKNowPlayableStaticMetadata(
-                assetURL: defaultURL ?? URL(fileURLWithPath: ""),
-                mediaType: defaultMediaType,
-                isLiveStream: isLive,
-                title: title ?? "Unknown Title",
-                artist: artist,
-                artwork: artworkPayload,
-                albumArtist: albumArtist,
-                albumTitle: albumTitle,
-                collectionIdentifier: defaultCollectionIdentifier,
-                externalContentIdentifier: defaultExternalContentIdentifier,
-                externalUserProfileIdentifier: defaultExternalUserProfileIdentifier,
-                chapterCount: defaultChapterCount,
-                creditsStartTime: defaultCreditsStartTime,
-                serviceIdentifier: defaultServiceIdentifier,
-                adTimeRanges: defaultAdTimeRanges,
-                genre: genre,
-                composer: composer,
-                trackNumber: trackNumber,
-                trackCount: trackCount,
-                discNumber: discNumber,
-                discCount: discCount,
-                isExplicit: nil,
-                releaseDate: releaseDate,
-                descriptionText: descriptionText
+            var metadata = makeNowPlayableStaticMetadata(
+                defaultURL: defaultURL,
+                defaultMediaType: defaultMediaType,
+                isLive: isLive,
+                defaultCollectionIdentifier: defaultCollectionIdentifier,
+                defaultExternalContentIdentifier: defaultExternalContentIdentifier,
+                defaultExternalUserProfileIdentifier: defaultExternalUserProfileIdentifier,
+                defaultChapterCount: defaultChapterCount,
+                defaultCreditsStartTime: defaultCreditsStartTime,
+                defaultServiceIdentifier: defaultServiceIdentifier
             )
+            metadata.adTimeRanges = defaultAdTimeRanges
+            return metadata
         }
     #else
         /// Converts this static metadata payload into an `AKNowPlayableStaticMetadata` instance.
@@ -161,37 +252,16 @@ public struct AKMediaStaticMetadata: @unchecked Sendable {
             defaultCreditsStartTime: Double? = nil,
             defaultServiceIdentifier: String? = nil
         ) -> AKNowPlayableStaticMetadata {
-            var artworkPayload: Artwork?
-            if let artworkImage {
-                artworkPayload = .image(artworkImage)
-            } else if let artwork {
-                artworkPayload = .artwork(artwork)
-            }
-
-            return AKNowPlayableStaticMetadata(
-                assetURL: defaultURL ?? URL(fileURLWithPath: ""),
-                mediaType: defaultMediaType,
-                isLiveStream: isLive,
-                title: title ?? "Unknown Title",
-                artist: artist,
-                artwork: artworkPayload,
-                albumArtist: albumArtist,
-                albumTitle: albumTitle,
-                collectionIdentifier: defaultCollectionIdentifier,
-                externalContentIdentifier: defaultExternalContentIdentifier,
-                externalUserProfileIdentifier: defaultExternalUserProfileIdentifier,
-                chapterCount: defaultChapterCount,
-                creditsStartTime: defaultCreditsStartTime,
-                serviceIdentifier: defaultServiceIdentifier,
-                genre: genre,
-                composer: composer,
-                trackNumber: trackNumber,
-                trackCount: trackCount,
-                discNumber: discNumber,
-                discCount: discCount,
-                isExplicit: nil,
-                releaseDate: releaseDate,
-                descriptionText: descriptionText
+            makeNowPlayableStaticMetadata(
+                defaultURL: defaultURL,
+                defaultMediaType: defaultMediaType,
+                isLive: isLive,
+                defaultCollectionIdentifier: defaultCollectionIdentifier,
+                defaultExternalContentIdentifier: defaultExternalContentIdentifier,
+                defaultExternalUserProfileIdentifier: defaultExternalUserProfileIdentifier,
+                defaultChapterCount: defaultChapterCount,
+                defaultCreditsStartTime: defaultCreditsStartTime,
+                defaultServiceIdentifier: defaultServiceIdentifier
             )
         }
     #endif

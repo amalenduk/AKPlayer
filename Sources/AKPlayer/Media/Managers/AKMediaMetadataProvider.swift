@@ -142,9 +142,6 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             if let v = metadata.artwork {
                 updated.artwork = v
             }
-            if let v = metadata.artworkImage {
-                updated.artworkImage = v
-            }
             if let v = metadata.trackNumber {
                 updated.trackNumber = v
             }
@@ -174,15 +171,6 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             }
             if let v = metadata.language {
                 updated.language = v
-            }
-
-            // Generate MPMediaItemArtwork if image is present without artwork
-            if updated.artwork == nil, let image = updated.artworkImage {
-                let size = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
-                    width: 300,
-                    height: 300
-                )
-                updated.artwork = MPMediaItemArtwork(boundsSize: size) { _ in image }
             }
 
             s.staticMetadata = updated
@@ -284,13 +272,7 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
                 if let data = try? await item.load(.dataValue),
                    let image = AKPlatformImage(data: data)
                 {
-                    meta.artworkImage = image
-                    let size = (image.size.width > 0 && image.size.height > 0) ? image
-                        .size : CGSize(
-                            width: 300,
-                            height: 300
-                        )
-                    meta.artwork = MPMediaItemArtwork(boundsSize: size) { _ in image }
+                    meta.artwork = .image(image)
                 }
             case .commonKeySubject:
                 meta.genre = try? await item.load(.stringValue)
@@ -398,16 +380,11 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             }
         case "COMM" where meta.descriptionText == nil:
             meta.descriptionText = try? await item.load(.stringValue)
-        case "APIC" where meta.artworkImage == nil:
+        case "APIC" where meta.artwork == nil:
             if let data = try? await item.load(.dataValue),
                let image = AKPlatformImage(data: data)
             {
-                meta.artworkImage = image
-                let size = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
-                    width: 300,
-                    height: 300
-                )
-                meta.artwork = MPMediaItemArtwork(boundsSize: size) { _ in image }
+                meta.artwork = .image(image)
             }
         default:
             break
@@ -456,16 +433,11 @@ public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @un
             meta.descriptionText = try? await item.load(.stringValue)
         case "cprt" where meta.copyrights == nil:
             meta.copyrights = try? await item.load(.stringValue)
-        case "covr" where meta.artworkImage == nil:
+        case "covr" where meta.artwork == nil:
             if let data = try? await item.load(.dataValue),
                let image = AKPlatformImage(data: data)
             {
-                meta.artworkImage = image
-                let size = (image.size.width > 0 && image.size.height > 0) ? image.size : CGSize(
-                    width: 300,
-                    height: 300
-                )
-                meta.artwork = MPMediaItemArtwork(boundsSize: size) { _ in image }
+                meta.artwork = .image(image)
             }
         case "trkn" where meta.trackNumber == nil:
             if let data = try? await item.load(.dataValue), data.count >= 6 {

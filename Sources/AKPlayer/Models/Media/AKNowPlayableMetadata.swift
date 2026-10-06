@@ -123,8 +123,59 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
 
     // MARK: - Init
 
+    /// Initializes a static metadata payload container across all platforms.
+    public init(
+        assetURL: URL,
+        mediaType: MPNowPlayingInfoMediaType,
+        isLiveStream: Bool,
+        title: String,
+        artist: String? = nil,
+        artwork: Artwork? = nil,
+        albumArtist: String? = nil,
+        albumTitle: String? = nil,
+        collectionIdentifier: String? = nil,
+        externalContentIdentifier: String? = nil,
+        externalUserProfileIdentifier: String? = nil,
+        chapterCount: Int? = nil,
+        creditsStartTime: Double? = nil,
+        serviceIdentifier: String? = nil,
+        genre: String? = nil,
+        composer: String? = nil,
+        trackNumber: Int? = nil,
+        trackCount: Int? = nil,
+        discNumber: Int? = nil,
+        discCount: Int? = nil,
+        isExplicit: Bool? = nil,
+        releaseDate: Date? = nil,
+        descriptionText: String? = nil
+    ) {
+        self.assetURL = assetURL
+        self.mediaType = mediaType
+        self.isLiveStream = isLiveStream
+        self.title = title
+        self.artist = artist
+        self.artwork = artwork
+        self.albumArtist = albumArtist
+        self.albumTitle = albumTitle
+        self.collectionIdentifier = collectionIdentifier
+        self.externalContentIdentifier = externalContentIdentifier
+        self.externalUserProfileIdentifier = externalUserProfileIdentifier
+        self.chapterCount = chapterCount
+        self.creditsStartTime = creditsStartTime
+        self.serviceIdentifier = serviceIdentifier
+        self.genre = genre
+        self.composer = composer
+        self.trackNumber = trackNumber
+        self.trackCount = trackCount
+        self.discNumber = discNumber
+        self.discCount = discCount
+        self.isExplicit = isExplicit
+        self.releaseDate = releaseDate
+        self.descriptionText = descriptionText
+    }
+
     #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
-        /// Initializes a static metadata payload container.
+        /// Convenience initializer including advertisement time ranges on supported platforms.
         public init(
             assetURL: URL,
             mediaType: MPNowPlayingInfoMediaType,
@@ -140,7 +191,7 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
             chapterCount: Int? = nil,
             creditsStartTime: Double? = nil,
             serviceIdentifier: String? = nil,
-            adTimeRanges: [MPAdTimeRange]? = nil,
+            adTimeRanges: [MPAdTimeRange]?,
             genre: String? = nil,
             composer: String? = nil,
             trackNumber: Int? = nil,
@@ -151,81 +202,32 @@ public struct AKNowPlayableStaticMetadata: AKNowPlayableStaticMetadataProtocol,
             releaseDate: Date? = nil,
             descriptionText: String? = nil
         ) {
-            self.assetURL = assetURL
-            self.mediaType = mediaType
-            self.isLiveStream = isLiveStream
-            self.title = title
-            self.artist = artist
-            self.artwork = artwork
-            self.albumArtist = albumArtist
-            self.albumTitle = albumTitle
-            self.collectionIdentifier = collectionIdentifier
-            self.externalContentIdentifier = externalContentIdentifier
-            self.externalUserProfileIdentifier = externalUserProfileIdentifier
-            self.chapterCount = chapterCount
-            self.creditsStartTime = creditsStartTime
-            self.serviceIdentifier = serviceIdentifier
+            self.init(
+                assetURL: assetURL,
+                mediaType: mediaType,
+                isLiveStream: isLiveStream,
+                title: title,
+                artist: artist,
+                artwork: artwork,
+                albumArtist: albumArtist,
+                albumTitle: albumTitle,
+                collectionIdentifier: collectionIdentifier,
+                externalContentIdentifier: externalContentIdentifier,
+                externalUserProfileIdentifier: externalUserProfileIdentifier,
+                chapterCount: chapterCount,
+                creditsStartTime: creditsStartTime,
+                serviceIdentifier: serviceIdentifier,
+                genre: genre,
+                composer: composer,
+                trackNumber: trackNumber,
+                trackCount: trackCount,
+                discNumber: discNumber,
+                discCount: discCount,
+                isExplicit: isExplicit,
+                releaseDate: releaseDate,
+                descriptionText: descriptionText
+            )
             self.adTimeRanges = adTimeRanges
-            self.genre = genre
-            self.composer = composer
-            self.trackNumber = trackNumber
-            self.trackCount = trackCount
-            self.discNumber = discNumber
-            self.discCount = discCount
-            self.isExplicit = isExplicit
-            self.releaseDate = releaseDate
-            self.descriptionText = descriptionText
-        }
-    #else
-        /// Initializes a static metadata payload container.
-        public init(
-            assetURL: URL,
-            mediaType: MPNowPlayingInfoMediaType,
-            isLiveStream: Bool,
-            title: String,
-            artist: String? = nil,
-            artwork: Artwork? = nil,
-            albumArtist: String? = nil,
-            albumTitle: String? = nil,
-            collectionIdentifier: String? = nil,
-            externalContentIdentifier: String? = nil,
-            externalUserProfileIdentifier: String? = nil,
-            chapterCount: Int? = nil,
-            creditsStartTime: Double? = nil,
-            serviceIdentifier: String? = nil,
-            genre: String? = nil,
-            composer: String? = nil,
-            trackNumber: Int? = nil,
-            trackCount: Int? = nil,
-            discNumber: Int? = nil,
-            discCount: Int? = nil,
-            isExplicit: Bool? = nil,
-            releaseDate: Date? = nil,
-            descriptionText: String? = nil
-        ) {
-            self.assetURL = assetURL
-            self.mediaType = mediaType
-            self.isLiveStream = isLiveStream
-            self.title = title
-            self.artist = artist
-            self.artwork = artwork
-            self.albumArtist = albumArtist
-            self.albumTitle = albumTitle
-            self.collectionIdentifier = collectionIdentifier
-            self.externalContentIdentifier = externalContentIdentifier
-            self.externalUserProfileIdentifier = externalUserProfileIdentifier
-            self.chapterCount = chapterCount
-            self.creditsStartTime = creditsStartTime
-            self.serviceIdentifier = serviceIdentifier
-            self.genre = genre
-            self.composer = composer
-            self.trackNumber = trackNumber
-            self.trackCount = trackCount
-            self.discNumber = discNumber
-            self.discCount = discCount
-            self.isExplicit = isExplicit
-            self.releaseDate = releaseDate
-            self.descriptionText = descriptionText
         }
     #endif
 }
