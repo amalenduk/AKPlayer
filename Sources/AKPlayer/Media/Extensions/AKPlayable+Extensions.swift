@@ -200,6 +200,40 @@ public extension AKPlayable {
     }
 }
 
+// MARK: - Media Classification Extensions
+
+public extension AKPlayable {
+    /// Evaluates whether this media item represents audio-only content based on explicit metadata,
+    /// file extensions, or heuristic title/URL keywords.
+    var isAudioOnly: Bool {
+        if staticMetadata?.mediaType == .audio {
+            return true
+        }
+
+        let ext = url.pathExtension.lowercased()
+        let audioExtensions: Set = [
+            "mp3", "m4a", "aac", "wav", "flac", "aiff", "alac", "caf", "ogg",
+            "m4b", "wma", "opus", "weba", "mid", "midi",
+        ]
+        if audioExtensions.contains(ext) {
+            return true
+        }
+
+        let urlString = url.absoluteString.lowercased()
+        let titleString = (metadataProvider.staticMetadata.title ?? staticMetadata?.title ?? "")
+            .lowercased()
+        let subtitleString = (metadataProvider.staticMetadata.artist ?? staticMetadata?
+            .artist ?? "").lowercased()
+
+        return titleString.contains("audiobook") ||
+            titleString.contains("audio-only") ||
+            subtitleString.contains("audiobook") ||
+            subtitleString.contains("audio-only") ||
+            urlString.contains("audiobook") ||
+            urlString.contains("audio_only")
+    }
+}
+
 // MARK: - Comparable Helpers
 
 extension Comparable {

@@ -16,6 +16,11 @@ import Synchronization
 /// inspection, and delegate forwarding.
 @MainActor
 public class AKPlayer: NSObject, AKPlayerProtocol {
+    // MARK: - Typealiases
+
+    /// Typealias for the player engine configuration structure.
+    public typealias Configuration = AKPlayerConfiguration
+
     // MARK: - Properties
 
     /// The underlying `AVPlayer` engine driving system media execution.

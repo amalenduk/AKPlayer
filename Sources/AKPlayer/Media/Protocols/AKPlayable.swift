@@ -65,6 +65,9 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
     /// configuration.
     var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm? { get }
 
+    /// Indicates whether the media item represents audio-only content.
+    var isAudioOnly: Bool { get }
+
     /// Indicates whether the media item is a live stream.
     func isLive() -> Bool
 
