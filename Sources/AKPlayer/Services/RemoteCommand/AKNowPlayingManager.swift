@@ -112,6 +112,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
     private var metadataObservationTask: Task<Void, Never>?
     /// Active task observing chapter service updates.
     private var chaptersObservationTask: Task<Void, Never>?
+    /// Active task observing track selection updates.
+    private var trackSelectionObservationTask: Task<Void, Never>?
 
     /// Cached currently active language options for Now Playing info.
     private var cachedCurrentLanguageOptions: [MPNowPlayingInfoLanguageOption]?
@@ -148,6 +150,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         metadataObservationTask = nil
         chaptersObservationTask?.cancel()
         chaptersObservationTask = nil
+        trackSelectionObservationTask?.cancel()
+        trackSelectionObservationTask = nil
         AKLogger.logDeinit(
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
@@ -187,6 +191,8 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         metadataObservationTask = nil
         chaptersObservationTask?.cancel()
         chaptersObservationTask = nil
+        trackSelectionObservationTask?.cancel()
+        trackSelectionObservationTask = nil
 
         clearCachedLanguageOptions()
         session.clearNowPlayingPlaybackInfo()
@@ -406,6 +412,7 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         mediaObservationTask?.cancel()
         metadataObservationTask?.cancel()
         chaptersObservationTask?.cancel()
+        trackSelectionObservationTask?.cancel()
 
         mediaObservationTask = Task { @MainActor [weak self, weak media] in
             guard let stream = media?.events else { return }
@@ -418,14 +425,20 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
                     cacheLanguageOptions(from: media)
                     updateNowPlayingInfo()
 
-                case .tracksDidChange:
-                    if media.state == .readyToPlay {
-                        cacheLanguageOptions(from: media)
-                        updateNowPlayingInfo()
-                    }
-
                 default:
                     break
+                }
+            }
+        }
+
+        trackSelectionObservationTask = Task { @MainActor [weak self, weak media] in
+            guard let stream = media?.trackSelection.events else { return }
+            for await event in stream {
+                guard !Task.isCancelled, let self, let media else { break }
+                switch event {
+                case .selectedTrackDidChange, .availableTracksDidChange:
+                    cacheLanguageOptions(from: media)
+                    updateNowPlayingInfo()
                 }
             }
         }

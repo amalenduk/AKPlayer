@@ -359,16 +359,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             }
         )
 
-        // 4. Tracks
-        observations.append(
-            item.observe(\.tracks, options: [.initial, .new]) { [weak self] observedItem, _ in
-                guard let self else { return }
-                let tracks = observedItem.tracks
-                emit(.tracksDidChange(tracks))
-            }
-        )
-
-        // 5. Timebase
+        // 4. Timebase
         observations.append(
             item.observe(\.timebase, options: [.initial, .new]) { [weak self] observedItem, _ in
                 guard let self else { return }

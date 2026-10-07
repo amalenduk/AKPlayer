@@ -61,9 +61,6 @@ public enum AKMediaEvent: Sendable {
 
     // MARK: - Asset Attributes
 
-    /// The available AVPlayerItemTrack list updated (e.g., audio, video, subtitle tracks loaded).
-    case tracksDidChange([AVPlayerItemTrack])
-
     /// The native video pixel/presentation resolution updated.
     case presentationSizeDidChange(CGSize)
 }
@@ -84,8 +81,6 @@ extension AKMediaEvent: Equatable {
         case let (.loadedTimeRangesDidChange(l), .loadedTimeRangesDidChange(r)):
             l == r
         case let (.seekableTimeRangesDidChange(l), .seekableTimeRangesDidChange(r)):
-            l == r
-        case let (.tracksDidChange(l), .tracksDidChange(r)):
             l == r
         case let (.presentationSizeDidChange(l), .presentationSizeDidChange(r)):
             l == r
