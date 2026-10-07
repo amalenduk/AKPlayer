@@ -94,6 +94,13 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         buildMarkers()
     }
 
+    /// The synthesized ad marker for the currently active interstitial ad break, if one is playing.
+    public var currentMarker: AKInterstitialMarker? {
+        guard let currentEvent else { return nil }
+        return markers.first { $0.id == currentEvent.identifier }
+            ?? AKInterstitialMarker(event: currentEvent, isCurrent: isPlayingInterstitial)
+    }
+
     // MARK: - Private State
 
     /// Collection of custom scheduled interstitial events.

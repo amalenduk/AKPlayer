@@ -66,6 +66,9 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     /// Synthesized ad markers for rendering cue points and fill segments on a progress bar.
     var markers: [AKInterstitialMarker] { get }
 
+    /// The synthesized ad marker for the currently active interstitial ad break, if one is playing.
+    var currentMarker: AKInterstitialMarker? { get }
+
     // MARK: - Observation Lifecycle
 
     /// Stops observing interstitial events and cleans up active observation tasks.
