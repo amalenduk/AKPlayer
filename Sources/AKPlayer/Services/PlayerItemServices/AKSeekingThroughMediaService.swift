@@ -13,6 +13,12 @@ import Foundation
 
 /// A protocol defining media boundary validation checks for seek targets.
 public protocol AKSeekingThroughMediaServiceProtocol: AnyObject, Sendable {
+    /// Evaluates whether seeking is generally supported for the active media item.
+    var canSeek: Bool { get }
+
+    /// Returns the current seekable window [pastBound ... liveEdge] for the active media item.
+    var seekableWindow: CMTimeRange? { get }
+
     /// Evaluates whether a given target is within seekable bounds.
     /// - Parameter target: The target seek position.
     /// - Returns: `true` if seeking to the target is permitted, `false` otherwise.
@@ -64,6 +70,25 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
 
     // MARK: - Public API
 
+    /// Evaluates whether seeking is currently permitted for the active media item.
+    public var canSeek: Bool {
+        guard let playerItem else { return false }
+        let isLive = mediaManager?.media?.isLive() == true || !playerItem.duration.isNumeric
+        if isLive {
+            guard let liveRange = playerItem.seekableTimeRanges.last?.timeRangeValue else {
+                return false
+            }
+            let threshold = mediaManager?.media?.liveEdgeThreshold ?? 4.0
+            return liveRange.duration.seconds > threshold
+        }
+        return playerItem.duration.isNumeric && playerItem.duration.seconds > 0
+    }
+
+    /// The current seekable time range for the active media item.
+    public var seekableWindow: CMTimeRange? {
+        playerItem?.seekableTimeRanges.last?.timeRangeValue
+    }
+
     /// Evaluates whether a given target is within seekable bounds.
     public func canSeek(to target: AKSeekTarget) -> Bool {
         canSeek(to: target).flag
@@ -109,9 +134,28 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
             return (false, .seekPositionNotAvailable)
         }
 
+        let isLive = mediaManager?.media?.isLive() == true || !playerItem.duration.isNumeric
+
+        if isLive {
+            guard let liveRange = getRangesAvailable().last else {
+                return (false, .seekPositionNotAvailable)
+            }
+
+            // Past boundary check: cannot seek before the earliest available DVR segment
+            if targetCMTime < liveRange.start {
+                return (false, .seekPositionNotAvailable)
+            }
+
+            // Future boundary check: cannot seek ahead of the live broadcast head
+            if targetCMTime > liveRange.end {
+                return (false, .seekOverstepPosition)
+            }
+
+            return (true, nil)
+        }
+
         let duration = playerItem.duration
 
-        // Handle dynamic/live streams without a fixed numeric duration
         guard duration.isNumeric, duration > .zero else {
             let ranges = getRangesAvailable()
             let isInRanges = isTimeInRanges(targetCMTime, ranges)

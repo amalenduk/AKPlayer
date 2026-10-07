@@ -76,7 +76,12 @@ public protocol AKMediaManagerProtocol: AnyObject, Sendable {
     /// - Returns: `true` if playback at the specified rate is supported.
     func canPlay(at rate: AKPlaybackRate) -> Bool
 
-    /// Evaluates whether seeking to a given target timestamp is permitted.
+    /// Evaluates whether seeking is generally supported for the media item.
+    var canSeek: Bool { get }
+
+    /// The current seekable time range for the media item.
+    var seekableWindow: CMTimeRange? { get }
+
     /// - Parameter target: The target seek target position.
     /// - Returns: `true` if the seek command is supported.
     func canSeek(to target: AKSeekTarget) -> Bool

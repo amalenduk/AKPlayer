@@ -137,6 +137,16 @@ public extension AKPlayable {
     func canSeek(to target: AKSeekTarget) -> Bool {
         manager.canSeek(to: target)
     }
+
+    /// Evaluates whether seeking is generally supported for the active media item.
+    var canSeek: Bool {
+        seekingThroughMedia.canSeek
+    }
+
+    /// The current seekable time range for the active media item.
+    var seekableWindow: CMTimeRange? {
+        seekingThroughMedia.seekableWindow
+    }
 }
 
 // MARK: - Direct Delegation via Manager (Services & Observers)

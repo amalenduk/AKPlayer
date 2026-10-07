@@ -253,6 +253,17 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         }
     }
 
+    /// Evaluates whether seeking is generally supported for the media item.
+    public var canSeek: Bool {
+        guard state.isPlayerItemLoaded || state.isReadyToPlay else { return false }
+        return seekingThroughMediaService.canSeek
+    }
+
+    /// The current seekable time range for the active media asset.
+    public var seekableWindow: CMTimeRange? {
+        seekingThroughMediaService.seekableWindow
+    }
+
     /// Evaluates whether seeking to a target seek target position is permitted.
     public func canSeek(to target: AKSeekTarget) -> Bool {
         guard state.isPlayerItemLoaded || state.isReadyToPlay else { return false }
