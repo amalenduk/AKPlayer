@@ -101,6 +101,18 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             ?? AKInterstitialMarker(event: currentEvent, isCurrent: isPlayingInterstitial)
     }
 
+    /// The 1-based index of the currently playing ad item within the active ad pod (e.g. 1 for "Ad
+    /// 1 of 2").
+    public var currentItemIndex: Int {
+        guard let currentItem = monitor?.interstitialPlayer.currentItem,
+              let items = currentEvent?.templateItems,
+              let index = items.firstIndex(where: { $0 === currentItem })
+        else {
+            return 1
+        }
+        return index + 1
+    }
+
     // MARK: - Private State
 
     /// Collection of custom scheduled interstitial events.

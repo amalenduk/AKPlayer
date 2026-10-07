@@ -69,6 +69,10 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     /// The synthesized ad marker for the currently active interstitial ad break, if one is playing.
     var currentMarker: AKInterstitialMarker? { get }
 
+    /// The 1-based index of the currently playing ad item within the active ad pod (e.g. 1 for "Ad
+    /// 1 of 2").
+    var currentItemIndex: Int { get }
+
     // MARK: - Observation Lifecycle
 
     /// Stops observing interstitial events and cleans up active observation tasks.
