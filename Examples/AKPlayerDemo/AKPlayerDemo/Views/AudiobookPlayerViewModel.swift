@@ -20,9 +20,7 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
         var configuration = AKPlayerConfiguration()
         configuration.isNowPlayingEnabled = true
         configuration.idleTimerDisabledForStates = [.buffering, .playing]
-        let p = AKPlayer(configuration: configuration, audioSessionService: audioSession)
-        p.delegate = self
-        return p
+        return AKPlayer(configuration: configuration, audioSessionService: audioSession)
     }()
 
     let audioSession = AKAudioSessionService()
@@ -72,6 +70,7 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
     @Published public var sleepTimerRemainingSeconds = 0
     private nonisolated(unsafe) var sleepTimerTask: Task<Void, Never>?
     private nonisolated(unsafe) var chaptersTask: Task<Void, Never>?
+    private nonisolated(unsafe) var playerEventsTask: Task<Void, Never>?
 
     // MARK: - Init & Deinit
 
@@ -85,6 +84,18 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
                 AKLogger.error("Failed to prepare player: \(error)", category: .player)
             }
         }
+        observePlayerEvents()
+    }
+
+    private func observePlayerEvents() {
+        playerEventsTask?.cancel()
+        playerEventsTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await event in self.player.events {
+                guard !Task.isCancelled else { break }
+                self.handlePlayerEvent(event)
+            }
+        }
     }
 
     deinit {
@@ -94,6 +105,7 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
         )
         chaptersTask?.cancel()
         sleepTimerTask?.cancel()
+        playerEventsTask?.cancel()
     }
 
     // MARK: - Media Loading
@@ -256,11 +268,12 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
     }
 }
 
-// MARK: - AKPlayerDelegate
+// MARK: - Player Events Handling
 
-extension AudiobookPlayerViewModel: AKPlayerDelegate {
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeStateTo state: AKPlayerState) {
-        DispatchQueue.main.async {
+extension AudiobookPlayerViewModel {
+    private func handlePlayerEvent(_ event: AKPlayerEvent) {
+        switch event {
+        case let .stateDidChange(state):
             self.stateDescription = state.description
             self.isPlaying = (state == .playing)
             self
@@ -272,27 +285,17 @@ extension AudiobookPlayerViewModel: AKPlayerDelegate {
             if effectiveDur > 0 {
                 self.duration = effectiveDur
             }
-        }
-    }
 
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo _: any AKPlayable) {
-        DispatchQueue.main.async {
+        case .mediaDidChange:
             let intTime = player.interstitialService.integratedTimelineCurrentTime
             self.currentTime = (intTime > 0) ? intTime : player.currentTime.seconds
             let intDur = player.interstitialService.integratedTimelineDuration
             let dur = player.currentItemDuration.seconds
             let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
             self.duration = effectiveDur
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _ player: AKPlayer,
-        didChangeCurrentTimeTo currentTime: CMTime,
-        for media: any AKPlayable
-    ) {
-        let sec = currentTime.seconds
-        DispatchQueue.main.async {
+        case let .timeDidChange(currentTime):
+            let sec = currentTime.seconds
             let intTime = player.interstitialService.integratedTimelineCurrentTime
             if intTime > 0 {
                 self.currentTime = intTime
@@ -307,34 +310,28 @@ extension AudiobookPlayerViewModel: AKPlayerDelegate {
             if effectiveDur > 0, self.duration != effectiveDur {
                 self.duration = effectiveDur
             }
-            self.currentChapter = media.chapterService.currentChapter(at: currentTime)
-            if self.chapters.isEmpty, !media.chapterService.chapters.isEmpty {
-                self.chapters = media.chapterService.chapters
+            if let media = player.currentMedia {
+                self.currentChapter = media.chapterService.currentChapter(at: currentTime)
+                if self.chapters.isEmpty, !media.chapterService.chapters.isEmpty {
+                    self.chapters = media.chapterService.chapters
+                }
             }
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didChangePlaybackRateTo newRate: AKPlaybackRate,
-        from _: AKPlaybackRate
-    ) {
-        DispatchQueue.main.async {
+        case let .playbackRateDidChange(newRate, _):
             self.playbackRate = newRate
-        }
-    }
 
-    public nonisolated func akPlayer(_: AKPlayer, didReachEndAt _: CMTime, for _: any AKPlayable) {
-        DispatchQueue.main.async {
+        case .didReachEnd:
             self.isPlaying = false
-        }
-    }
 
-    public nonisolated func akPlayer(_: AKPlayer, didFailWith error: AKPlayerError) {
-        DispatchQueue.main.async {
+        case let .didFail(error):
             self.stateDescription = "Failed: \(error.localizedDescription)"
             self.isLoading = false
             self.isPlaying = false
+
+        case .boundaryReached, .volumeDidChange, .muteStatusDidChange, .sharePlayStateDidChange,
+             .commandUnavailable, .interstitial, .media, .trackSelection, .playerItemNotification,
+             .metadata, .chapter:
+            break
         }
     }
 }

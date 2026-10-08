@@ -25,7 +25,6 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
             audioSessionService: audioSession
         )
         p.player.appliesMediaSelectionCriteriaAutomatically = true
-        p.delegate = self
         return p
     }()
 
@@ -56,6 +55,7 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     public private(set) var pipController: AKPictureInPictureController?
     private nonisolated(unsafe) var pipEventsTask: Task<Void, Never>?
     private nonisolated(unsafe) var mediaEventsTask: Task<Void, Never>?
+    private nonisolated(unsafe) var playerEventsTask: Task<Void, Never>?
     private var clearUnavailableWorkItem: DispatchWorkItem?
 
     /// Threshold in seconds to consider the player at the live edge.
@@ -75,6 +75,18 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
                 AKLogger.error("Failed to prepare player: \(error)", category: .player)
             }
         }
+        observePlayerEvents()
+    }
+
+    private func observePlayerEvents() {
+        playerEventsTask?.cancel()
+        playerEventsTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await event in self.player.events {
+                guard !Task.isCancelled else { break }
+                self.handlePlayerEvent(event)
+            }
+        }
     }
 
     deinit {
@@ -84,6 +96,7 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
         )
         pipEventsTask?.cancel()
         mediaEventsTask?.cancel()
+        playerEventsTask?.cancel()
     }
 
     // MARK: - Media Loading
@@ -289,59 +302,38 @@ public class LivePlayerViewModel: NSObject, ObservableObject {
     }
 }
 
-// MARK: - AKPlayerDelegate
+// MARK: - Player Events Handling
 
-extension LivePlayerViewModel: AKPlayerDelegate {
-    public nonisolated func akPlayer(_: AKPlayer, didChangeStateTo state: AKPlayerState) {
-        DispatchQueue.main.async {
+extension LivePlayerViewModel {
+    private func handlePlayerEvent(_ event: AKPlayerEvent) {
+        switch event {
+        case let .stateDidChange(state):
             self.stateDescription = state.description
             self
                 .isLoading =
                 (state == .waitingForNetwork || state == .buffering || state == .loading)
             self.updateDVRWindowAndDrift()
-        }
-    }
 
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
-        DispatchQueue.main.async {
+        case let .mediaDidChange(media):
             self.media = media as? AKMedia
             self.isLive = media.isLive()
             self.currentTime = player.currentTime.seconds
             self.updateDVRWindowAndDrift()
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didChangeCurrentTimeTo currentTime: CMTime,
-        for _: any AKPlayable
-    ) {
-        DispatchQueue.main.async {
+        case let .timeDidChange(currentTime):
             self.currentTime = currentTime.seconds
             self.updateDVRWindowAndDrift()
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didChangePlaybackRateTo newRate: AKPlaybackRate,
-        from _: AKPlaybackRate
-    ) {
-        DispatchQueue.main.async { self.playbackRate = newRate }
-    }
+        case let .playbackRateDidChange(newRate, _):
+            self.playbackRate = newRate
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didInvokeBoundaryTimeObserverAt _: CMTime,
-        for _: any AKPlayable
-    ) {}
-    public nonisolated func akPlayer(_: AKPlayer, didReachEndAt _: CMTime, for _: any AKPlayable) {}
+        case let .volumeDidChange(volume):
+            self.volume = volume
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didEncounterUnavailableAction reason: AKPlayerUnavailableCommandReason
-    ) {
-        DispatchQueue.main.async {
+        case let .muteStatusDidChange(isMuted):
+            self.isMuted = isMuted
+
+        case let .commandUnavailable(reason):
             self.clearUnavailableWorkItem?.cancel()
             self.unavailableMessage = reason.description
             let work = DispatchWorkItem { [weak self] in
@@ -349,21 +341,14 @@ extension LivePlayerViewModel: AKPlayerDelegate {
             }
             self.clearUnavailableWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work)
-        }
-    }
 
-    public nonisolated func akPlayer(_: AKPlayer, didFailWith error: AKPlayerError) {
-        DispatchQueue.main.async {
+        case let .didFail(error):
             self.unavailableMessage = "Error: \(error.localizedDescription)"
+
+        case .didReachEnd, .boundaryReached, .sharePlayStateDidChange, .interstitial, .media,
+             .trackSelection, .playerItemNotification, .metadata, .chapter:
+            break
         }
-    }
-
-    public nonisolated func akPlayer(_: AKPlayer, didChangeVolumeTo volume: Float) {
-        DispatchQueue.main.async { self.volume = volume }
-    }
-
-    public nonisolated func akPlayer(_: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {
-        DispatchQueue.main.async { self.isMuted = isMuted }
     }
 }
 

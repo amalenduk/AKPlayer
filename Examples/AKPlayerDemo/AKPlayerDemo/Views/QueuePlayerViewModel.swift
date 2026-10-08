@@ -22,7 +22,6 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
             audioSessionService: audioSession
         )
         p.player.appliesMediaSelectionCriteriaAutomatically = true
-        p.delegate = self
         return p
     }()
 
@@ -32,6 +31,7 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
     @Published public var playlist: [TestMedia] = []
     @Published public var currentMedia: (any AKPlayable)?
     @Published public var currentIndex: Int? = nil
+    private nonisolated(unsafe) var playerEventsTask: Task<Void, Never>?
     @Published public var stateDescription = "Idle"
     @Published public var isPlaying = false
     @Published public var isLoading = false
@@ -52,6 +52,18 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
                 AKLogger.error("Failed to prepare queue player: \(error)", category: .player)
             }
         }
+        observePlayerEvents()
+    }
+
+    private func observePlayerEvents() {
+        playerEventsTask?.cancel()
+        playerEventsTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await event in self.queuePlayer.events {
+                guard !Task.isCancelled else { break }
+                self.handlePlayerEvent(event)
+            }
+        }
     }
 
     deinit {
@@ -59,6 +71,7 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
+        playerEventsTask?.cancel()
     }
 
     private func updateQueueProperties() {
@@ -153,80 +166,54 @@ public class QueuePlayerViewModel: NSObject, ObservableObject {
     }
 }
 
-// MARK: - AKPlayerDelegate
+// MARK: - Player Events Handling
 
-extension QueuePlayerViewModel: AKPlayerDelegate {
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeStateTo state: AKPlayerState) {
-        DispatchQueue.main.async {
+extension QueuePlayerViewModel {
+    private func handlePlayerEvent(_ event: AKPlayerEvent) {
+        switch event {
+        case let .stateDidChange(state):
             self.stateDescription = state.description
             self.isPlaying = (state == .playing)
             self.isLoading = state.isAny(of: [.loading, .buffering, .waitingForNetwork])
-            let intDur = player.interstitialService.integratedTimelineDuration
-            let dur = player.currentItemDuration.seconds
+            let intDur = queuePlayer.interstitialService.integratedTimelineDuration
+            let dur = queuePlayer.currentItemDuration.seconds
             let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
             if effectiveDur > 0 {
                 self.duration = effectiveDur
             }
             self.updateQueueProperties()
-        }
-    }
 
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
-        DispatchQueue.main.async {
+        case let .mediaDidChange(media):
             self.currentMedia = media
-            let intTime = player.interstitialService.integratedTimelineCurrentTime
-            self.currentTime = (intTime > 0) ? intTime : player.currentTime.seconds
-            let intDur = player.interstitialService.integratedTimelineDuration
-            let dur = player.currentItemDuration.seconds
+            let intTime = queuePlayer.interstitialService.integratedTimelineCurrentTime
+            self.currentTime = (intTime > 0) ? intTime : queuePlayer.currentTime.seconds
+            let intDur = queuePlayer.interstitialService.integratedTimelineDuration
+            let dur = queuePlayer.currentItemDuration.seconds
             let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
             self.duration = effectiveDur
             self.updateQueueProperties()
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _ player: AKPlayer,
-        didChangeCurrentTimeTo currentTime: CMTime,
-        for _: any AKPlayable
-    ) {
-        DispatchQueue.main.async {
-            let intTime = player.interstitialService.integratedTimelineCurrentTime
+        case let .timeDidChange(currentTime):
+            let intTime = queuePlayer.interstitialService.integratedTimelineCurrentTime
             if intTime > 0 {
                 self.currentTime = intTime
             } else {
                 self.currentTime = currentTime.seconds
             }
-            let intDur = player.interstitialService.integratedTimelineDuration
-            let dur = player.currentItemDuration.seconds
+            let intDur = queuePlayer.interstitialService.integratedTimelineDuration
+            let dur = queuePlayer.currentItemDuration.seconds
             let effectiveDur = (intDur > 0) ? intDur : ((dur.isFinite && dur > 0) ? dur : 0)
             if effectiveDur > 0, self.duration != effectiveDur {
                 self.duration = effectiveDur
             }
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didChangePlaybackRateTo _: AKPlaybackRate,
-        from _: AKPlaybackRate
-    ) {}
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didInvokeBoundaryTimeObserverAt _: CMTime,
-        for _: any AKPlayable
-    ) {}
-
-    public nonisolated func akPlayer(_: AKPlayer, didReachEndAt _: CMTime, for _: any AKPlayable) {
-        DispatchQueue.main.async {
+        case .didReachEnd:
             self.updateQueueProperties()
+
+        case .playbackRateDidChange, .boundaryReached, .volumeDidChange, .muteStatusDidChange,
+             .sharePlayStateDidChange, .commandUnavailable, .didFail, .interstitial, .media,
+             .trackSelection, .playerItemNotification, .metadata, .chapter:
+            break
         }
     }
-
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didEncounterUnavailableAction _: AKPlayerUnavailableCommandReason
-    ) {}
-    public nonisolated func akPlayer(_: AKPlayer, didFailWith _: AKPlayerError) {}
-    public nonisolated func akPlayer(_: AKPlayer, didChangeVolumeTo _: Float) {}
-    public nonisolated func akPlayer(_: AKPlayer, didChangeMutedStatusTo _: Bool) {}
 }

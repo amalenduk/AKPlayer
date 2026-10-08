@@ -240,12 +240,8 @@ public final class AKFairPlayHandler: NSObject, AKFairPlayHandlerProtocol,
         }
 
         // 5. Provide CKC to AVContentKeyRequest
-        do {
-            let keyResponse = AVContentKeyResponse(fairPlayStreamingKeyResponseData: ckcData)
-            keyRequest.processContentKeyResponse(keyResponse)
-        } catch {
-            throw AKFairPlayError.keyResponseProcessingFailed(error.localizedDescription)
-        }
+        let keyResponse = AVContentKeyResponse(fairPlayStreamingKeyResponseData: ckcData)
+        keyRequest.processContentKeyResponse(keyResponse)
     }
 
     /// Executes persistable key loading or generation for offline playback.

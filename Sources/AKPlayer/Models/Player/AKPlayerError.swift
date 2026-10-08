@@ -164,7 +164,7 @@ extension AKPlayerError.PlayerItemFailedToPlayReason: LocalizedError {
         switch self {
         case let .failedToPlayToEndTime(error):
             NSLocalizedString(
-                "AVPlayerItem failed to play to end time with error: \(error?.localizedDescription)",
+                "AVPlayerItem failed to play to end time with error: \(error?.localizedDescription ?? "")",
                 comment: "Item failed to finish playing"
             )
         }

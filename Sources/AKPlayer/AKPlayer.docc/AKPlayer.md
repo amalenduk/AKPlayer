@@ -37,7 +37,6 @@ A modern, highly modular, Swift 6 concurrency-ready audio/video playback framewo
 - ``AKPlayerProtocol``
 - ``AKPlayerActionsProtocol``
 - ``AKPlayerControllerProtocol``
-- ``AKPlayerDelegate``
 
 ### Playback States & Events
 

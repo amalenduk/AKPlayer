@@ -13,8 +13,7 @@ import CoreMedia
 
 /// Comprehensive playback, media, service, and interstitial events published by ``AKPlayer``.
 ///
-/// Subscribe with `for await event in player.events`. The existing
-/// ``AKPlayerDelegate`` remains supported as a compatibility adapter.
+/// Subscribe with `for await event in player.events`.
 public enum AKPlayerEvent: Sendable {
     // MARK: - Media & Media Services Events
 

@@ -268,21 +268,9 @@ public final class AKNowPlayingManager: AKNowPlayingManagerProtocol {
         // Artwork resolution: custom -> extracted
         let resolvedArtwork: Artwork? = custom?.artwork ?? extracted.artwork
 
-        // Dynamic media type detection: Video if visual tracks/presentationSize exist, else Audio
         let defaultMediaType: MPNowPlayingInfoMediaType = {
-            if let item = playerManager?.currentItem {
-                if item.presentationSize != .zero, item.presentationSize.width > 0 {
-                    return .video
-                }
-                if !item.asset.tracks(withMediaType: .video).isEmpty {
-                    return .video
-                }
-            } else if let asset = currentMedia.asset {
-                if !asset.tracks(withMediaType: .video).isEmpty {
-                    return .video
-                }
-            }
-            return .audio
+            guard let currentMedia = playerManager?.currentMedia else { return .none }
+            return currentMedia.isAudioOnly ? .audio : .video
         }()
 
         var staticMetadata = AKNowPlayableStaticMetadata(

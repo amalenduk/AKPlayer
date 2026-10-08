@@ -13,7 +13,7 @@ import Synchronization
 // MARK: - AKPlayer
 
 /// Primary high-level interface providing media playback control, state
-/// inspection, and delegate forwarding.
+/// inspection, and event broadcasting.
 @MainActor
 public class AKPlayer: NSObject, AKPlayerProtocol {
     // MARK: - Typealiases
@@ -165,10 +165,6 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     public var interstitialService: AKPlayerInterstitialServiceProtocol {
         manager.interstitialService
     }
-
-    /// The delegate object receiving high-level player state transitions,
-    /// playback events, and error notifications.
-    public weak var delegate: AKPlayerDelegate?
 
     /// Task managing the asynchronous event stream from the player controller.
     private var playerEventsTask: Task<Void, Never>?
@@ -452,7 +448,6 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
                 guard !Task.isCancelled, let self else { break }
 
                 eventBroadcaster.send(event)
-                handleControllerEvent(event)
 
                 if case let .mediaDidChange(media) = event {
                     startObservingActiveMedia(media)
@@ -531,61 +526,6 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         }
         for task in tasks {
             task.cancel()
-        }
-    }
-
-    private func handleControllerEvent(_ event: AKPlayerEvent) {
-        switch event {
-        case let .stateDidChange(state):
-            delegate?.akPlayer(self, didChangeStateTo: state)
-
-        case let .mediaDidChange(media):
-            delegate?.akPlayer(self, didChangeMediaTo: media)
-
-        case let .timeDidChange(time):
-            guard let currentMedia else { return }
-            delegate?.akPlayer(
-                self,
-                didChangeCurrentTimeTo: time,
-                for: currentMedia
-            )
-
-        case let .didReachEnd(time):
-            guard let currentMedia else { return }
-            delegate?.akPlayer(self, didReachEndAt: time, for: currentMedia)
-
-        case let .boundaryReached(time):
-            guard let currentMedia else { return }
-            delegate?.akPlayer(
-                self,
-                didInvokeBoundaryTimeObserverAt: time,
-                for: currentMedia
-            )
-
-        case let .playbackRateDidChange(newRate, previousRate):
-            delegate?.akPlayer(
-                self,
-                didChangePlaybackRateTo: newRate,
-                from: previousRate
-            )
-
-        case let .volumeDidChange(volume):
-            delegate?.akPlayer(self, didChangeVolumeTo: volume)
-
-        case let .muteStatusDidChange(isMuted):
-            delegate?.akPlayer(self, didChangeMutedStatusTo: isMuted)
-
-        case let .sharePlayStateDidChange:
-            break
-
-        case let .commandUnavailable(reason):
-            delegate?.akPlayer(self, didEncounterUnavailableAction: reason)
-
-        case let .didFail(error):
-            delegate?.akPlayer(self, didFailWith: error)
-
-        case .media, .trackSelection, .playerItemNotification, .metadata, .chapter, .interstitial:
-            break
         }
     }
 }

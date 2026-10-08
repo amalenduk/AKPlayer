@@ -167,7 +167,7 @@ public class AKBufferingState: AKBaseState {
         guard !playerController.interstitialService.isPlayingInterstitial else { return }
         switch event {
         case let .failedToPlayToEndTime(error):
-            if error is URLError {
+            if error.underlyingError is URLError {
                 let controller = AKWaitingForNetworkState(
                     playerController: playerController,
                     autoPlay: _autoPlay,

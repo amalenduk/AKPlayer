@@ -212,7 +212,7 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
             return nil
         }
 
-        guard let selectedOption = await playerItem.currentMediaSelection
+        guard let selectedOption = playerItem.currentMediaSelection
             .selectedMediaOption(in: group)
         else {
             return resolvedOffOption(for: type, allowsEmptySelection: group.allowsEmptySelection)
@@ -270,7 +270,7 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
                 continue
             }
 
-            if let selectedOption = await playerItem.currentMediaSelection
+            if let selectedOption = playerItem.currentMediaSelection
                 .selectedMediaOption(in: group),
                 let languageOption = selectedOption.makeNowPlayingInfoLanguageOption()
             {

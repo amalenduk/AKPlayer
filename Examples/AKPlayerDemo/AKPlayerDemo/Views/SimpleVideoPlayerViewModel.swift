@@ -19,7 +19,6 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         configuration.isNowPlayingEnabled = true
         let p = AKPlayer(configuration: configuration, audioSessionService: audioSession)
         p.player.appliesMediaSelectionCriteriaAutomatically = true
-        p.delegate = self
         return p
     }()
 
@@ -67,6 +66,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     @Published public var isSubtitleEnabled = false
     @Published public var activeSubtitleLanguage: String?
 
+    private nonisolated(unsafe) var playerEventsTask: Task<Void, Never>?
     private var clearUnavailableWorkItem: DispatchWorkItem?
     private nonisolated(unsafe) var interstitialTask: Task<Void, Never>?
     private nonisolated(unsafe) var pipEventsTask: Task<Void, Never>?
@@ -105,6 +105,18 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
             }
         }
         observeInterstitialEvents()
+        observePlayerEvents()
+    }
+
+    private func observePlayerEvents() {
+        playerEventsTask?.cancel()
+        playerEventsTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await event in self.player.events {
+                guard !Task.isCancelled else { break }
+                self.handlePlayerEvent(event)
+            }
+        }
     }
 
     deinit {
@@ -115,6 +127,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         interstitialTask?.cancel()
         pipEventsTask?.cancel()
         chaptersTask?.cancel()
+        playerEventsTask?.cancel()
     }
 
     // MARK: - Interstitial Observation
@@ -128,34 +141,21 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                 guard !Task.isCancelled, let self else { break }
                 switch event {
                 case .scheduleDidChange:
+                    break
+                case .adMarkersDidChange:
                     adMarkers = service.markers
-                    let intDur = service.integratedTimelineDuration
-                    if intDur > 0 {
-                        duration = intDur
-                    }
-                case let .adMarkersDidChange(markers):
-                    adMarkers = markers
-                    let intDur = service.integratedTimelineDuration
-                    if intDur > 0 {
-                        duration = intDur
-                    }
                 case let .willStart(event):
                     interstitialIdentifier = event.identifier
                     isInterstitialActive = true
-                    adMarkers = service.markers
-                case let .didStart(event):
-                    interstitialIdentifier = event.identifier
-                    isInterstitialActive = true
-                    adMarkers = service.markers
+                case .didStart:
+                    break
                 case let .progress(progress):
                     interstitialProgress = progress
                 case .didFinish:
                     isInterstitialActive = false
                     interstitialIdentifier = nil
                     interstitialProgress = nil
-                    adMarkers = service.markers
                 case let .integratedTimeline(timelineEvent):
-                    adMarkers = service.markers
                     switch timelineEvent {
                     case let .timeUpdated(current, _, dur):
                         if dur > 0 {
@@ -163,14 +163,10 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
                         }
                         currentTime = current
                     case .segmentsUpdated, .snapshotOutOfSync:
-                        let intDur = service.integratedTimelineDuration
-                        if intDur > 0 {
-                            duration = intDur
-                        }
+                        break
                     }
                 case let .playbackStateDidChange(state):
                     interstitialPlaybackState = state
-                    isInterstitialActive = (state != .idle && state != .finished)
                 }
             }
         }
@@ -454,11 +450,12 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     }
 }
 
-// MARK: - AKPlayerDelegate
+// MARK: - Player Events Handling
 
-extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeStateTo state: AKPlayerState) {
-        DispatchQueue.main.async {
+extension SimpleVideoPlayerViewModel {
+    private func handlePlayerEvent(_ event: AKPlayerEvent) {
+        switch event {
+        case let .stateDidChange(state):
             self.stateDescription = state.description
             self
                 .isLoading =
@@ -470,12 +467,8 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             } else if dur.isFinite, dur > 0, self.duration == 0 {
                 self.duration = dur
             }
-            self.adMarkers = self.interstitialService.markers
-        }
-    }
 
-    public nonisolated func akPlayer(_ player: AKPlayer, didChangeMediaTo media: any AKPlayable) {
-        DispatchQueue.main.async {
+        case let .mediaDidChange(media):
             self.lastLoadedMedia = media
             let intTime = self.interstitialService.integratedTimelineCurrentTime
             self.currentTime = (intTime > 0) ? intTime : player.currentTime.seconds
@@ -486,17 +479,9 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             } else {
                 self.duration = (dur.isFinite && dur > 0) ? dur : 0
             }
-            self.adMarkers = self.interstitialService.markers
             self.refreshSelectionGroups()
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _ player: AKPlayer,
-        didChangeCurrentTimeTo currentTime: CMTime,
-        for media: any AKPlayable
-    ) {
-        DispatchQueue.main.async {
+        case let .timeDidChange(currentTime):
             let hasIntegratedTimeline = (self.interstitialService.integratedTimeline != nil)
             if !hasIntegratedTimeline, !self.isInterstitialActive,
                !self.interstitialService.isPlayingInterstitial
@@ -507,34 +492,23 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
                     self.duration = dur
                 }
             }
-            self.currentChapter = media.chapterService.currentChapter(at: currentTime)
-            if self.chapters.isEmpty, !media.chapterService.chapters.isEmpty {
-                self.chapters = media.chapterService.chapters
+            if let media = player.currentMedia {
+                self.currentChapter = media.chapterService.currentChapter(at: currentTime)
+                if self.chapters.isEmpty, !media.chapterService.chapters.isEmpty {
+                    self.chapters = media.chapterService.chapters
+                }
             }
-        }
-    }
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didChangePlaybackRateTo newRate: AKPlaybackRate,
-        from _: AKPlaybackRate
-    ) {
-        DispatchQueue.main.async { self.playbackRate = newRate }
-    }
+        case let .playbackRateDidChange(newRate, _):
+            self.playbackRate = newRate
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didInvokeBoundaryTimeObserverAt _: CMTime,
-        for _: any AKPlayable
-    ) {}
+        case let .volumeDidChange(volume):
+            self.volume = volume
 
-    public nonisolated func akPlayer(_: AKPlayer, didReachEndAt _: CMTime, for _: any AKPlayable) {}
+        case let .muteStatusDidChange(isMuted):
+            self.isMuted = isMuted
 
-    public nonisolated func akPlayer(
-        _: AKPlayer,
-        didEncounterUnavailableAction reason: AKPlayerUnavailableCommandReason
-    ) {
-        DispatchQueue.main.async {
+        case let .commandUnavailable(reason):
             self.clearUnavailableWorkItem?.cancel()
             self.unavailableMessage = reason.description
             let work = DispatchWorkItem { [weak self] in
@@ -542,21 +516,14 @@ extension SimpleVideoPlayerViewModel: AKPlayerDelegate {
             }
             self.clearUnavailableWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work)
-        }
-    }
 
-    public nonisolated func akPlayer(_: AKPlayer, didFailWith error: AKPlayerError) {
-        DispatchQueue.main.async {
+        case let .didFail(error):
             self.unavailableMessage = "Error: \(error.localizedDescription)"
+
+        case .didReachEnd, .boundaryReached, .sharePlayStateDidChange, .interstitial, .media,
+             .trackSelection, .playerItemNotification, .metadata, .chapter:
+            break
         }
-    }
-
-    public nonisolated func akPlayer(_: AKPlayer, didChangeVolumeTo volume: Float) {
-        DispatchQueue.main.async { self.volume = volume }
-    }
-
-    public nonisolated func akPlayer(_: AKPlayer, didChangeMutedStatusTo isMuted: Bool) {
-        DispatchQueue.main.async { self.isMuted = isMuted }
     }
 }
 

@@ -82,17 +82,17 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
             guard let mediaManager else { return }
 
             // Check initial state
-            if await mediaManager.state == .playerItemLoaded,
-               let item = await mediaManager.playerItem
+            if mediaManager.state == .playerItemLoaded,
+               let item = mediaManager.playerItem
             {
                 self?.startObserving(playerItem: item)
             }
 
-            for await event in await mediaManager.events {
+            for await event in mediaManager.events {
                 guard !Task.isCancelled, let self else { break }
 
                 if case let .stateDidChange(state) = event {
-                    if state == .playerItemLoaded, let item = await mediaManager.playerItem {
+                    if state == .playerItemLoaded, let item = mediaManager.playerItem {
                         startObserving(playerItem: item)
                     } else if state == .idle || state == .failed {
                         stopObserving()
