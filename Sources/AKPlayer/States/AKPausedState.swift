@@ -18,7 +18,7 @@ public class AKPausedState: AKBaseState {
 
     /// Flag indicating whether playback paused naturally because the media
     /// reached its end time.
-    private let playerItemDidPlayToEndTime: Bool
+    private var playerItemDidPlayToEndTime: Bool
 
     // MARK: - Init
 
@@ -121,6 +121,8 @@ public class AKPausedState: AKBaseState {
                 )
                 change(controller)
             }
+        case .didPlayToEndTime:
+            playerItemDidPlayToEndTime = true
         default:
             break
         }
