@@ -61,18 +61,31 @@ public protocol AKTrackSelectionServiceProtocol: AnyObject, Sendable {
 
     // MARK: - 5. Session & Stream Observations
 
-    /// Clears internal track caches and resets observer sessions.
-    func resetSession() async
-
     /// An asynchronous stream emitting unified track selection events.
     var events: AsyncStream<AKTrackSelectionEvent> { get }
+}
+
+// MARK: - Internal Lifecycle Protocol
+
+/// Internal lifecycle management contract for track selection service.
+protocol AKTrackSelectionLifecycleManaging: AnyObject, Sendable {
+    /// Starts observing track changes and media selection on the active player item.
+    func startObserving()
+
+    /// Clears internal track caches and resets observer sessions.
+    func resetSession()
+
+    /// Reloads available tracks and active selections across all track types, broadcasting changes.
+    func reloadTracksAndSelections() async
 }
 
 // MARK: - Implementation
 
 /// Thread-safe service managing audio, subtitle, and closed caption track selections on
 /// AVPlayerItem.
-public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @unchecked Sendable {
+public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol,
+    AKTrackSelectionLifecycleManaging, @unchecked Sendable
+{
     // MARK: - Internal State
 
     /// Thread-confined internal state model for track groups and observation tasks.
@@ -81,8 +94,14 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
         var groupCache: [String: AVMediaSelectionGroup] = [:]
         /// Last recorded active selection for each track type.
         var lastKnownSelection: [AKTrackType: AKMediaTrackOption?] = [:]
+        /// Last recorded available tracks for each track type.
+        var lastKnownAvailableTracks: [AKTrackType: [AKMediaTrackOption]] = [:]
         /// Background task observing system accessibility caption preferences.
         var observationTask: Task<Void, Never>?
+        /// Observer for player item tracks changes.
+        var tracksObservation: NSKeyValueObservation?
+        /// Observer for player item status changes.
+        var statusObservation: NSKeyValueObservation?
     }
 
     // MARK: - Properties
@@ -118,6 +137,8 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
     deinit {
         state.withLock {
             $0.observationTask?.cancel()
+            $0.tracksObservation?.invalidate()
+            $0.statusObservation?.invalidate()
         }
         eventBroadcaster.finish()
     }
@@ -377,22 +398,37 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
 
     // MARK: - 5. Session & Stream Observations
 
+    /// Starts observing track changes and media selections on the active player item.
+    public func startObserving() {
+        startObservingExternalChanges()
+    }
+
     /// Clears internal track caches and resets observer sessions.
-    public func resetSession() async {
+    public func resetSession() {
         state.withLock {
             $0.groupCache.removeAll()
             $0.lastKnownSelection.removeAll()
+            $0.lastKnownAvailableTracks.removeAll()
+            $0.observationTask?.cancel()
+            $0.tracksObservation?.invalidate()
+            $0.statusObservation?.invalidate()
+            $0.observationTask = nil
+            $0.tracksObservation = nil
+            $0.statusObservation = nil
         }
-        startObservingExternalChanges()
     }
 
     // MARK: - External Change Observation
 
-    /// Sets up notification observation for system-level media selection changes.
+    /// Sets up observation for system-level media selection and track changes.
     private func startObservingExternalChanges() {
         guard let playerItem else { return }
 
-        state.withLock { $0.observationTask?.cancel() }
+        state.withLock {
+            $0.observationTask?.cancel()
+            $0.tracksObservation?.invalidate()
+            $0.statusObservation?.invalidate()
+        }
 
         let task = Task { [weak self, weak playerItem] in
             guard let playerItem else { return }
@@ -402,21 +438,64 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
                 object: playerItem
             ) {
                 guard !Task.isCancelled, let self else { break }
-                await handleExternalChangeNotification()
+                await self.reloadTracksAndSelections()
             }
         }
 
-        state.withLock { $0.observationTask = task }
+        let tracksObs = playerItem.observe(\.tracks, options: [
+            .initial,
+            .new,
+        ]) { [weak self] _, _ in
+            Task { [weak self] in
+                guard let self else { return }
+                await self.reloadTracksAndSelections()
+            }
+        }
+
+        let statusObs = playerItem.observe(\.status, options: [
+            .initial,
+            .new,
+        ]) { [weak self] item, _ in
+            guard item.status == .readyToPlay else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                await self.reloadTracksAndSelections()
+            }
+        }
+
+        state.withLock {
+            $0.observationTask = task
+            $0.tracksObservation = tracksObs
+            $0.statusObservation = statusObs
+        }
     }
 
-    /// Handles external media selection notifications by fetching updated selections and notifying
-    /// subscribers.
-    private func handleExternalChangeNotification() async {
-        let types: [AKTrackType] = [.audio, .subtitle, .closedCaption]
+    /// Reloads available tracks and active selections across all track types, broadcasting changes.
+    public func reloadTracksAndSelections() async {
+        guard playerItem != nil else { return }
+        // Invalidate group cache to ensure fresh track groups are loaded from the asset
+        state.withLock { $0.groupCache.removeAll() }
+
+        let types: [AKTrackType] = [
+            .audio,
+            .subtitle,
+            .closedCaption,
+            .audioDescription,
+            .videoAlternative,
+        ]
         for type in types {
-            guard let resolved = try? await selectedTrack(for: type) else { continue }
-            recordAndBroadcastIfChanged(resolved, for: type)
+            if let available = try? await availableTracks(for: type) {
+                recordAndBroadcastAvailableTracksIfChanged(available, for: type)
+            }
+            if let selected = try? await selectedTrack(for: type) {
+                recordAndBroadcastIfChanged(selected, for: type)
+            }
         }
+    }
+
+    /// Handles external media selection notifications by reloading tracks and selections.
+    private func handleExternalChangeNotification() async {
+        await reloadTracksAndSelections()
     }
 
     // MARK: - Private Utilities
@@ -521,6 +600,27 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol, @un
     /// - Parameters:
     ///   - option: The newly selected track option.
     ///   - type: The track type for which selection changed.
+    /// Updates the last known available tracks and broadcasts the event if it differs.
+    /// - Parameters:
+    ///   - options: The newly loaded list of available track options.
+    ///   - type: The track type for which available tracks changed.
+    private func recordAndBroadcastAvailableTracksIfChanged(
+        _ options: [AKMediaTrackOption],
+        for type: AKTrackType
+    ) {
+        let shouldBroadcast = state.withLock { s -> Bool in
+            if s.lastKnownAvailableTracks[type] == options {
+                return false
+            }
+            s.lastKnownAvailableTracks[type] = options
+            return true
+        }
+
+        if shouldBroadcast {
+            eventBroadcaster.send(.availableTracksDidChange(options, for: type))
+        }
+    }
+
     private func recordAndBroadcastIfChanged(_ option: AKMediaTrackOption?, for type: AKTrackType) {
         let shouldBroadcast = state.withLock { s -> Bool in
             if s.lastKnownSelection[type] == option,

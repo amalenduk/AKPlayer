@@ -40,11 +40,14 @@ public protocol AKMediaMetadataProviderProtocol: AnyObject, Sendable {
 
     /// Manually updates / merges static metadata (e.g. from backend API or custom models).
     func updateStaticMetadata(_ metadata: AKMediaStaticMetadata)
+}
 
+// MARK: - Internal Lifecycle Protocol
+
+/// Internal lifecycle management contract for metadata extraction service.
+protocol AKMediaMetadataLifecycleManaging: AnyObject, Sendable {
     /// Ingests dynamic timed metadata groups received from player item outputs.
     func handleTimedMetadata(_ items: [AVMetadataItem])
-
-    // MARK: - Lifecycle
 
     /// Asynchronously extracts common and format-specific metadata from the active asset.
     func loadMetadata() async
@@ -56,7 +59,9 @@ public protocol AKMediaMetadataProviderProtocol: AnyObject, Sendable {
 // MARK: - AKMediaMetadataProvider
 
 /// Thread-safe provider extracting Common, ID3, and iTunes metadata from media assets and streams.
-public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol, @unchecked Sendable {
+public final class AKMediaMetadataProvider: AKMediaMetadataProviderProtocol,
+    AKMediaMetadataLifecycleManaging, @unchecked Sendable
+{
     // MARK: - Properties
 
     /// Weak reference to the parent media manager.

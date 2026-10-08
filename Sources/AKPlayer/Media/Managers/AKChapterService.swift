@@ -16,7 +16,9 @@ import Synchronization
 // MARK: - AKChapterService
 
 /// Thread-safe service responsible for extracting, querying, and observing media chapters.
-public final class AKChapterService: AKChapterServiceProtocol, @unchecked Sendable {
+public final class AKChapterService: AKChapterServiceProtocol, AKChapterLifecycleManaging,
+    @unchecked Sendable
+{
     // MARK: - Properties
 
     /// Weak reference to the parent media manager.

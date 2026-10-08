@@ -63,7 +63,7 @@ struct AKChapterTests {
             .currentChapterNumber(at: CMTime(seconds: 5, preferredTimescale: 600)) == nil)
         #expect(service.chapterTitle(at: CMTime(seconds: 5, preferredTimescale: 600)) == nil)
 
-        service.resetSession()
+        (service as? AKChapterLifecycleManaging)?.resetSession()
         #expect(service.chapters.isEmpty)
     }
 
@@ -75,7 +75,7 @@ struct AKChapterTests {
         let service = media.chapterService
         let stream = service.events
 
-        service.resetSession()
+        (service as? AKChapterLifecycleManaging)?.resetSession()
 
         var received: [AKChapterEvent] = []
         for await event in stream {

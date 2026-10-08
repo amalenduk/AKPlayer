@@ -101,7 +101,7 @@ struct AKMediaMetadataTests {
         #expect(provider.staticMetadata.genre == "Rock")
 
         // Reset session
-        provider.resetSession()
+        (provider as? AKMediaMetadataLifecycleManaging)?.resetSession()
         #expect(provider.staticMetadata.title == nil)
         #expect(provider.timedMetadata.isEmpty)
     }

@@ -77,10 +77,10 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
 
     private let playerItemInitService: any AKPlayerItemInitServiceProtocol
     private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
-    private var _trackSelectionService: (any AKTrackSelectionServiceProtocol)!
-    private var _metadataProvider: (any AKMediaMetadataProviderProtocol)!
-    private var _chapterService: (any AKChapterServiceProtocol)!
-    private var _playerItemNotificationsObserver: (any AKPlayerItemNotificationsObserverProtocol)!
+    private var _trackSelectionService: AKTrackSelectionService!
+    private var _metadataProvider: AKMediaMetadataProvider!
+    private var _chapterService: AKChapterService!
+    private var _playerItemNotificationsObserver: AKPlayerItemNotificationsObserver!
 
     // MARK: - Initialization & Cleanup
 
@@ -118,7 +118,11 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             // 2. Attach live timed metadata output
             attachMetadataOutput(to: customItem)
 
-            // 3. Load metadata and chapters in parallel (extracting asset if not explicitly
+            // 3. Start observing tracks and notifications
+            _trackSelectionService.startObserving()
+            _playerItemNotificationsObserver.startObserving(playerItem: customItem)
+
+            // 4. Load metadata and chapters in parallel (extracting asset if not explicitly
             // provided)
             loadMetadataAndChapters(extractAssetFrom: customItem)
         } else if media.customAsset != nil {
@@ -144,10 +148,9 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
 
     /// Instantiates the underlying `AVURLAsset` for the assigned media.
     public func createAsset() async {
-        assert(
-            state.isIdle || state.isFailed,
-            "This function can only be called if the media is idle or has encountered an error."
-        )
+        if !state.isIdle, !state.isFailed {
+            abortAssetInitialization()
+        }
         guard let media else { return }
         error = nil
         asset = await playerItemInitService.createAsset(for: media)
@@ -184,16 +187,17 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         let newItem = playerItemInitService.createPlayerItem(from: asset, for: media)
         playerItem = newItem
 
-        // Reset track selection session targeting the new player item
-        Task {
-            await trackSelectionService.resetSession()
-        }
-
         // Attach live stream timed metadata output
         attachMetadataOutput(to: newItem)
 
         bindObservers(to: newItem)
         state = .playerItemLoaded
+
+        // Start observing track changes and selections on the active player item
+        _trackSelectionService.startObserving()
+
+        // Start observing system notifications on the active player item
+        _playerItemNotificationsObserver.startObserving(playerItem: newItem)
     }
 
     /// Aborts active asset property loading and cancels pending operations.
@@ -203,8 +207,10 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         asset = nil
         playerItem = nil
         state = .idle
-        metadataProvider.resetSession()
-        chapterService.resetSession()
+        _metadataProvider.resetSession()
+        _chapterService.resetSession()
+        _trackSelectionService.resetSession()
+        _playerItemNotificationsObserver.stopObserving()
     }
 
     // MARK: - Preflight Capability Checks
@@ -424,8 +430,8 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             if asset == nil, let customItem {
                 asset = await MainActor.run { customItem.asset as? AVURLAsset }
             }
-            async let meta: () = metadataProvider.loadMetadata()
-            async let chapters: () = chapterService.loadChapters()
+            async let meta: () = _metadataProvider.loadMetadata()
+            async let chapters: () = _chapterService.loadChapters()
             _ = await (meta, chapters)
         }
     }
@@ -459,6 +465,6 @@ extension AKMediaManager: AVPlayerItemMetadataOutputPushDelegate {
     ) {
         let items = groups.flatMap(\.items)
         guard !items.isEmpty else { return }
-        metadataProvider.handleTimedMetadata(items)
+        _metadataProvider.handleTimedMetadata(items)
     }
 }

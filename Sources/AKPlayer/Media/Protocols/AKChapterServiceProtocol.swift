@@ -66,9 +66,12 @@ public protocol AKChapterServiceProtocol: AnyObject, Sendable {
     /// - Parameter time: Current playback timestamp.
     /// - Returns: The previous `AKChapter`, or `nil` if already on the first chapter.
     func previousChapter(from time: CMTime) -> AKChapter?
+}
 
-    // MARK: - Lifecycle
+// MARK: - Internal Lifecycle Protocol
 
+/// Internal lifecycle management contract for chapter extraction service.
+protocol AKChapterLifecycleManaging: AnyObject, Sendable {
     /// Loads chapter metadata asynchronously from the underlying media asset.
     func loadChapters() async
 

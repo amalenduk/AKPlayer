@@ -36,10 +36,22 @@ public protocol AKPlayerItemNotificationsObserverProtocol: AnyObject, Sendable {
     var events: AsyncStream<AKPlayerItemNotificationEvent> { get }
 }
 
+// MARK: - Internal Lifecycle Protocol
+
+/// Internal lifecycle management contract for player item notifications observer.
+protocol AKPlayerItemNotificationsLifecycleManaging: AnyObject, Sendable {
+    /// Starts observing system notifications for the specified player item.
+    func startObserving(playerItem: AVPlayerItem)
+
+    /// Stops observing system notifications and cancels active notification tasks.
+    func stopObserving()
+}
+
 // MARK: - Implementation
 
 /// Thread-safe observer managing system notifications for AVPlayerItem instances.
 public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsObserverProtocol,
+    AKPlayerItemNotificationsLifecycleManaging,
     Sendable
 {
     // MARK: - Properties
@@ -49,8 +61,6 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
 
     /// Mutex protecting the active notification observation task group for the current player item.
     private let activeTask = Mutex<Task<Void, Never>?>(nil)
-    /// Mutex protecting the media manager state observation task.
-    private let stateTask = Mutex<Task<Void, Never>?>(nil)
 
     /// Multi-subscriber stream emitting AVPlayerItem lifecycle events.
     public var events: AsyncStream<AKPlayerItemNotificationEvent> {
@@ -59,57 +69,13 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
 
     // MARK: - Init & Deinit
 
-    /// Initializes an observer monitoring notifications for player items loaded in the media
-    /// manager.
-    /// - Parameter mediaManager: The media manager instance providing the active player item.
-    public init(mediaManager: any AKMediaManagerProtocol) {
-        startMonitoringMediaEvents(for: mediaManager)
-    }
+    /// Initializes an observer monitoring notifications for player items.
+    /// - Parameter mediaManager: Optional media manager reference for dependency injection.
+    public init(mediaManager _: (any AKMediaManagerProtocol)? = nil) {}
 
     deinit {
-        stopMonitoringMediaEvents()
         stopObserving()
         broadcaster.finish()
-    }
-
-    // MARK: - Media State Monitoring
-
-    /// Begins monitoring media manager state transitions to dynamically attach or detach item
-    /// observation.
-    /// - Parameter mediaManager: The media manager providing player item updates.
-    private func startMonitoringMediaEvents(for mediaManager: any AKMediaManagerProtocol) {
-        let task = Task { [weak self, weak mediaManager] in
-            guard let mediaManager else { return }
-
-            // Check initial state
-            if mediaManager.state == .playerItemLoaded,
-               let item = mediaManager.playerItem
-            {
-                self?.startObserving(playerItem: item)
-            }
-
-            for await event in mediaManager.events {
-                guard !Task.isCancelled, let self else { break }
-
-                if case let .stateDidChange(state) = event {
-                    if state == .playerItemLoaded, let item = mediaManager.playerItem {
-                        startObserving(playerItem: item)
-                    } else if state == .idle || state == .failed {
-                        stopObserving()
-                    }
-                }
-            }
-        }
-
-        stateTask.withLock { $0 = task }
-    }
-
-    /// Cancels and releases the active media manager state observation task.
-    private func stopMonitoringMediaEvents() {
-        stateTask.withLock {
-            $0?.cancel()
-            $0 = nil
-        }
     }
 
     // MARK: - AVPlayerItem Observation
@@ -117,7 +83,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
     /// Attaches NotificationCenter observers for the given player item and forwards events through
     /// the broadcaster.
     /// - Parameter playerItem: The `AVPlayerItem` to observe.
-    private func startObserving(playerItem: AVPlayerItem) {
+    public func startObserving(playerItem: AVPlayerItem) {
         stopObserving()
 
         let newTask = Task { [weak self, weak playerItem] in
@@ -209,7 +175,7 @@ public final class AKPlayerItemNotificationsObserver: AKPlayerItemNotificationsO
     }
 
     /// Stops observing the current player item and cancels active notification tasks.
-    private func stopObserving() {
+    public func stopObserving() {
         activeTask.withLock {
             $0?.cancel()
             $0 = nil
