@@ -26,7 +26,12 @@ public class AKLoadingState: AKBaseState {
         _autoPlay
     }
 
-    private(set) var _autoPlay: Bool
+    private(set) var _autoPlay: Bool {
+        didSet {
+            guard oldValue != _autoPlay else { return }
+            playerController?.notifyAutoPlayDidChange(_autoPlay)
+        }
+    }
 
     /// An optional initial position to seek to upon entering loaded state.
     private let position: AKSeekTarget?

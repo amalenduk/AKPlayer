@@ -37,7 +37,12 @@ public class AKWaitingForNetworkState: AKBaseState {
         _autoPlay
     }
 
-    private(set) var _autoPlay: Bool
+    private(set) var _autoPlay: Bool {
+        didSet {
+            guard oldValue != _autoPlay else { return }
+            playerController?.notifyAutoPlayDidChange(_autoPlay)
+        }
+    }
 
     /// The player state to transition into after buffering resolves following network restoration.
     private var stateToNavigateAfterBuffering: AKPlayerState?

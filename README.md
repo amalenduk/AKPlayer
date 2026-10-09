@@ -244,13 +244,18 @@ AKPlayer is powered by a deterministic, event-driven state machine. Every playba
 └──────────────┘└──────────────┘
 ```
 
-You can inspect the state at any time via `player.state` or subscribe to asynchronous state transitions:
+You can inspect the state and autoplay status at any time via `player.state` and `player.autoPlay`, or subscribe to asynchronous updates:
 
 ```swift
 Task {
     for await event in player.events {
-        if case .stateDidChange(let state) = event {
+        switch event {
+        case .stateDidChange(let state):
             print("Player transitioned to: \(state)")
+        case .autoPlayDidChange(let isAutoPlay):
+            print("AutoPlay status changed: \(isAutoPlay)")
+        default:
+            break
         }
     }
 }
@@ -521,6 +526,9 @@ Task {
         switch event {
         case .stateDidChange(let state):
             print("State: \(state)")
+
+        case .autoPlayDidChange(let isAutoPlay):
+            print("AutoPlay status changed: \(isAutoPlay)")
             
         case .timeDidChange(let time):
             print("Current time: \(time.seconds)")

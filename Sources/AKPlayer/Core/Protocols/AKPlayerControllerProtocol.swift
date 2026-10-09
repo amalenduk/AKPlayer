@@ -75,6 +75,10 @@ public protocol AKPlayerControllerProtocol: AnyObject, Sendable, AKPlayerProtoco
     /// transitions complete.
     func processStateChange()
 
+    /// Dispatches an `autoPlayDidChange` event if the autoplay value has changed.
+    /// - Parameter isAutoPlay: The new autoplay status.
+    func notifyAutoPlayDidChange(_ isAutoPlay: Bool)
+
     /// Single entry point for dispatching all player events across the
     /// framework.
     /// Broadcasts the event to the delegate and forwards it to event listeners

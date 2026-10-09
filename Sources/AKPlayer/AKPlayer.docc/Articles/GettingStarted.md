@@ -37,6 +37,8 @@ Task { @MainActor in
         switch event {
         case let .stateDidChange(state):
             print("Player state changed to: \(state)")
+        case let .autoPlayDidChange(isAutoPlay):
+            print("AutoPlay status changed to: \(isAutoPlay)")
         case let .periodicTimeDidChange(time):
             print("Current playback time: \(time.seconds)s")
         case let .mediaLoaded(media):

@@ -167,6 +167,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// logic.
     private var controller: (any AKPlayerStateControllerProtocol)!
 
+    /// Cached autoplay status to deduplicate `.autoPlayDidChange` event emissions.
+    private var lastEmittedAutoPlay: Bool?
+
     /// Multicast event broadcaster dispatching playback events to asynchronous stream subscribers.
     private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
 
@@ -502,9 +505,18 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// `AKPlayerStateControllerProtocol`.
     public func change(_ newController: any AKPlayerStateControllerProtocol) {
         controller = newController
+        notifyAutoPlayDidChange(newController.autoPlay)
         eventBroadcaster.send(.stateDidChange(newController.state))
         processStateChange()
         newController.processStateChange()
+    }
+
+    /// Dispatches an `autoPlayDidChange` event if the autoplay value has changed.
+    /// - Parameter isAutoPlay: The new autoplay status.
+    public func notifyAutoPlayDidChange(_ isAutoPlay: Bool) {
+        guard lastEmittedAutoPlay != isAutoPlay else { return }
+        lastEmittedAutoPlay = isAutoPlay
+        emit(.autoPlayDidChange(isAutoPlay))
     }
 
     /// Hook called whenever state changes to execute custom side effects based

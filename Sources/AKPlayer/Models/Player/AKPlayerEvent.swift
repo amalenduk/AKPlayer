@@ -37,6 +37,10 @@ public enum AKPlayerEvent: Sendable {
     /// The player's operational state transitioned (e.g., from buffering to playing).
     case stateDidChange(AKPlayerState)
 
+    /// The autoPlay status changed (e.g., media loaded with autoPlay, or user issued play/pause
+    /// while loading or buffering).
+    case autoPlayDidChange(Bool)
+
     /// The active playable media item was swapped or updated.
     case mediaDidChange(any AKPlayable)
 
@@ -102,6 +106,8 @@ extension AKPlayerEvent: Equatable {
         case let (.mediaDidChange(l), .mediaDidChange(r)):
             l.isEqual(to: r)
         case let (.stateDidChange(l), .stateDidChange(r)):
+            l == r
+        case let (.autoPlayDidChange(l), .autoPlayDidChange(r)):
             l == r
         case let (.timeDidChange(l), .timeDidChange(r)):
             l == r
