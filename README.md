@@ -53,7 +53,7 @@
 - 🎛️ **Now Playing & Remote Commands**: Zero-boilerplate Control Center, Lock Screen, Dynamic Island, and Apple Watch media control integration.
 - 💬 **Subtitles & Multi-Audio**: Discovery and selection of audio tracks, subtitles (CC / SDH), and accessibility descriptions matching system preferences.
 - 🏷️ **Chapters & Metadata Provider**: Async extraction of ID3/HLS static and timed metadata along with chapter timelines.
-- 🎨 **Modular UI Components**: Drop-in progress bars (`AKProgressBar`) with live edge indicators, chapter ticks, and interstitial overlays.
+- 🎨 **Video Rendering View**: Platform-native `AKPlayerView` for rendering video with AVFoundation.
 - 🍿 **AirPlay & PiP**: Effortless Picture-in-Picture with automatic background restoration and full AirPlay support.
 - 📻 **FairPlay Streaming (DRM)**: Integrated `AKFairPlayHandler` for SPC/CKC license key exchange with persistable offline key support.
 - 👥 **Apple SharePlay**: Seamless synchronized playback across FaceTime using `GroupActivities` and `AVPlayerPlaybackCoordinator`.
@@ -348,9 +348,9 @@ Task {
 
 ---
 
-### 4. Interstitial Ads & Progress Bar
+### 4. Interstitial Ads
 
-Schedule pre-rolls, mid-rolls, and post-rolls with `AVPlayerInterstitialEventController` integration and render them using SwiftUI's `AKProgressBar`:
+Schedule pre-rolls, mid-rolls, and post-rolls with `AVPlayerInterstitialEventController` integration. The demo app includes an interactive progress bar showing interstitial markers and enforcing seek restrictions.
 
 ```swift
 // Schedule a mid-roll ad break at 30 seconds
@@ -361,29 +361,6 @@ let adEvent = AKInterstitialScheduleConfig(
     restrictions: [.constrainsSeekingForwardInPrimaryContent] // non-skippable
 )
 player.interstitialService.schedule(adEvent)
-
-// SwiftUI interactive progress bar with Ad cue markers
-struct PlayerControlsView: View {
-    @ObservedObject var viewModel: SimpleVideoPlayerViewModel
-
-    var body: some View {
-        AKProgressBar(
-            currentTime: viewModel.currentTime,
-            duration: viewModel.duration,
-            bufferProgress: viewModel.bufferProgress,
-            markers: viewModel.player.interstitialService.markers,
-            configuration: AKProgressBarConfiguration(
-                activeMarkerColor: .yellow,
-                playedMarkerColor: .gray,
-                unplayedMarkerColor: .orange,
-                enforceRestrictions: true // Prevents scrubbing past unplayed mandatory ads
-            ),
-            onSeek: { targetSeconds in
-                viewModel.player.seek(to: .seconds(targetSeconds))
-            }
-        )
-    }
-}
 ```
 
 ---

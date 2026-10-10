@@ -7,6 +7,7 @@
 //
 
 #if canImport(SwiftUI)
+    import AKPlayer
     import SwiftUI
 
     // MARK: - AKProgressBarConfiguration

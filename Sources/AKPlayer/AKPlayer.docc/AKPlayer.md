@@ -20,7 +20,7 @@ A modern, highly modular, Swift 6 concurrency-ready audio/video playback framewo
 - **Live Stream Edge Synchronization**: Monitor live stream drift and jump directly to the live edge with `jumpToLive()`.
 - **Timed Interstitials & Ads**: Parse HLS interstitials or synthesize local ad markers with custom action policies (`.skip`, `.freeze`, `.playAd`).
 - **Rich Media & Chapters**: Integrated chapter navigation, static artwork/metadata, and dynamic Now Playing info synchronization.
-- **Customizable UI**: Includes ready-to-use SwiftUI, UIKit, and AppKit progress bar and video player components (``AKProgressBar``, ``AKPlayerView``).
+- **Video Rendering**: Includes the platform-native ``AKPlayerView`` for displaying video.
 
 ## Topics
 
@@ -101,9 +101,3 @@ A modern, highly modular, Swift 6 concurrency-ready audio/video playback framewo
 
 - ``AKInterstitialMarker``
 - ``AKPlayerInterstitialServiceProtocol``
-
-### UI Components
-
-- ``AKProgressBar``
-- ``AKProgressBarDelegate``
-- ``AKTimeFormattingUtility``

@@ -6,6 +6,7 @@
 //   Licensed under the MIT license. See LICENSE file in the project root.
 //
 
+import AKPlayer
 import AVKit
 import SwiftUI
 
