@@ -95,7 +95,7 @@ public struct AudiobookPlayerView: View {
             ) {
                 ForEach(AKPlaybackRate.allCases, id: \.self) { rate in
                     Button(rate.title) {
-                        viewModel.setRate(rate)
+                        viewModel.setPlaybackRate(rate)
                     }
                 }
                 Button("Cancel", role: .cancel) {}

@@ -87,6 +87,12 @@ public final class AKPlayerObservable {
     /// The playback state of the active interstitial ad.
     public private(set) var interstitialPlaybackState: AKInterstitialPlaybackState = .idle
 
+    /// The unique identifier of the currently active interstitial ad break, if any.
+    public private(set) var currentInterstitialIdentifier: String?
+
+    /// The progress of the currently playing interstitial ad item, if available.
+    public private(set) var interstitialProgress: AKPlayerInterstitialProgress?
+
     /// The active playback rate.
     public private(set) var playbackRate: AKPlaybackRate
 
@@ -335,6 +341,11 @@ public final class AKPlayerObservable {
     /// Changes the audio mute state.
     public func setMuted(_ isMuted: Bool) {
         player.isMuted = isMuted
+    }
+
+    /// Toggles the audio mute state.
+    public func toggleMute() {
+        setMuted(!isMuted)
     }
 
     // MARK: - Seeking & Skipping
@@ -718,12 +729,21 @@ public final class AKPlayerObservable {
 
     private func handleInterstitial(_ event: AKInterstitialEvent) {
         switch event {
-        case .willStart, .didStart:
+        case let .willStart(event):
+            isInterstitialActive = true
+            currentInterstitialIdentifier = event.identifier
+            updateCanSeek()
+            updateCurrentAdMarker()
+        case .didStart:
             isInterstitialActive = true
             updateCanSeek()
             updateCurrentAdMarker()
+        case let .progress(progress):
+            interstitialProgress = progress
         case .didFinish:
             isInterstitialActive = false
+            currentInterstitialIdentifier = nil
+            interstitialProgress = nil
         case let .integratedTimeline(.timeUpdated(current, _, dur)):
             guard timelineSource == .integrated else { break }
             currentTime = CMTime(seconds: current, preferredTimescale: 600)
@@ -732,8 +752,6 @@ public final class AKPlayerObservable {
             updateCurrentChapter()
         case let .adMarkersDidChange(markers):
             adMarkers = markers
-        case .progress:
-            break
         case let .playbackStateDidChange(state):
             interstitialPlaybackState = state
         case .scheduleDidChange, .integratedTimeline:

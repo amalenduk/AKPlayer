@@ -192,7 +192,7 @@ public class AudiobookPlayerViewModel: NSObject, ObservableObject {
         }
     }
 
-    public func setRate(_ rate: AKPlaybackRate) {
+    public func setPlaybackRate(_ rate: AKPlaybackRate) {
         player.play(at: rate)
     }
 
@@ -329,8 +329,7 @@ extension AudiobookPlayerViewModel {
             self.isPlaying = false
 
         case .boundaryReached, .volumeDidChange, .muteStatusDidChange, .sharePlayStateDidChange,
-             .commandUnavailable, .interstitial, .media, .trackSelection, .playerItemNotification,
-             .metadata, .chapter:
+             .commandUnavailable, .interstitial, .media, .autoPlayDidChange:
             break
         }
     }

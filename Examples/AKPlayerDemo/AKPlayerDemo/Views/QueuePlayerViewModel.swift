@@ -212,7 +212,7 @@ extension QueuePlayerViewModel {
 
         case .playbackRateDidChange, .boundaryReached, .volumeDidChange, .muteStatusDidChange,
              .sharePlayStateDidChange, .commandUnavailable, .didFail, .interstitial, .media,
-             .trackSelection, .playerItemNotification, .metadata, .chapter:
+             .autoPlayDidChange:
             break
         }
     }

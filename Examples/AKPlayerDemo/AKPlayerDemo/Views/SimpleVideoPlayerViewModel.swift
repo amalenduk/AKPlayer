@@ -14,18 +14,17 @@ import SwiftUI
 
 @MainActor
 public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
-    public lazy var player: AKPlayer = {
-        var configuration = AKPlayerConfiguration()
-        configuration.isNowPlayingEnabled = true
-        let p = AKPlayer(configuration: configuration, audioSessionService: audioSession)
-        p.player.appliesMediaSelectionCriteriaAutomatically = true
-        return p
-    }()
+    public let observable: AKPlayerObservable
 
-    public lazy var interstitialService: AKPlayerInterstitialServiceProtocol = player
-        .interstitialService
+    public var player: AKPlayer {
+        observable.player
+    }
 
-    let audioSession = AKAudioSessionService()
+    public var interstitialService: AKPlayerInterstitialServiceProtocol {
+        player.interstitialService
+    }
+
+    let audioSession: AKAudioSessionService
 
     // Playback State
     @Published public var stateDescription = "Idle"
@@ -66,11 +65,9 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     @Published public var isSubtitleEnabled = false
     @Published public var activeSubtitleLanguage: String?
 
-    private nonisolated(unsafe) var playerEventsTask: Task<Void, Never>?
+    private var observationTask: Task<Void, Never>?
+    private var pipEventsTask: Task<Void, Never>?
     private var clearUnavailableWorkItem: DispatchWorkItem?
-    private nonisolated(unsafe) var interstitialTask: Task<Void, Never>?
-    private nonisolated(unsafe) var pipEventsTask: Task<Void, Never>?
-    private nonisolated(unsafe) var chaptersTask: Task<Void, Never>?
 
     // MARK: - Models for Selection Sheet
 
@@ -95,28 +92,118 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     }
 
     override public init() {
+        let audioSessionService = AKAudioSessionService()
+        self.audioSession = audioSessionService
+        var configuration = AKPlayerConfiguration()
+        configuration.isNowPlayingEnabled = true
+        let player = AKPlayer(
+            configuration: configuration,
+            audioSessionService: audioSessionService
+        )
+        player.player.appliesMediaSelectionCriteriaAutomatically = true
+        let obs = AKPlayerObservable(player: player)
+        obs.timelineSource = .integrated
+        self.observable = obs
         super.init()
         AKLogger.logInit(self)
+
         Task { @MainActor [weak self] in
             do {
-                try await self?.player.prepare()
+                try await self?.observable.prepare()
             } catch {
                 AKLogger.error("Failed to prepare player: \(error)", category: .player)
             }
         }
-        observeInterstitialEvents()
-        observePlayerEvents()
+
+        startObservingObservable()
     }
 
-    private func observePlayerEvents() {
-        playerEventsTask?.cancel()
-        playerEventsTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            for await event in self.player.events {
-                guard !Task.isCancelled else { break }
-                self.handlePlayerEvent(event)
+    private func startObservingObservable() {
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { break }
+                await withCheckedContinuation { continuation in
+                    withObservationTracking {
+                        self.syncFromObservable()
+                    } onChange: {
+                        Task { @MainActor in
+                            continuation.resume()
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private func syncFromObservable() {
+        self.stateDescription = observable.state.description
+        self.isLoading = observable.isLoading
+        self.currentTime = observable.currentTimeSeconds
+        self.duration = observable.durationSeconds
+        self.volume = observable.volume
+        self.isMuted = observable.isMuted
+        self.playbackRate = observable.playbackRate
+        self.lastLoadedMedia = observable.currentMedia
+        self.isInterstitialActive = observable.isInterstitialActive
+        self.interstitialPlaybackState = observable.interstitialPlaybackState
+        self.adMarkers = observable.adMarkers
+        self.interstitialIdentifier = observable.currentInterstitialIdentifier
+        self.interstitialProgress = observable.interstitialProgress
+        self.chapters = observable.chapters
+        self.currentChapter = observable.currentChapter
+
+        if let err = observable.error {
+            self.unavailableMessage = "Error: \(err.localizedDescription)"
+        } else if case let .commandUnavailable(reason) = observable.latestEvent {
+            self.showUnavailable(reason.description)
+        }
+
+        let subtitleTrack = observable.selectedSubtitleTrack
+        self.isSubtitleEnabled = (subtitleTrack != nil && subtitleTrack != .off)
+        self.activeSubtitleLanguage = self.isSubtitleEnabled ? subtitleTrack?.title : nil
+
+        self.updateSelectionGroups()
+    }
+
+    private func showUnavailable(_ message: String) {
+        clearUnavailableWorkItem?.cancel()
+        unavailableMessage = message
+        let work = DispatchWorkItem { [weak self] in
+            self?.unavailableMessage = nil
+        }
+        clearUnavailableWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work)
+    }
+
+    private func updateSelectionGroups() {
+        let trackTypes: [(AKTrackType, String)] = [
+            (.audio, "Audio"),
+            (.subtitle, "Subtitles"),
+            (.closedCaption, "Closed Captions"),
+        ]
+
+        var groups: [SelectionGroup] = []
+        for (type, title) in trackTypes {
+            let options = observable.availableTracks[type] ?? []
+            guard !options.isEmpty else { continue }
+            let selected = observable.selectedTracks[type]
+            let mappedOptions = options.map { opt in
+                SelectionOption(option: opt, isSelected: opt == selected)
+            }
+            let group = AKMediaTrackGroup(
+                type: type,
+                options: options,
+                selectedOption: selected
+            )
+            groups.append(SelectionGroup(
+                type: type,
+                title: title,
+                info: group,
+                options: mappedOptions
+            ))
+        }
+        self.selectionGroups = groups
     }
 
     deinit {
@@ -124,91 +211,6 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
             String(describing: Self.self),
             pointer: Unmanaged.passUnretained(self)
         )
-        interstitialTask?.cancel()
-        pipEventsTask?.cancel()
-        chaptersTask?.cancel()
-        playerEventsTask?.cancel()
-    }
-
-    // MARK: - Interstitial Observation
-
-    private func observeInterstitialEvents() {
-        interstitialTask?.cancel()
-        adMarkers = interstitialService.markers
-        interstitialTask = Task { [weak self] in
-            guard let service = self?.interstitialService else { return }
-            for await event in service.events {
-                guard !Task.isCancelled, let self else { break }
-                switch event {
-                case .scheduleDidChange:
-                    break
-                case .adMarkersDidChange:
-                    adMarkers = service.markers
-                case let .willStart(event):
-                    interstitialIdentifier = event.identifier
-                    isInterstitialActive = true
-                case .didStart:
-                    break
-                case let .progress(progress):
-                    interstitialProgress = progress
-                case .didFinish:
-                    isInterstitialActive = false
-                    interstitialIdentifier = nil
-                    interstitialProgress = nil
-                case let .integratedTimeline(timelineEvent):
-                    switch timelineEvent {
-                    case let .timeUpdated(current, _, dur):
-                        if dur > 0 {
-                            duration = dur
-                        }
-                        currentTime = current
-                    case .segmentsUpdated, .snapshotOutOfSync:
-                        break
-                    }
-                case let .playbackStateDidChange(state):
-                    interstitialPlaybackState = state
-                }
-            }
-        }
-    }
-
-    // MARK: - Chapters Observation
-
-    private func observeChapterEvents(for media: any AKPlayable) {
-        chaptersTask?.cancel()
-        chapters = media.chapterService.chapters
-        currentChapter = media.chapterService.currentChapter(at: player.currentTime)
-
-        chaptersTask = Task { [weak self] in
-            guard let self else { return }
-            for await event in media.chapterService.events {
-                guard !Task.isCancelled else { break }
-                if case let .chaptersDidChange(updatedChapters) = event {
-                    await MainActor.run {
-                        self.chapters = updatedChapters
-                        self.currentChapter = media.chapterService.currentChapter(
-                            at: self.player.currentTime
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    public func selectChapter(_ chapter: AKChapter) {
-        Task {
-            await player.seek(to: .seconds(chapter.startTime), scope: .primary)
-        }
-    }
-
-    public func refreshChapters() {
-        guard let media = player.currentMedia else {
-            chapters = []
-            currentChapter = nil
-            return
-        }
-        chapters = media.chapterService.chapters
-        currentChapter = media.chapterService.currentChapter(at: player.currentTime)
     }
 
     // MARK: - Media Loading
@@ -219,48 +221,41 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         duration = 0
         isLoading = true
         stateDescription = "Loading"
-        player.load(media: media, autoPlay: autoPlay, at: target)
-        observeInterstitialEvents()
-        observeChapterEvents(for: media)
+        observable.load(media: media, autoPlay: autoPlayEnabled && autoPlay, at: target)
     }
 
     // MARK: - Playback Controls
 
     public func play() {
-        player.play()
+        observable.play()
     }
 
     public func pause() {
-        player.pause()
+        observable.pause()
     }
 
     public func stop() {
-        player.stop()
-        interstitialTask?.cancel()
-        interstitialTask = nil
+        observable.stop()
         pipEventsTask?.cancel()
         pipEventsTask = nil
-        chaptersTask?.cancel()
-        chaptersTask = nil
         chapters = []
         currentChapter = nil
     }
 
     public func setVolume(_ v: Float) {
-        player.volume = v; volume = v
+        observable.setVolume(v)
     }
 
     public func toggleMute() {
-        player.isMuted = !player.isMuted; isMuted = player.isMuted
+        observable.toggleMute()
     }
 
     public func seek(to seconds: Double) {
         Task {
-            if interstitialService.integratedTimeline != nil {
-                await player.seek(to: .seconds(seconds), scope: .integrated)
-            } else {
-                await player.seek(to: .seconds(seconds))
-            }
+            _ = await observable.seek(
+                to: seconds,
+                scope: (observable.timelineSource == .integrated) ? .integrated : .primary
+            )
         }
     }
 
@@ -270,16 +265,16 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
 
     public func seekOffset(_ offset: Double) {
         Task {
-            if interstitialService.integratedTimeline != nil {
-                await player.seek(to: .offset(offset), scope: .integrated)
+            if offset > 0 {
+                _ = await observable.skipForward(by: offset)
             } else {
-                await player.seek(to: .offset(offset))
+                _ = await observable.skipBackward(by: abs(offset))
             }
         }
     }
 
-    public func setRate(_ rate: AKPlaybackRate) {
-        player.play(at: .custom(rate.rate))
+    public func setPlaybackRate(_ rate: AKPlaybackRate) {
+        observable.setPlaybackRate(rate)
     }
 
     // MARK: - Interstitial Controls
@@ -296,68 +291,33 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         interstitialService.cancelCurrent(resumptionOffset: .zero)
     }
 
-    // MARK: - Track Selection via AKTrackSelectionService
+    // MARK: - Chapters
+
+    public func selectChapter(_ chapter: AKChapter) {
+        Task {
+            _ = await observable.seek(to: chapter)
+        }
+    }
+
+    public func refreshChapters() {
+        chapters = observable.chapters
+        currentChapter = observable.currentChapter
+    }
+
+    // MARK: - Track Selection
 
     public func refreshSelectionGroups() {
-        guard let media = player.currentMedia else {
-            selectionGroups = []
-            return
-        }
-
         Task {
-            let trackTypes: [(AKTrackType, String)] = [
-                (.audio, "Audio"),
-                (.subtitle, "Subtitles"),
-                (.closedCaption, "Closed Captions"),
-            ]
-
-            var groups: [SelectionGroup] = []
-            let trackService = media.trackSelection
-
-            for (type, title) in trackTypes {
-                do {
-                    guard let group = try await trackService.trackGroup(for: type),
-                          !group.options.isEmpty else { continue }
-
-                    let options = group.options.map { trackOption in
-                        SelectionOption(
-                            option: trackOption,
-                            isSelected: trackOption == group.selectedOption
-                        )
-                    }
-
-                    groups.append(SelectionGroup(
-                        type: type,
-                        title: title,
-                        info: group,
-                        options: options
-                    ))
-                } catch {
-                    print("Failed to load tracks for \(title): \(error)")
-                }
-            }
-
-            await MainActor.run {
-                self.selectionGroups = groups
-            }
+            try? await observable.refreshTracks(for: [.audio, .subtitle, .closedCaption])
+            updateSelectionGroups()
         }
     }
 
     public func select(option: SelectionOption, in group: SelectionGroup) {
-        guard let media = player.currentMedia else { return }
-
         Task {
             do {
-                try await media.trackSelection.select(option.option, for: group.type)
-                let selectedSubtitle = try? await media.trackSelection.selectedTrack(for: .subtitle)
-                await MainActor.run {
-                    self.isSubtitleEnabled = (selectedSubtitle != nil && selectedSubtitle != .off)
-                    self
-                        .activeSubtitleLanguage =
-                        (selectedSubtitle != nil && selectedSubtitle != .off) ? selectedSubtitle?
-                            .title : nil
-                }
-                self.refreshSelectionGroups()
+                try await observable.selectTrack(option.option, for: group.type)
+                updateSelectionGroups()
             } catch {
                 print("Failed to select track: \(error)")
             }
@@ -375,33 +335,19 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     }
 
     public func toggleQuickSubtitles() {
-        guard let media = player.currentMedia else { return }
         Task {
             do {
                 if isSubtitleEnabled {
-                    try await media.trackSelection.select(.off, for: .subtitle)
-                    await MainActor.run {
-                        self.isSubtitleEnabled = false
-                        self.activeSubtitleLanguage = nil
-                    }
+                    try await observable.selectTrack(.off, for: .subtitle)
                 } else {
-                    let subtitles = try await media.trackSelection.availableTracks(for: .subtitle)
+                    let subtitles = observable.subtitleTracks
                     if let firstOption = subtitles.first(where: { $0 != .off }) {
-                        try await media.trackSelection.select(firstOption, for: .subtitle)
-                        await MainActor.run {
-                            self.isSubtitleEnabled = true
-                            self.activeSubtitleLanguage = firstOption.title
-                        }
+                        try await observable.selectTrack(firstOption, for: .subtitle)
                     } else {
-                        try await media.trackSelection.selectPreferredTrack(for: .subtitle)
-                        let current = try await media.trackSelection.selectedTrack(for: .subtitle)
-                        await MainActor.run {
-                            self.isSubtitleEnabled = (current != nil && current != .off)
-                            self.activeSubtitleLanguage = current?.title
-                        }
+                        try await observable.selectPreferredTrack(for: .subtitle)
                     }
                 }
-                self.refreshSelectionGroups()
+                updateSelectionGroups()
             } catch {
                 print("Failed to toggle quick subtitles: \(error)")
             }
@@ -417,11 +363,8 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
         controller.delegate = self
         controller.canStartAutomatically = true
 
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            pipController = controller
-            isPipPossible = controller.isPictureInPicturePossible
-        }
+        pipController = controller
+        isPipPossible = controller.isPictureInPicturePossible
 
         pipEventsTask?.cancel()
         pipEventsTask = Task { [weak self] in
@@ -447,83 +390,6 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
 
     public func togglePip() {
         pipController?.toggle()
-    }
-}
-
-// MARK: - Player Events Handling
-
-extension SimpleVideoPlayerViewModel {
-    private func handlePlayerEvent(_ event: AKPlayerEvent) {
-        switch event {
-        case let .stateDidChange(state):
-            self.stateDescription = state.description
-            self
-                .isLoading =
-                (state == .waitingForNetwork || state == .buffering || state == .loading)
-            let intDur = self.interstitialService.integratedTimelineDuration
-            let dur = player.currentItemDuration.seconds
-            if intDur > 0 {
-                self.duration = intDur
-            } else if dur.isFinite, dur > 0, self.duration == 0 {
-                self.duration = dur
-            }
-
-        case let .mediaDidChange(media):
-            self.lastLoadedMedia = media
-            let intTime = self.interstitialService.integratedTimelineCurrentTime
-            self.currentTime = (intTime > 0) ? intTime : player.currentTime.seconds
-            let intDur = self.interstitialService.integratedTimelineDuration
-            let dur = player.currentItemDuration.seconds
-            if intDur > 0 {
-                self.duration = intDur
-            } else {
-                self.duration = (dur.isFinite && dur > 0) ? dur : 0
-            }
-            self.refreshSelectionGroups()
-
-        case let .timeDidChange(currentTime):
-            let hasIntegratedTimeline = (self.interstitialService.integratedTimeline != nil)
-            if !hasIntegratedTimeline, !self.isInterstitialActive,
-               !self.interstitialService.isPlayingInterstitial
-            {
-                self.currentTime = currentTime.seconds
-                let dur = player.currentItemDuration.seconds
-                if dur.isFinite, dur > 0, self.duration == 0 {
-                    self.duration = dur
-                }
-            }
-            if let media = player.currentMedia {
-                self.currentChapter = media.chapterService.currentChapter(at: currentTime)
-                if self.chapters.isEmpty, !media.chapterService.chapters.isEmpty {
-                    self.chapters = media.chapterService.chapters
-                }
-            }
-
-        case let .playbackRateDidChange(newRate, _):
-            self.playbackRate = newRate
-
-        case let .volumeDidChange(volume):
-            self.volume = volume
-
-        case let .muteStatusDidChange(isMuted):
-            self.isMuted = isMuted
-
-        case let .commandUnavailable(reason):
-            self.clearUnavailableWorkItem?.cancel()
-            self.unavailableMessage = reason.description
-            let work = DispatchWorkItem { [weak self] in
-                DispatchQueue.main.async { self?.unavailableMessage = nil }
-            }
-            self.clearUnavailableWorkItem = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work)
-
-        case let .didFail(error):
-            self.unavailableMessage = "Error: \(error.localizedDescription)"
-
-        case .didReachEnd, .boundaryReached, .sharePlayStateDidChange, .interstitial, .media,
-             .trackSelection, .playerItemNotification, .metadata, .chapter:
-            break
-        }
     }
 }
 

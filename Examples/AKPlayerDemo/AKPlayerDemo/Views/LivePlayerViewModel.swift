@@ -346,7 +346,7 @@ extension LivePlayerViewModel {
             self.unavailableMessage = "Error: \(error.localizedDescription)"
 
         case .didReachEnd, .boundaryReached, .sharePlayStateDidChange, .interstitial, .media,
-             .trackSelection, .playerItemNotification, .metadata, .chapter:
+             .autoPlayDidChange:
             break
         }
     }

@@ -503,7 +503,7 @@ public struct SimpleVideoPlayerView: View {
                 id: \.title
             ) { rate in
                 Button(rate.title) {
-                    viewModel.setRate(rate)
+                    viewModel.setPlaybackRate(rate)
                 }
             }
 
