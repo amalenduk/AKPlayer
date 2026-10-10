@@ -473,7 +473,8 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
     private func startObservingActiveMedia(_ media: any AKPlayable) {
         stopObservingActiveMedia()
 
-        // 1. Media item lifecycle, ranges, capabilities, tracks
+        // Media item lifecycle, tracks, ranges, notifications, metadata, chapters
+        // are all unified and emitted through media.events by AKMediaManager.
         let mediaTask = Task { [weak self] in
             for await event in media.events {
                 guard !Task.isCancelled, let self else { break }
@@ -481,40 +482,8 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
             }
         }
 
-        // 2. Track selection (audio, subtitle, cc)
-        let trackTask = Task { [weak self] in
-            for await event in media.trackSelection.events {
-                guard !Task.isCancelled, let self else { break }
-                eventBroadcaster.send(.trackSelection(event))
-            }
-        }
-
-        // 3. AVPlayerItem notifications (stalls, jumps, completion)
-        let notifTask = Task { [weak self] in
-            for await event in media.playerItemNotifications.events {
-                guard !Task.isCancelled, let self else { break }
-                eventBroadcaster.send(.playerItemNotification(event))
-            }
-        }
-
-        // 4. Metadata provider (static and timed metadata)
-        let metaTask = Task { [weak self] in
-            for await event in media.metadataProvider.events {
-                guard !Task.isCancelled, let self else { break }
-                eventBroadcaster.send(.metadata(event))
-            }
-        }
-
-        // 5. Chapter service (markers and active chapter updates)
-        let chapterTask = Task { [weak self] in
-            for await event in media.chapterService.events {
-                guard !Task.isCancelled, let self else { break }
-                eventBroadcaster.send(.chapter(event))
-            }
-        }
-
         activeMediaTasks.withLock {
-            $0 = [mediaTask, trackTask, notifTask, metaTask, chapterTask]
+            $0 = [mediaTask]
         }
     }
 

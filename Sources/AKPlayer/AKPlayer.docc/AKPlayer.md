@@ -21,6 +21,54 @@ A modern, highly modular, Swift 6 concurrency-ready audio/video playback framewo
 - **Timed Interstitials & Ads**: Parse HLS interstitials or synthesize local ad markers with custom action policies (`.skip`, `.freeze`, `.playAd`).
 - **Rich Media & Chapters**: Integrated chapter navigation, static artwork/metadata, and dynamic Now Playing info synchronization.
 - **Video Rendering**: Includes the platform-native ``AKPlayerView`` for displaying video.
+- **Observable UI State**: Use ``AKPlayerObservable`` to observe playback, chapters, tracks, and player events in SwiftUI.
+
+## Observable Player
+
+`AKPlayerObservable` wraps an ``AKPlayer`` and observes its unified event stream, publishing playback
+state, progress, chapter changes, and available or selected track options.
+
+```swift
+import AKPlayer
+import SwiftUI
+
+struct PlayerControls: View {
+    @State private var model = AKPlayerObservable()
+
+    var body: some View {
+        VStack {
+            Text(model.currentChapter?.title ?? "No chapter")
+            Slider(
+                value: Binding(
+                    get: { model.currentTimeSeconds },
+                    set: { seconds in
+                        Task { await model.seek(to: seconds) }
+                    }
+                ),
+                in: 0...max(model.durationSeconds, 1)
+            )
+            Button(model.isPlaying ? "Pause" : "Play") {
+                model.togglePlayPause()
+            }
+        }
+        .task {
+            do {
+                try await model.prepare()
+            } catch {
+                print("Player preparation failed: \(error)")
+            }
+        }
+    }
+}
+```
+
+Track options are available through `availableTracks` and `selectedTracks`; use
+`selectTrack(_:for:)` or `selectPreferredTrack(for:)` to change selections. The wrapper also exposes
+the current media's `trackSelectionService` and `chapterService`, and the underlying `player` for
+other services and controls. For live media with a DVR window, `duration` reflects the latest
+seekable range instead of the media item's indefinite duration. Set `timelineSource` to `.integrated`
+to use the timeline that includes scheduled interstitials; it defaults to `.normal`. Track-selection
+methods throw service errors to the caller.
 
 ## Topics
 

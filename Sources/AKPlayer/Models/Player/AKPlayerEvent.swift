@@ -15,22 +15,14 @@ import CoreMedia
 ///
 /// Subscribe with `for await event in player.events`.
 public enum AKPlayerEvent: Sendable {
-    // MARK: - Media & Media Services Events
+    // MARK: - Media Events
 
-    /// The active media item lifecycle, duration, ranges, or capability event.
+    /// The active media item lifecycle, duration, ranges, capabilities, tracks, chapters, or
+    /// metadata event.
     case media(AKMediaEvent)
 
-    /// Track selection event for audio, subtitle, and closed captions.
-    case trackSelection(AKTrackSelectionEvent)
-
-    /// Underlying AVPlayerItem system notification event.
-    case playerItemNotification(AKPlayerItemNotificationEvent)
-
-    /// Metadata provider event (static container metadata and dynamic timed metadata).
-    case metadata(AKMediaMetadataEvent)
-
-    /// Chapter service event (chapter markers and active chapter transitions).
-    case chapter(AKChapterEvent)
+    /// The active playable media item was swapped or updated.
+    case mediaDidChange(any AKPlayable)
 
     // MARK: - Core Player State & Playback
 
@@ -40,9 +32,6 @@ public enum AKPlayerEvent: Sendable {
     /// The autoPlay status changed (e.g., media loaded with autoPlay, or user issued play/pause
     /// while loading or buffering).
     case autoPlayDidChange(Bool)
-
-    /// The active playable media item was swapped or updated.
-    case mediaDidChange(any AKPlayable)
 
     // MARK: - Playback Progress
 
@@ -93,16 +82,6 @@ extension AKPlayerEvent: Equatable {
         switch (lhs, rhs) {
         case let (.media(l), .media(r)):
             l == r
-        case let (.trackSelection(l), .trackSelection(r)):
-            l == r
-        case let (.playerItemNotification(l), .playerItemNotification(r)):
-            l == r
-        case let (.metadata(l), .metadata(r)):
-            l == r
-        case let (.chapter(l), .chapter(r)):
-            l == r
-        case let (.interstitial(l), .interstitial(r)):
-            l == r
         case let (.mediaDidChange(l), .mediaDidChange(r)):
             l.isEqual(to: r)
         case let (.stateDidChange(l), .stateDidChange(r)):
@@ -129,6 +108,8 @@ extension AKPlayerEvent: Equatable {
         case let (.commandUnavailable(l), .commandUnavailable(r)):
             l == r
         case let (.didFail(l), .didFail(r)):
+            l == r
+        case let (.interstitial(l), .interstitial(r)):
             l == r
         default:
             false

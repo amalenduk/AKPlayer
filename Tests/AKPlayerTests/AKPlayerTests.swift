@@ -18,6 +18,50 @@ import Testing
 
 @MainActor
 struct AKPlayerTests {
+    @Test func observablePlayerStartsWithUnderlyingPlayerState() {
+        let player = AKPlayer()
+        let observable = AKPlayerObservable(player: player)
+
+        #expect(observable.player === player)
+        #expect(observable.state == player.state)
+        #expect(observable.autoPlay == player.autoPlay)
+        #expect(observable.currentTime == player.currentTime)
+        #expect(observable.duration == player.currentItemDuration)
+        #expect(observable.loadedTimeRanges.isEmpty)
+        #expect(observable.isInterstitialActive == false)
+        #expect(observable.isPlaying == player.isPlaying)
+        #expect(observable.chapters.isEmpty)
+        #expect(observable.availableTracks.isEmpty)
+        #expect(observable.selectedTracks.isEmpty)
+        #expect(observable.audioTracks.isEmpty)
+        #expect(observable.subtitleTracks.isEmpty)
+        #expect(observable.closedCaptionTracks.isEmpty)
+        #expect(observable.videoAlternativeTracks.isEmpty)
+    }
+
+    @Test func observableTimelineSourceCanBeChanged() {
+        let observable = AKPlayerObservable()
+
+        #expect(observable.timelineSource == .normal)
+
+        observable.timelineSource = .integrated
+        #expect(observable.timelineSource == .integrated)
+
+        observable.timelineSource = .normal
+        #expect(observable.timelineSource == .normal)
+    }
+
+    @Test func observablePlayerTransportSkipHelpers() async {
+        let player = AKPlayer()
+        let observable = AKPlayerObservable(player: player)
+
+        // Transport skips should execute safely without crashing even when idle
+        let forwardSuccess = await observable.skipForward(by: 15)
+        let backwardSuccess = await observable.skipBackward(by: 10)
+        #expect(forwardSuccess == false)
+        #expect(backwardSuccess == false)
+    }
+
     @Test func queuePlayerNowPlayingIntegration() async throws {
         let queuePlayer = AKQueuePlayer()
         try await queuePlayer.prepare()

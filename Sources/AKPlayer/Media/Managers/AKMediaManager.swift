@@ -74,6 +74,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     // MARK: - Private Storage
 
     private var observations: [NSKeyValueObservation] = []
+    private var childServiceTasks: [Task<Void, Never>] = []
 
     private let playerItemInitService: any AKPlayerItemInitServiceProtocol
     private var _seekingThroughMediaService: (any AKSeekingThroughMediaServiceProtocol)!
@@ -108,6 +109,9 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         _chapterService = AKChapterService(mediaManager: self)
         _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
 
+        // Observe events from child services and emit them through manager.events
+        startObservingChildServices()
+
         // Configure initial lifecycle state for pre-configured media items (playerItem or asset)
         if let customItem = media.customPlayerItem {
             state = .playerItemLoaded
@@ -136,6 +140,8 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     }
 
     deinit {
+        childServiceTasks.forEach { $0.cancel() }
+        childServiceTasks.removeAll()
         observations.removeAll()
         eventBroadcaster.finish()
         AKLogger.logDeinit(
@@ -445,6 +451,44 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         Task { @MainActor in
             item.add(metadataOutput)
         }
+    }
+
+    // MARK: - Child Service Observation
+
+    private func startObservingChildServices() {
+        let trackTask = Task { [weak self] in
+            guard let self else { return }
+            for await event in _trackSelectionService.events {
+                guard !Task.isCancelled else { break }
+                emit(.trackSelection(event))
+            }
+        }
+
+        let notifTask = Task { [weak self] in
+            guard let self else { return }
+            for await event in _playerItemNotificationsObserver.events {
+                guard !Task.isCancelled else { break }
+                emit(.playerItemNotification(event))
+            }
+        }
+
+        let metaTask = Task { [weak self] in
+            guard let self else { return }
+            for await event in _metadataProvider.events {
+                guard !Task.isCancelled else { break }
+                emit(.metadata(event))
+            }
+        }
+
+        let chapterTask = Task { [weak self] in
+            guard let self else { return }
+            for await event in _chapterService.events {
+                guard !Task.isCancelled else { break }
+                emit(.chapter(event))
+            }
+        }
+
+        childServiceTasks = [trackTask, notifTask, metaTask, chapterTask]
     }
 }
 

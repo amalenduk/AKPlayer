@@ -8,6 +8,7 @@
 
 import AVFoundation
 import CoreGraphics
+import CoreMedia
 
 // MARK: - AKMediaCapability
 
@@ -63,6 +64,20 @@ public enum AKMediaEvent: Sendable {
 
     /// The native video pixel/presentation resolution updated.
     case presentationSizeDidChange(CGSize)
+
+    // MARK: - Media Subservices Events
+
+    /// Track selection event for audio, subtitle, closed captions, and alternative video tracks.
+    case trackSelection(AKTrackSelectionEvent)
+
+    /// Underlying AVPlayerItem system notification event.
+    case playerItemNotification(AKPlayerItemNotificationEvent)
+
+    /// Metadata provider event (static container metadata and dynamic timed metadata).
+    case metadata(AKMediaMetadataEvent)
+
+    /// Chapter service event (chapter markers and active chapter transitions).
+    case chapter(AKChapterEvent)
 }
 
 // MARK: - Equatable Conformance
@@ -83,6 +98,14 @@ extension AKMediaEvent: Equatable {
         case let (.seekableTimeRangesDidChange(l), .seekableTimeRangesDidChange(r)):
             l == r
         case let (.presentationSizeDidChange(l), .presentationSizeDidChange(r)):
+            l == r
+        case let (.trackSelection(l), .trackSelection(r)):
+            l == r
+        case let (.playerItemNotification(l), .playerItemNotification(r)):
+            l == r
+        case let (.metadata(l), .metadata(r)):
+            l == r
+        case let (.chapter(l), .chapter(r)):
             l == r
         default:
             false
