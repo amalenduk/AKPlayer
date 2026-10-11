@@ -146,6 +146,25 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
                 return (false, .actionNotPermitted)
             }
 
+            // Handle relative offset targets on live streams
+            if case let .offset(offset) = target {
+                let current = playerItem.currentTime()
+                if offset > 0 {
+                    // Cannot seek forward if already at the live broadcast head
+                    if mediaManager?.media?.isAtLiveEdge == true || current >= liveRange.end {
+                        return (false, .seekOverstepPosition)
+                    }
+                    return (true, nil)
+                } else if offset < 0 {
+                    // Cannot seek backward if already at or before the earliest segment
+                    if current <= liveRange.start {
+                        return (false, .seekPositionNotAvailable)
+                    }
+                    return (true, nil)
+                }
+                return (true, nil)
+            }
+
             // Translate relative DVR offset [0 ... liveRange.duration] to absolute timeline
             // position
             let effectiveTargetTime: CMTime = if targetCMTime < liveRange.start,

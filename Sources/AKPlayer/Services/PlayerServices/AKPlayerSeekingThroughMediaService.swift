@@ -230,15 +230,24 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             return
         }
 
-        // If playing a live stream with DVR, translate relative position [0...dvrDuration] to
-        // absolute time
+        // If playing a live stream with DVR, translate relative position [0...dvrDuration] and
+        // clamp to valid DVR window bounds
         if currentItem.duration.isIndefinite || !currentItem.duration.isNumeric,
-           let liveRange = currentItem.seekableTimeRanges.last?.timeRangeValue,
-           targetCMTime < liveRange.start,
-           targetCMTime >= .zero,
-           targetCMTime <= liveRange.duration
+           let liveRange = currentItem.seekableTimeRanges.last?.timeRangeValue
         {
-            targetCMTime = liveRange.start + targetCMTime
+            if targetCMTime < liveRange.start,
+               targetCMTime >= .zero,
+               targetCMTime <= liveRange.duration
+            {
+                targetCMTime = liveRange.start + targetCMTime
+            }
+
+            // Clamp live seek target to valid DVR window [start ... end]
+            if targetCMTime > liveRange.end {
+                targetCMTime = liveRange.end
+            } else if targetCMTime < liveRange.start {
+                targetCMTime = liveRange.start
+            }
         }
 
         player.seek(
