@@ -498,7 +498,7 @@ let player = AKPlayer(audioSessionService: audioService)
 // Observe audio route changes (e.g. headphones unplugged -> pause)
 Task {
     for await event in audioService.routeChangesObserver.events {
-        if case .routeChanged(let reason, _) = event, reason == .oldDeviceUnavailable {
+        if event.reason == .oldDeviceUnavailable {
             print("Headphones disconnected; auto-paused.")
         }
     }
@@ -547,7 +547,7 @@ let player = AKPlayer(configuration: config)
 
 ## Observing Events
 
-AKPlayer supports both **Swift Modern Concurrency (`AsyncStream`)** and the **Delegate Pattern (`AKPlayerDelegate`)**.
+AKPlayer supports both **Swift Modern Concurrency (`AsyncStream`)** and **SwiftUI Observation (`AKPlayerObservable`)**.
 
 ### Using AsyncStream (`player.events`)
 
@@ -583,35 +583,45 @@ Task {
             
         case .muteStatusDidChange(let isMuted):
             print("Mute status changed: \(isMuted)")
+
+        case .sharePlayStateDidChange(let sharePlayState):
+            print("SharePlay state: \(sharePlayState)")
             
         case .commandUnavailable(let reason):
             print("Command unavailable: \(reason)")
             
         case .didFail(let error):
             print("Playback error: \(error)")
+
+        case .interstitial(let interstitialEvent):
+            print("Interstitial event: \(interstitialEvent)")
+
+        case .media(let mediaEvent):
+            print("Media event: \(mediaEvent)")
         }
     }
 }
 ```
 
-### Using AKPlayerDelegate
+### Using AKPlayerObservable in SwiftUI
+
+For SwiftUI applications, observe player state seamlessly with `AKPlayerObservable`:
 
 ```swift
-class MyPlayerCoordinator: AKPlayerDelegate {
-    func player(_ player: any AKPlayerProtocol, didChangeState state: AKPlayerState) {
-        print("Delegate state update: \(state)")
-    }
+struct PlayerControlsView: View {
+    @State private var model = AKPlayerObservable()
 
-    func player(_ player: any AKPlayerProtocol, didChangeTime time: CMTime) {
-        // Handle periodic time
-    }
+    var body: some View {
+        VStack {
+            Text("State: \(model.state.rawValue)")
+            Text("Time: \(model.currentTimeSeconds)s / \(model.durationSeconds)s")
 
-    func player(_ player: any AKPlayerProtocol, didFailWith error: AKPlayerError) {
-        print("Playback failed: \(error.localizedDescription)")
+            Button(model.isPlaying ? "Pause" : "Play") {
+                model.togglePlayPause()
+            }
+        }
     }
 }
-
-player.delegate = myCoordinator
 ```
 
 ---
