@@ -175,16 +175,6 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         return loadedTimeRanges.last.map { CMTimeRangeGetEnd($0).seconds } ?? 0
     }
 
-    /// Whether the player is actively playing media.
-    public var isPlaying: Bool {
-        state.isPlaying
-    }
-
-    /// Whether the player is loading or buffering media.
-    public var isLoading: Bool {
-        state.isLoading || state.isBuffering || state.isWaitingForNetwork
-    }
-
     /// Available audio tracks for the current media.
     public var audioTracks: [AKMediaTrackOption] {
         availableTracks[.audio] ?? []
