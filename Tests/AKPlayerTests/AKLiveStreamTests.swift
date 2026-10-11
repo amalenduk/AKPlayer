@@ -112,4 +112,16 @@ struct AKLiveStreamTests {
         #expect(vodMedia.liveDrift == nil)
         #expect(vodMedia.isAtLiveEdge == false)
     }
+
+    @Test func liveStreamRelativeDVRSeekValidation() throws {
+        let liveUrl = try #require(URL(string: "https://example.com/live/master.m3u8"))
+        let media = AKMedia(url: liveUrl, type: .stream(isLive: true))
+        let seekingService = media.seekingThroughMedia
+
+        // Without loaded player item, correctly reports .waitTillMediaLoaded
+        let result: (flag: Bool, reason: AKPlayerUnavailableCommandReason?) = seekingService
+            .canSeek(to: .seconds(30))
+        #expect(result.flag == false)
+        #expect(result.reason == AKPlayerUnavailableCommandReason.waitTillMediaLoaded)
+    }
 }

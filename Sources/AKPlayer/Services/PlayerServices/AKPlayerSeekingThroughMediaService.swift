@@ -218,7 +218,7 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
         let timescale = currentItem.duration.timescale > 0 ? currentItem.duration.timescale : 600
 
         // Resolve target to CMTime using unified AKSeekTarget resolve
-        guard let targetCMTime = seek.target.resolve(
+        guard var targetCMTime = seek.target.resolve(
             currentTime: player.currentTime(),
             duration: currentItem.duration,
             preferredTimescale: timescale,
@@ -228,6 +228,17 @@ public final class AKPlayerSeekingThroughMediaService: AKPlayerSeekingThroughMed
             requestedSeekTarget = nil
             seek.complete(with: false)
             return
+        }
+
+        // If playing a live stream with DVR, translate relative position [0...dvrDuration] to
+        // absolute time
+        if currentItem.duration.isIndefinite || !currentItem.duration.isNumeric,
+           let liveRange = currentItem.seekableTimeRanges.last?.timeRangeValue,
+           targetCMTime < liveRange.start,
+           targetCMTime >= .zero,
+           targetCMTime <= liveRange.duration
+        {
+            targetCMTime = liveRange.start + targetCMTime
         }
 
         player.seek(

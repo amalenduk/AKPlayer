@@ -146,13 +146,24 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
                 return (false, .actionNotPermitted)
             }
 
+            // Translate relative DVR offset [0 ... liveRange.duration] to absolute timeline
+            // position
+            let effectiveTargetTime: CMTime = if targetCMTime < liveRange.start,
+                                                 targetCMTime >= .zero,
+                                                 targetCMTime <= liveRange.duration
+            {
+                liveRange.start + targetCMTime
+            } else {
+                targetCMTime
+            }
+
             // Past boundary check: cannot seek before the earliest available DVR segment
-            if targetCMTime < liveRange.start {
+            if effectiveTargetTime < liveRange.start {
                 return (false, .seekPositionNotAvailable)
             }
 
             // Future boundary check: cannot seek ahead of the live broadcast head
-            if targetCMTime > liveRange.end {
+            if effectiveTargetTime > liveRange.end {
                 return (false, .seekOverstepPosition)
             }
 
@@ -180,13 +191,20 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
         guard let playerItem else { return false }
 
         let timescale = playerItem.duration.timescale > 0 ? playerItem.duration.timescale : 600
-        guard let time = target.resolve(
+        guard var time = target.resolve(
             currentTime: playerItem.currentTime(),
             duration: playerItem.duration,
             preferredTimescale: timescale,
             clampToDuration: false
         ) else {
             return false
+        }
+
+        let isLive = mediaManager?.media?.isLive() == true || !playerItem.duration.isNumeric
+        if isLive, let liveRange = ranges.last, time < liveRange.start, time >= .zero,
+           time <= liveRange.duration
+        {
+            time = liveRange.start + time
         }
 
         return isTimeInRanges(time, ranges)
