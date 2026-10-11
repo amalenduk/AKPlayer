@@ -30,7 +30,7 @@ struct AKPlayerTests {
         #expect(observable.presentationSize == (player.currentItem?.presentationSize ?? .zero))
         #expect(observable.loadedTimeRanges.isEmpty)
         #expect(observable.isInterstitialActive == false)
-        #expect(observable.isPlaying == player.isPlaying)
+        #expect(observable.state.isPlaying == player.isPlaying)
         #expect(observable.chapters.isEmpty)
         #expect(observable.availableTracks.isEmpty)
         #expect(observable.selectedTracks.isEmpty)
