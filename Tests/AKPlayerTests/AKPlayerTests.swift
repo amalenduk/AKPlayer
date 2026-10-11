@@ -27,6 +27,7 @@ struct AKPlayerTests {
         #expect(observable.autoPlay == player.autoPlay)
         #expect(observable.currentTime == player.currentTime)
         #expect(observable.duration == player.currentItemDuration)
+        #expect(observable.presentationSize == (player.currentItem?.presentationSize ?? .zero))
         #expect(observable.loadedTimeRanges.isEmpty)
         #expect(observable.isInterstitialActive == false)
         #expect(observable.isPlaying == player.isPlaying)

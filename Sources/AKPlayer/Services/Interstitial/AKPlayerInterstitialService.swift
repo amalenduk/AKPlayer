@@ -297,15 +297,32 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     public func cancelCurrent(resumptionOffset: CMTime = .zero) {
         guard let event = currentEvent else { return }
 
-        playedEventIDs.insert(event.identifier)
         controller?.cancelCurrentEvent(withResumptionOffset: resumptionOffset)
-        lastStartedEvent = nil
+        finishCurrentEvent(event, resumptionOffset: resumptionOffset)
+    }
 
-        setPlaybackState(.finished)
-        stopObservingInterstitialPlaybackState()
-        removeProgressObserver()
-        refreshMarkers()
-        emit(.didFinish(event, reason: .cancelled(resumptionOffset: resumptionOffset)))
+    /// Skips the currently active interstitial using AVFoundation's native skip API when available.
+    public func skipCurrentEvent() {
+        guard let event = currentEvent, let controller else { return }
+
+        let resumptionOffset: CMTime
+        if #available(
+            iOS 26.0,
+            macCatalyst 26.0,
+            macOS 26.0,
+            tvOS 26.0,
+            visionOS 26.0,
+            watchOS 26.0,
+            *
+        ) {
+            controller.skipCurrentEvent()
+            resumptionOffset = event.resumptionOffset
+        } else {
+            controller.cancelCurrentEvent(withResumptionOffset: .zero)
+            resumptionOffset = .zero
+        }
+
+        finishCurrentEvent(event, resumptionOffset: resumptionOffset)
     }
 
     // MARK: - Integrated Timeline Seeking
@@ -546,6 +563,16 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                 emit(.didFinish(finishedEvent, reason: .completed))
             }
         }
+    }
+
+    private func finishCurrentEvent(_ event: AVPlayerInterstitialEvent, resumptionOffset: CMTime) {
+        playedEventIDs.insert(event.identifier)
+        lastStartedEvent = nil
+        setPlaybackState(.finished)
+        stopObservingInterstitialPlaybackState()
+        removeProgressObserver()
+        refreshMarkers()
+        emit(.didFinish(event, reason: .cancelled(resumptionOffset: resumptionOffset)))
     }
 
     // MARK: - Private Progress Observation

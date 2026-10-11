@@ -135,6 +135,10 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     /// - Parameter resumptionOffset: Resumption offset in the primary content.
     func cancelCurrent(resumptionOffset: CMTime)
 
+    /// Skips the currently active interstitial event, using the native AVFoundation API when
+    /// available.
+    func skipCurrentEvent()
+
     // MARK: - Integrated Timeline Seeking
 
     /// Seeks to a target `CMTime` along the integrated timeline.
@@ -167,4 +171,10 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
         by delta: TimeInterval,
         completion: @Sendable @escaping (Bool) -> Void
     )
+}
+
+public extension AKPlayerInterstitialServiceProtocol {
+    func skipCurrentEvent() {
+        cancelCurrent(resumptionOffset: .zero)
+    }
 }

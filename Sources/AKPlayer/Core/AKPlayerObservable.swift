@@ -51,6 +51,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// The currently loaded media item.
     public private(set) var currentMedia: (any AKPlayable)?
 
+    /// The presentation dimensions of the current video item.
+    public private(set) var presentationSize: CGSize
+
     /// Playback capabilities reported for the current media item.
     public private(set) var capabilities: [AKMediaCapability: Bool] = [:]
 
@@ -239,6 +242,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         state = player.state
         autoPlay = player.autoPlay
         currentMedia = player.currentMedia
+        presentationSize = player.currentItem?.presentationSize ?? .zero
         switch timelineSource {
         case .normal:
             currentTime = player.currentTime
@@ -774,6 +778,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
             currentTime = .zero
             duration = .zero
             loadedTimeRanges = []
+            presentationSize = .zero
             metadata = nil
             timedMetadata = nil
             chapters = []
@@ -882,8 +887,10 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case let .metadata(metadataEvent):
             handleMetadata(metadataEvent)
 
-        case .stateDidChange, .timebaseDidChange, .presentationSizeDidChange,
-             .playerItemNotification:
+        case let .presentationSizeDidChange(size):
+            presentationSize = size
+
+        case .stateDidChange, .timebaseDidChange, .playerItemNotification:
             break
         }
     }
