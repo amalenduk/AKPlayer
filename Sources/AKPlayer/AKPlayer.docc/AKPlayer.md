@@ -70,6 +70,14 @@ seekable range instead of the media item's indefinite duration. Set `timelineSou
 to use the timeline that includes scheduled interstitials; it defaults to `.normal`. Track-selection
 methods throw service errors to the caller.
 
+For playlist playback, use ``AKQueuePlayerObservable``. It inherits the playback and media state
+from ``AKPlayerObservable`` and adds observable queue items, index, repeat and shuffle settings, and
+queue navigation and editing actions. It also observes queue changes made directly through its
+underlying ``AKQueuePlayer``. To process typed queue changes outside SwiftUI, subscribe to the
+queue player's ``AKQueuePlayer/queueEvents`` stream, which reports item additions, removals, moves,
+queue loads, current-item changes, and repeat or shuffle mode changes as ``AKPlayerQueueEvent``
+values.
+
 ## Topics
 
 ### Getting Started
@@ -85,6 +93,7 @@ methods throw service errors to the caller.
 - ``AKPlayerProtocol``
 - ``AKPlayerActionsProtocol``
 - ``AKPlayerControllerProtocol``
+- ``AKQueuePlayerProtocol``
 
 ### Playback States & Events
 
@@ -95,6 +104,14 @@ methods throw service errors to the caller.
 - ``AKSeekTarget``
 - ``AKSeekScope``
 - ``AKSeek``
+
+### Queue Playback
+
+- ``AKQueuePlayer``
+- ``AKQueuePlayerProtocol``
+- ``AKQueuePlayerObservable``
+- ``AKPlayerQueueEvent``
+- ``AKRepeatMode``
 
 ### Configuration
 

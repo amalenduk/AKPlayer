@@ -32,6 +32,9 @@ public protocol AKQueuePlayerProtocol: AKPlayerProtocol {
     /// Indicates whether a valid previous item exists to play.
     var canPlayPrevious: Bool { get }
 
+    /// An asynchronous stream of queue mutations and queue playback setting changes.
+    var queueEvents: AsyncStream<AKPlayerQueueEvent> { get }
+
     /// Loads a list of media items into the queue and starts playback at the specified index.
     func load(
         items: [any AKPlayable],

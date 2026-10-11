@@ -79,7 +79,7 @@ public class AKMedia: NSObject, AKPlayable, @unchecked Sendable {
     ///   - audioTimePitchAlgorithm: Optional custom time-pitch algorithm.
     public init(
         url: URL,
-        type: AKMediaType,
+        type: AKMediaType = .clip,
         customAsset: AVURLAsset? = nil,
         customPlayerItem: AVPlayerItem? = nil,
         fairPlay: AKFairPlayConfiguration? = nil,

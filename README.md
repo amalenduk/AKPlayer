@@ -299,20 +299,76 @@ let item2 = AKMedia(url: url2)
 let item3 = AKMedia(url: url3)
 
 // Load playlist
-queuePlayer.load(media: [item1, item2, item3], autoPlay: true)
+queuePlayer.load(items: [item1, item2, item3], startIndex: 0, autoPlay: true)
 
 // Playlist navigation
 queuePlayer.next()
 queuePlayer.previous()
-queuePlayer.jumpTo(at: 2)
+queuePlayer.jumpTo(index: 2)
 
 // Playlist modes
 queuePlayer.repeatMode = .all // .off, .one, .all
-queuePlayer.shuffleMode = true
+queuePlayer.isShuffleEnabled = true
 
-// Reorder queue
+// Reorder & mutate queue
+queuePlayer.append(item4)
+queuePlayer.insert(item5, at: 0)
 queuePlayer.move(from: 0, to: 2)
 queuePlayer.remove(at: 1)
+
+// Observe queue-specific mutations & settings
+Task {
+    for await event in queuePlayer.queueEvents {
+        switch event {
+        case let .itemsLoaded(items, startIndex, autoPlay):
+            print("Loaded \(items.count) items starting at index \(startIndex)")
+        case let .currentItemDidChange(item, index):
+            print("Active item changed: \(String(describing: item?.url)) at index: \(String(describing: index))")
+        case let .repeatModeDidChange(mode):
+            print("Repeat mode changed to: \(mode)")
+        case let .shuffleModeDidChange(isEnabled):
+            print("Shuffle enabled: \(isEnabled)")
+        case let .itemAdded(item, at: index):
+            print("Item added at \(index)")
+        case let .itemRemoved(item, at: index):
+            print("Item removed at \(index)")
+        case let .itemMoved(item, from: source, to: destination):
+            print("Item moved from \(source) to \(destination)")
+        }
+    }
+}
+```
+
+#### SwiftUI Observable Queue
+
+For SwiftUI apps, use `AKQueuePlayerObservable`:
+
+```swift
+struct PlaylistView: View {
+    @State private var queueModel = AKQueuePlayerObservable()
+
+    var body: some View {
+        VStack {
+            Text("Playing item \(queueModel.currentIndex.map { $0 + 1 } ?? 0) of \(queueModel.items.count)")
+            
+            HStack(spacing: 20) {
+                Button("Previous") { queueModel.previous() }
+                    .disabled(!queueModel.canPlayPrevious)
+                Button(queueModel.isPlaying ? "Pause" : "Play") {
+                    queueModel.togglePlayPause()
+                }
+                Button("Next") { queueModel.next() }
+                    .disabled(!queueModel.canPlayNext)
+                Button(queueModel.isShuffleEnabled ? "Shuffle On" : "Shuffle Off") {
+                    queueModel.isShuffleEnabled.toggle()
+                }
+            }
+        }
+        .task {
+            queueModel.load(items: [item1, item2, item3], startIndex: 0, autoPlay: true)
+        }
+    }
+}
 ```
 
 ---

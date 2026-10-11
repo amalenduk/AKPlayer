@@ -28,13 +28,19 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     }
 
     /// Repeat mode governing queue iteration behavior. Defaults to `.off`.
-    public var repeatMode: AKRepeatMode = .off
+    public var repeatMode: AKRepeatMode = .off {
+        didSet {
+            guard oldValue != repeatMode else { return }
+            publishQueueEvent(.repeatModeDidChange(repeatMode))
+        }
+    }
 
     /// Indicates whether shuffle mode is active.
     public var isShuffleEnabled = false {
         didSet {
             guard oldValue != isShuffleEnabled else { return }
             updateShuffleQueue()
+            publishQueueEvent(.shuffleModeDidChange(isEnabled: isShuffleEnabled))
         }
     }
 
@@ -54,6 +60,13 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
             return true
         }
         return currentIndex > 0 || currentTime.seconds > 3.0
+    }
+
+    private let queueEventBroadcaster = AKEventBroadcaster<AKPlayerQueueEvent>()
+
+    /// An asynchronous stream of queue mutations and queue playback setting changes.
+    public var queueEvents: AsyncStream<AKPlayerQueueEvent> {
+        queueEventBroadcaster.makeStream()
     }
 
     // MARK: - Private State
@@ -90,6 +103,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     deinit {
         queueEventsTask?.cancel()
         queueEventsTask = nil
+        queueEventBroadcaster.finish()
     }
 
     // MARK: - Lifecycle Preparation
@@ -116,6 +130,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             updateShuffleQueue()
         }
+        publishQueueEvent(.itemsLoaded(items: items, startIndex: startIndex, autoPlay: autoPlay))
 
         guard activeItems.indices.contains(startIndex) else { return }
         let targetMedia = activeItems[startIndex]
@@ -179,6 +194,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             shuffledItems.append(item)
         }
+        publishQueueEvent(.itemAdded(item, at: items.count - 1))
         nowPlayingManager?.updateNowPlayingInfo()
     }
 
@@ -192,6 +208,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             shuffledItems.append(item)
         }
+        publishQueueEvent(.itemAdded(item, at: index))
         nowPlayingManager?.updateNowPlayingInfo()
     }
 
@@ -204,6 +221,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         if isShuffleEnabled {
             shuffledItems.removeAll(where: { $0.url == removedItem.url })
         }
+        publishQueueEvent(.itemRemoved(removedItem, at: index))
         nowPlayingManager?.updateNowPlayingInfo()
     }
 
@@ -218,6 +236,7 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
 
         let item = items.remove(at: sourceIndex)
         items.insert(item, at: destinationIndex)
+        publishQueueEvent(.itemMoved(item, from: sourceIndex, to: destinationIndex))
         nowPlayingManager?.updateNowPlayingInfo()
     }
 
@@ -246,11 +265,22 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
             for await event in events {
                 guard !Task.isCancelled else { break }
 
-                if case .didReachEnd = event {
+                switch event {
+                case .didReachEnd:
                     handleTrackEnded()
+                case .mediaDidChange:
+                    publishQueueEvent(
+                        .currentItemDidChange(item: currentMedia, index: currentIndex)
+                    )
+                default:
+                    break
                 }
             }
         }
+    }
+
+    private func publishQueueEvent(_ event: AKPlayerQueueEvent) {
+        queueEventBroadcaster.send(event)
     }
 
     /// Handles automatic advancing or stopping when the active track finishes playing.

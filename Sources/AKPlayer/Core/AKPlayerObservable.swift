@@ -25,7 +25,7 @@ public enum AKPlayerTimelineSource: Sendable, Equatable {
 /// remain available for functionality not directly surfaced by this type.
 @MainActor
 @Observable
-public final class AKPlayerObservable {
+public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// The underlying player that performs media loading and playback.
     public let player: AKPlayer
 
@@ -260,6 +260,7 @@ public final class AKPlayerObservable {
         error = player.error
         isLive = player.isLive
         isAtLiveEdge = player.isAtLiveEdge
+        liveDrift = player.currentMedia?.liveDrift ?? .zero
         metadata = player.currentMedia?.metadataProvider.staticMetadata
         timedMetadata = player.currentMedia?.metadataProvider.timedMetadata
         canSeek = player.interstitialService.isPlayingInterstitial
@@ -312,6 +313,12 @@ public final class AKPlayerObservable {
         player.play()
     }
 
+    /// Commands the player to begin media playback at a specified speed multiplier.
+    /// - Parameter rate: The target playback speed rate multiplier.
+    public func play(at rate: AKPlaybackRate) {
+        player.play(at: rate)
+    }
+
     /// Pauses playback.
     public func pause() {
         player.pause()
@@ -350,14 +357,155 @@ public final class AKPlayerObservable {
 
     // MARK: - Seeking & Skipping
 
-    /// Seeks within the active media timeline.
-    /// - Parameters:
-    ///   - target: The destination position.
-    ///   - scope: The timeline coordinate space. Defaults to the primary timeline.
+    /// Asynchronously seeks to a designated target position within the primary playback timeline.
+    /// - Parameter target: The destination position target.
     /// - Returns: Whether the seek completed successfully.
     @discardableResult
-    public func seek(to target: AKSeekTarget, scope: AKSeekScope = .primary) async -> Bool {
+    public func seek(to target: AKSeekTarget) async -> Bool {
+        await player.seek(to: target)
+    }
+
+    /// Asynchronously seeks to a designated target position with custom tolerance boundary
+    /// constraints.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - toleranceBefore: The allowable tolerance boundary before the target time.
+    ///   - toleranceAfter: The allowable tolerance boundary after the target time.
+    /// - Returns: Whether the seek completed successfully.
+    @discardableResult
+    public func seek(
+        to target: AKSeekTarget,
+        toleranceBefore: CMTime,
+        toleranceAfter: CMTime
+    ) async -> Bool {
+        await player.seek(
+            to: target,
+            toleranceBefore: toleranceBefore,
+            toleranceAfter: toleranceAfter
+        )
+    }
+
+    /// Seeks to a designated target position within primary timeline using a completion callback.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - completionHandler: A callback invoked when the seek operation finishes.
+    public func seek(
+        to target: AKSeekTarget,
+        completionHandler: @escaping @Sendable (Bool) -> Void
+    ) {
+        player.seek(to: target, completionHandler: completionHandler)
+    }
+
+    /// Seeks to a designated target position with custom tolerance boundary constraints using a
+    /// completion callback.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - toleranceBefore: The allowable tolerance boundary before the target time.
+    ///   - toleranceAfter: The allowable tolerance boundary after the target time.
+    ///   - completionHandler: A callback invoked when the seek operation finishes.
+    public func seek(
+        to target: AKSeekTarget,
+        toleranceBefore: CMTime,
+        toleranceAfter: CMTime,
+        completionHandler: @escaping @Sendable (Bool) -> Void
+    ) {
+        player.seek(
+            to: target,
+            toleranceBefore: toleranceBefore,
+            toleranceAfter: toleranceAfter,
+            completionHandler: completionHandler
+        )
+    }
+
+    /// Asynchronously seeks to a designated target position within the active media or integrated
+    /// timeline.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - scope: The timeline coordinate space targeted.
+    /// - Returns: Whether the seek completed successfully.
+    @discardableResult
+    public func seek(to target: AKSeekTarget, scope: AKSeekScope) async -> Bool {
         await player.seek(to: target, scope: scope)
+    }
+
+    /// Asynchronously seeks to a designated target position with custom tolerance boundary
+    /// constraints.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - scope: The timeline coordinate space targeted.
+    ///   - toleranceBefore: The allowable tolerance boundary before the target time.
+    ///   - toleranceAfter: The allowable tolerance boundary after the target time.
+    /// - Returns: Whether the seek completed successfully.
+    @discardableResult
+    public func seek(
+        to target: AKSeekTarget,
+        scope: AKSeekScope,
+        toleranceBefore: CMTime,
+        toleranceAfter: CMTime
+    ) async -> Bool {
+        await player.seek(
+            to: target,
+            scope: scope,
+            toleranceBefore: toleranceBefore,
+            toleranceAfter: toleranceAfter
+        )
+    }
+
+    /// Seeks to a designated target position using a completion callback.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - scope: The timeline coordinate space targeted.
+    ///   - completionHandler: A callback invoked when the seek operation finishes.
+    public func seek(
+        to target: AKSeekTarget,
+        scope: AKSeekScope,
+        completionHandler: @escaping @Sendable (Bool) -> Void
+    ) {
+        player.seek(to: target, scope: scope, completionHandler: completionHandler)
+    }
+
+    /// Seeks to a designated target position with custom tolerance boundary constraints using a
+    /// completion callback.
+    /// - Parameters:
+    ///   - target: The destination position target.
+    ///   - scope: The timeline coordinate space targeted.
+    ///   - toleranceBefore: The allowable tolerance boundary before the target time.
+    ///   - toleranceAfter: The allowable tolerance boundary after the target time.
+    ///   - completionHandler: A callback invoked when the seek operation finishes.
+    public func seek(
+        to target: AKSeekTarget,
+        scope: AKSeekScope,
+        toleranceBefore: CMTime,
+        toleranceAfter: CMTime,
+        completionHandler: @escaping @Sendable (Bool) -> Void
+    ) {
+        player.seek(
+            to: target,
+            scope: scope,
+            toleranceBefore: toleranceBefore,
+            toleranceAfter: toleranceAfter,
+            completionHandler: completionHandler
+        )
+    }
+
+    /// Asynchronously seeks on the integrated timeline to a designated position in seconds.
+    /// - Parameter seconds: The target position in seconds along the integrated timeline.
+    /// - Returns: Whether the seek completed successfully.
+    @discardableResult
+    public func seekOnIntegratedTimeline(to seconds: Double) async -> Bool {
+        await player.seekOnIntegratedTimeline(to: seconds)
+    }
+
+    /// Seeks on the integrated timeline to a designated position in seconds using a completion
+    /// callback.
+    /// - Parameters:
+    ///   - seconds: The target position in seconds along the integrated timeline.
+    ///   - completionHandler: A callback invoked when the seek operation finishes.
+    public func seekOnIntegratedTimeline(
+        to seconds: Double,
+        completionHandler: @escaping @Sendable (Bool) -> Void
+    ) {
+        player.seekOnIntegratedTimeline(to: seconds, completionHandler: completionHandler)
     }
 
     /// Seeks to a position expressed in seconds.
@@ -416,6 +564,51 @@ public final class AKPlayerObservable {
             return false
         }
         return await seek(to: chapter)
+    }
+
+    // MARK: - Media Navigation
+
+    /// Steps frame-by-frame through video media by a specified frame count offset.
+    /// - Parameter count: The frame offset count (positive for forward, negative for reverse).
+    public func step(by count: Int) {
+        player.step(by: count)
+    }
+
+    /// Fast-forwards playback using the default fast-forward speed defined in player configuration.
+    public func fastForward() {
+        player.fastForward()
+    }
+
+    /// Fast-forwards playback at a custom speed multiplier rate.
+    /// - Parameter rate: The target fast-forward speed rate multiplier.
+    public func fastForward(at rate: AKPlaybackRate) {
+        player.fastForward(at: rate)
+    }
+
+    /// Rewinds playback using the default rewind speed defined in player configuration.
+    public func rewind() {
+        player.rewind()
+    }
+
+    /// Rewinds playback at a custom speed multiplier rate.
+    /// - Parameter rate: The target rewind speed rate multiplier.
+    public func rewind(at rate: AKPlaybackRate) {
+        player.rewind(at: rate)
+    }
+
+    // MARK: - Live Stream Navigation
+
+    /// Jumps directly to the live head of the stream and resumes playback at normal speed.
+    /// - Returns: Whether the jump completed successfully.
+    @discardableResult
+    public func jumpToLive() async -> Bool {
+        await player.jumpToLive()
+    }
+
+    /// Jumps directly to the live head of the stream with a completion callback.
+    /// - Parameter completionHandler: A callback invoked when the seek operation finishes.
+    public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
+        player.jumpToLive(completionHandler: completionHandler)
     }
 
     // MARK: - Track Selection
@@ -567,8 +760,7 @@ public final class AKPlayerObservable {
         case let .didFail(playerError):
             error = playerError
 
-        case .boundaryReached, .commandUnavailable, .didReachEnd,
-             .sharePlayStateDidChange:
+        case .boundaryReached, .commandUnavailable, .didReachEnd, .sharePlayStateDidChange:
             break
         }
     }
