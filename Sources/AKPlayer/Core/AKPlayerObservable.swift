@@ -29,21 +29,6 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// The underlying player that performs media loading and playback.
     public let player: AKPlayer
 
-    /// The active Now Playing info and remote command center session.
-    public var nowPlayingManager: (any AKNowPlayingManagerProtocol)? {
-        player.nowPlayingManager
-    }
-
-    /// The service managing sequential seeking actions through media queues.
-    public var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
-        player.playerSeekingThroughMediaService
-    }
-
-    /// The service managing scheduled interstitial (ad) events and playback timelines.
-    public var interstitialService: AKPlayerInterstitialServiceProtocol {
-        player.interstitialService
-    }
-
     /// The latest player event received by this wrapper.
     public private(set) var latestEvent: AKPlayerEvent?
 
@@ -238,6 +223,21 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// Currently selected alternative video track.
     public var selectedVideoAlternativeTrack: AKMediaTrackOption? {
         selectedTracks[.videoAlternative]
+    }
+
+    /// The active Now Playing info and remote command center session.
+    public var nowPlayingManager: (any AKNowPlayingManagerProtocol)? {
+        player.nowPlayingManager
+    }
+
+    /// The service managing sequential seeking actions through media queues.
+    public var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
+        player.playerSeekingThroughMediaService
+    }
+
+    /// The service managing scheduled interstitial (ad) events and playback timelines.
+    public var interstitialService: AKPlayerInterstitialServiceProtocol {
+        player.interstitialService
     }
 
     @ObservationIgnored private var eventTask: Task<Void, Never>?
