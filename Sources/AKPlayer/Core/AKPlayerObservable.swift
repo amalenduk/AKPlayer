@@ -29,6 +29,21 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// The underlying player that performs media loading and playback.
     public let player: AKPlayer
 
+    /// The active Now Playing info and remote command center session.
+    public var nowPlayingManager: (any AKNowPlayingManagerProtocol)? {
+        player.nowPlayingManager
+    }
+
+    /// The service managing sequential seeking actions through media queues.
+    public var playerSeekingThroughMediaService: AKPlayerSeekingThroughMediaServiceProtocol {
+        player.playerSeekingThroughMediaService
+    }
+
+    /// The service managing scheduled interstitial (ad) events and playback timelines.
+    public var interstitialService: AKPlayerInterstitialServiceProtocol {
+        player.interstitialService
+    }
+
     /// The latest player event received by this wrapper.
     public private(set) var latestEvent: AKPlayerEvent?
 
