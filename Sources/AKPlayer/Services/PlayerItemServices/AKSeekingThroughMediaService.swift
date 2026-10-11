@@ -75,7 +75,7 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
         guard let playerItem else { return false }
         let isLive = mediaManager?.media?.isLive() == true || !playerItem.duration.isNumeric
         if isLive {
-            guard let liveRange = playerItem.seekableTimeRanges.last?.timeRangeValue else {
+            guard let liveRange = getRangesAvailable().last else {
                 return false
             }
             let threshold = mediaManager?.media?.liveEdgeThreshold ?? 4.0
@@ -86,7 +86,7 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
 
     /// The current seekable time range for the active media item.
     public var seekableWindow: CMTimeRange? {
-        playerItem?.seekableTimeRanges.last?.timeRangeValue
+        getRangesAvailable().last ?? playerItem?.seekableTimeRanges.last?.timeRangeValue
     }
 
     /// Evaluates whether a given target is within seekable bounds.
@@ -139,6 +139,11 @@ public final class AKSeekingThroughMediaService: AKSeekingThroughMediaServicePro
         if isLive {
             guard let liveRange = getRangesAvailable().last else {
                 return (false, .seekPositionNotAvailable)
+            }
+
+            let threshold = mediaManager?.media?.liveEdgeThreshold ?? 4.0
+            guard liveRange.duration.seconds > threshold else {
+                return (false, .actionNotPermitted)
             }
 
             // Past boundary check: cannot seek before the earliest available DVR segment

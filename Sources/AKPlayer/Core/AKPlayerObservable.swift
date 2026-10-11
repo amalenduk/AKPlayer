@@ -296,7 +296,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         liveDriftTimerTask?.cancel()
     }
 
-    // MARK: - Playback Commands
+    // MARK: - Loading Media (AKPlayerActionsProtocol)
 
     /// Prepares the underlying player and its audio session.
     public func prepare() async throws {
@@ -311,6 +311,8 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     ) {
         player.load(media: media, autoPlay: autoPlay, at: position)
     }
+
+    // MARK: - Controlling Playback (AKPlayerActionsProtocol)
 
     /// Starts or resumes playback.
     public func play() {
@@ -339,27 +341,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         player.stop()
     }
 
-    /// Changes the playback rate.
-    public func setPlaybackRate(_ rate: AKPlaybackRate) {
-        player.play(at: rate)
-    }
-
-    /// Changes the output volume.
-    public func setVolume(_ volume: Float) {
-        player.volume = volume
-    }
-
-    /// Changes the audio mute state.
-    public func setMuted(_ isMuted: Bool) {
-        player.isMuted = isMuted
-    }
-
-    /// Toggles the audio mute state.
-    public func toggleMute() {
-        setMuted(!isMuted)
-    }
-
-    // MARK: - Seeking & Skipping
+    // MARK: - Seeking Through Media (AKPlayerActionsProtocol)
 
     /// Asynchronously seeks to a designated target position within the primary playback timeline.
     /// - Parameter target: The destination position target.
@@ -570,7 +552,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         return await seek(to: chapter)
     }
 
-    // MARK: - Media Navigation
+    // MARK: - Media Navigation (AKPlayerActionsProtocol)
 
     /// Steps frame-by-frame through video media by a specified frame count offset.
     /// - Parameter count: The frame offset count (positive for forward, negative for reverse).
@@ -600,7 +582,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         player.rewind(at: rate)
     }
 
-    // MARK: - Live Stream Navigation
+    // MARK: - Live Stream Navigation (AKPlayerActionsProtocol)
 
     /// Jumps directly to the live head of the stream and resumes playback at normal speed.
     /// - Returns: Whether the jump completed successfully.
@@ -613,6 +595,28 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// - Parameter completionHandler: A callback invoked when the seek operation finishes.
     public func jumpToLive(completionHandler: @escaping @Sendable (Bool) -> Void) {
         player.jumpToLive(completionHandler: completionHandler)
+    }
+
+    // MARK: - Audio & Volume Controls
+
+    /// Changes the output volume.
+    public func setVolume(_ volume: Float) {
+        player.volume = volume
+    }
+
+    /// Changes the audio mute state.
+    public func setMuted(_ isMuted: Bool) {
+        player.isMuted = isMuted
+    }
+
+    /// Toggles the audio mute state.
+    public func toggleMute() {
+        setMuted(!isMuted)
+    }
+
+    /// Changes the playback rate.
+    public func setPlaybackRate(_ rate: AKPlaybackRate) {
+        player.play(at: rate)
     }
 
     // MARK: - Track Selection
