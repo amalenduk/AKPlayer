@@ -955,10 +955,11 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case let .progress(progress):
             interstitialProgress = progress
         case .didFinish:
-            updateCanSeek()
             isInterstitialActive = false
             currentInterstitialIdentifier = nil
             interstitialProgress = nil
+            updateCurrentAdMarker()
+            updateCanSeek()
         case let .integratedTimeline(.timeUpdated(current, _, dur)):
             guard timelineSource == .integrated else { break }
             currentTime = CMTime(seconds: current, preferredTimescale: 600)
