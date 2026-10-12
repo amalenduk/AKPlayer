@@ -950,12 +950,12 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
             updateCanSeek()
             updateCurrentAdMarker()
         case .didStart:
-            isInterstitialActive = true
             updateCanSeek()
             updateCurrentAdMarker()
         case let .progress(progress):
             interstitialProgress = progress
         case .didFinish:
+            updateCanSeek()
             isInterstitialActive = false
             currentInterstitialIdentifier = nil
             interstitialProgress = nil
