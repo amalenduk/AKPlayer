@@ -44,7 +44,8 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
 
     /// Timeline used to update ``currentTime`` and ``duration``.
     ///
-    /// Changing this value synchronizes the timeline properties from the selected source.
+    /// Changing this value synchronizes the timeline properties from the selected source. It does
+    /// not affect seeking; pass a ``AKSeekScope`` to a seek function to choose its timeline.
     public var timelineSource: AKPlayerTimelineSource {
         didSet {
             guard timelineSource != oldValue else { return }
