@@ -758,7 +758,6 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
 
         case let .mediaDidChange(media):
             handleMediaDidChange(media)
-            willPlay = player.willPlay
 
         case let .timeDidChange(time):
             handleTimeDidChange(time)
