@@ -38,6 +38,10 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// Whether the player is configured to automatically begin playback when media is ready.
     public private(set) var autoPlay: Bool
 
+    /// Flag indicating whether playback is intended to start or resume as soon as
+    /// media readiness permits (e.g., during loading, buffering, or waiting for network).
+    public private(set) var willPlay: Bool
+
     /// Timeline used to update ``currentTime`` and ``duration``.
     ///
     /// Changing this value synchronizes the timeline properties from the selected source.
@@ -246,6 +250,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         self.timelineSource = timelineSource
         state = player.state
         autoPlay = player.autoPlay
+        willPlay = player.willPlay
         currentMedia = player.currentMedia
         presentationSize = player.currentItem?.presentationSize ?? .zero
         switch timelineSource {
@@ -745,12 +750,15 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         switch event {
         case let .stateDidChange(newState):
             handleStateDidChange(newState)
+            willPlay = player.willPlay
 
         case let .autoPlayDidChange(isAutoPlay):
             autoPlay = isAutoPlay
+            willPlay = player.willPlay
 
         case let .mediaDidChange(media):
             handleMediaDidChange(media)
+            willPlay = player.willPlay
 
         case let .timeDidChange(time):
             handleTimeDidChange(time)

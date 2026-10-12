@@ -403,4 +403,21 @@ struct AKPlayerTests {
         controller.change(AKPausedState(playerController: controller))
         #expect(controller.state == .paused)
     }
+
+    @Test func willPlayEvaluation() throws {
+        let player = AVPlayer()
+        let controller = AKPlayerController(player: player, configuration: AKPlayerConfiguration())
+        try controller.prepare()
+
+        // Idle state: willPlay is false
+        #expect(!controller.willPlay)
+
+        // Paused state: willPlay is false
+        controller.change(AKPausedState(playerController: controller))
+        #expect(!controller.willPlay)
+
+        // Playing state: actively playing, so willPlay is false
+        controller.change(AKPlayingState(playerController: controller))
+        #expect(!controller.willPlay)
+    }
 }

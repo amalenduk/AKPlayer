@@ -71,6 +71,12 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.autoPlay
     }
 
+    /// Flag indicating whether playback is intended to start or resume as soon as
+    /// media readiness permits (e.g., during loading, buffering, or waiting for network).
+    public var willPlay: Bool {
+        playerController.willPlay
+    }
+
     /// Flag indicating if a seek action is currently in progress.
     public var isSeeking: Bool {
         playerController.isSeeking

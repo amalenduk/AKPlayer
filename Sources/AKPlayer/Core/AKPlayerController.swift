@@ -79,6 +79,16 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         controller.autoPlay
     }
 
+    /// Flag indicating whether playback is intended to start or resume as soon as
+    /// media readiness permits (e.g., during loading, buffering, or waiting for network).
+    public var willPlay: Bool {
+        (state.isBuffering
+            || state.isLoading
+            || state.isLoaded
+            || state.isWaitingForNetwork)
+            && autoPlay
+    }
+
     /// Indicates whether a seek operation is currently being performed by the
     /// seeking service.
     public var isSeeking: Bool {

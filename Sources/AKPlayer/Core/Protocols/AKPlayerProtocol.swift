@@ -51,6 +51,10 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
     /// loading.
     var autoPlay: Bool { get }
 
+    /// Flag indicating whether playback is intended to start or resume as soon as
+    /// media readiness permits (e.g., during loading, buffering, or waiting for network).
+    var willPlay: Bool { get }
+
     /// Flag indicating whether a seek action is currently in progress.
     var isSeeking: Bool { get }
 

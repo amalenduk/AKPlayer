@@ -78,6 +78,12 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         manager.autoPlay
     }
 
+    /// Flag indicating whether playback is intended to start or resume as soon as
+    /// media readiness permits (e.g., during loading, buffering, or waiting for network).
+    public var willPlay: Bool {
+        manager.willPlay
+    }
+
     /// A boolean flag indicating whether a seek operation is currently in
     /// progress.
     public var isSeeking: Bool {
