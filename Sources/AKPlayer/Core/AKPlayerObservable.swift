@@ -955,6 +955,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
             updateCurrentAdMarker()
         case let .progress(progress):
             interstitialProgress = progress
+            updateCurrentAdMarker()
         case .didFinish:
             isInterstitialActive = false
             currentInterstitialIdentifier = nil
@@ -974,6 +975,11 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case .scheduleDidChange, .integratedTimeline:
             break
         }
+    }
+
+    /// Synchronizes active interstitial ad marker metadata and current item index.
+    public func syncInterstitialAdIndex() {
+        updateCurrentAdMarker()
     }
 
     private func updateCurrentAdMarker() {

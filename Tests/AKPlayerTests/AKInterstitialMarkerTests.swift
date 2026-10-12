@@ -184,4 +184,16 @@ struct AKInterstitialMarkerTests {
             Issue.record("Expected .seek case with integrated scope")
         }
     }
+
+    @MainActor
+    @Test func skipCurrentAdAndSkipCurrentEventProtocolMethods() {
+        let avPlayer = AVPlayer()
+        let service = AKPlayerInterstitialService(with: avPlayer)
+
+        // Calling when not playing an interstitial should safely no-op without crashes
+        #expect(!service.isPlayingInterstitial)
+        service.skipCurrentAd()
+        service.skipCurrentEvent()
+        #expect(!service.isPlayingInterstitial)
+    }
 }

@@ -139,6 +139,10 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     /// available.
     func skipCurrentEvent()
 
+    /// Skips the currently playing ad item. If multiple ads exist in the active ad pod, advances
+    /// to the next ad item; otherwise cancels/skips the entire interstitial event.
+    func skipCurrentAd()
+
     // MARK: - Integrated Timeline Seeking
 
     /// Seeks to a target `CMTime` along the integrated timeline.
@@ -176,5 +180,9 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
 public extension AKPlayerInterstitialServiceProtocol {
     func skipCurrentEvent() {
         cancelCurrent(resumptionOffset: .zero)
+    }
+
+    func skipCurrentAd() {
+        skipCurrentEvent()
     }
 }

@@ -104,13 +104,27 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
     /// The 1-based index of the currently playing ad item within the active ad pod (e.g. 1 for "Ad
     /// 1 of 2").
     public var currentItemIndex: Int {
-        guard let currentItem = monitor?.interstitialPlayer.currentItem,
-              let items = currentEvent?.templateItems,
-              let index = items.firstIndex(where: { $0 === currentItem })
+        guard let interstitialPlayer = monitor?.interstitialPlayer,
+              let currentItem = interstitialPlayer.currentItem
         else {
             return 1
         }
-        return index + 1
+
+        let items = currentEvent?.templateItems ?? []
+
+        // 1. Try pointer identity
+        if let index = items.firstIndex(where: { $0 === currentItem }) {
+            return index + 1
+        }
+
+        // 2. Queue remaining items count in AVQueuePlayer
+        let totalCount = max(items.count, currentMarker?.templateItemCount ?? 1)
+        let remainingInQueue = interstitialPlayer.items().count
+        if totalCount > 1, remainingInQueue > 0, remainingInQueue <= totalCount {
+            return (totalCount - remainingInQueue) + 1
+        }
+
+        return 1
     }
 
     // MARK: - Private State
@@ -323,6 +337,21 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         }
 
         finishCurrentEvent(event, resumptionOffset: resumptionOffset)
+    }
+
+    /// Skips the currently active ad item.
+    /// If multiple ads exist in the active ad pod (e.g. Ad 1 of 2), advances to the next ad.
+    /// If this is the last or only ad in the break, cancels/skips the entire interstitial event.
+    public func skipCurrentAd() {
+        guard isPlayingInterstitial else { return }
+
+        let totalItems = currentEvent?.templateItems.count ?? 1
+        if currentItemIndex < totalItems, let interstitialPlayer = monitor?.interstitialPlayer {
+            interstitialPlayer.advanceToNextItem()
+            emitProgress()
+        } else {
+            skipCurrentEvent()
+        }
     }
 
     // MARK: - Integrated Timeline Seeking
@@ -611,12 +640,13 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         let current = item.currentTime().seconds
         let duration = item.duration.seconds
 
-        guard current.isFinite, duration.isFinite, duration > 0 else { return }
+        let validCurrent = (current.isFinite && current >= 0) ? current : 0
+        let validDuration = (duration.isFinite && duration > 0) ? duration : 0
 
         let progress = AKPlayerInterstitialProgress(
-            currentTime: current,
-            duration: duration,
-            timeRemaining: max(0, duration - current)
+            currentTime: validCurrent,
+            duration: validDuration,
+            timeRemaining: max(0, validDuration - validCurrent)
         )
         emit(.progress(progress))
     }
@@ -786,6 +816,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
                     guard let self else { return }
                     self.observeItemBufferFlags(newItem)
                     self.updatePlaybackState()
+                    self.refreshMarkers()
+                    self.emitProgress()
                 }
             }
         )
