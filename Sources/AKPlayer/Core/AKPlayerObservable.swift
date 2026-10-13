@@ -74,6 +74,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// Buffered time ranges loaded in memory for the active media item.
     public private(set) var loadedTimeRanges: [CMTimeRange] = []
 
+    /// The buffered time remaining from the current playback position, in seconds.
+    public private(set) var bufferedDurationSeconds = 0.0
+
     /// Static metadata describing the current media (e.g., title, artist, artwork).
     public private(set) var metadata: AKMediaStaticMetadata?
 
@@ -164,20 +167,6 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     public var durationSeconds: Double {
         let seconds = duration.seconds
         return seconds.isFinite && !seconds.isNaN ? seconds : 0
-    }
-
-    /// The total buffered time in seconds calculated from the latest loaded time ranges, or zero if
-    /// unavailable.
-    public var bufferedDurationSeconds: Double {
-        let current = currentTime
-        for range in loadedTimeRanges where range.containsTime(current) {
-            let end = CMTimeRangeGetEnd(range).seconds
-            let cur = current.seconds
-            if end >= cur {
-                return end - cur
-            }
-        }
-        return loadedTimeRanges.last.map { CMTimeRangeGetEnd($0).seconds } ?? 0
     }
 
     /// Available audio tracks for the current media.
@@ -795,6 +784,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
             currentTime = .zero
             duration = .zero
             loadedTimeRanges = []
+            bufferedDurationSeconds = 0
             presentationSize = .zero
             metadata = nil
             timedMetadata = nil
@@ -880,6 +870,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
 
         case let .loadedTimeRangesDidChange(ranges):
             loadedTimeRanges = ranges
+            updateBufferedDuration()
 
         case let .seekableTimeRangesDidChange(ranges):
             updateCanSeek()
@@ -1005,6 +996,21 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
                 preferredTimescale: 600
             )
         }
+    }
+
+    private func updateBufferedDuration() {
+        let current = currentTime
+        for range in loadedTimeRanges where range.containsTime(current) {
+            let end = CMTimeRangeGetEnd(range).seconds
+            let cur = current.seconds
+            if end >= cur {
+                bufferedDurationSeconds = end - cur
+                return
+            }
+        }
+        bufferedDurationSeconds = loadedTimeRanges.last.map {
+            CMTimeRangeGetEnd($0).seconds
+        } ?? 0
     }
 
     private func updateCanSeek() {
