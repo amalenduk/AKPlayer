@@ -62,6 +62,14 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// Playback capabilities reported for the current media item.
     public private(set) var capabilities: [AKMediaCapability: Bool] = [:]
 
+    /// Playback can change rate reported for the current media item.
+    public var canChangeRate: Bool {
+        capabilities[.playFastForward] ?? false
+            || capabilities[.playSlowForward] ?? false
+            || capabilities[.playFastReverse] ?? false
+            || capabilities[.playSlowReverse] ?? false
+    }
+
     /// Whether seeking is currently allowed for the media or active interstitial.
     public private(set) var canSeek = false
 
@@ -132,10 +140,76 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     public private(set) var currentChapter: AKChapter?
 
     /// Available track options keyed by track type.
-    public private(set) var availableTracks: [AKTrackType: [AKMediaTrackOption]] = [:]
+    public var availableTracks: [AKTrackType: [AKMediaTrackOption]] {
+        var tracks: [AKTrackType: [AKMediaTrackOption]] = [:]
+        if !audioTracks.isEmpty {
+            tracks[.audio] = audioTracks
+        }
+        if !subtitleTracks.isEmpty {
+            tracks[.subtitle] = subtitleTracks
+        }
+        if !closedCaptionTracks.isEmpty {
+            tracks[.closedCaption] = closedCaptionTracks
+        }
+        if !videoAlternativeTracks.isEmpty {
+            tracks[.videoAlternative] = videoAlternativeTracks
+        }
+        if !audioDescriptionTracks.isEmpty {
+            tracks[.audioDescription] = audioDescriptionTracks
+        }
+        return tracks
+    }
 
     /// Selected track options keyed by track type. Types with no selected option are absent.
-    public private(set) var selectedTracks: [AKTrackType: AKMediaTrackOption] = [:]
+    public var selectedTracks: [AKTrackType: AKMediaTrackOption] {
+        var tracks: [AKTrackType: AKMediaTrackOption] = [:]
+        if let selectedAudioTrack {
+            tracks[.audio] = selectedAudioTrack
+        }
+        if let selectedSubtitleTrack {
+            tracks[.subtitle] = selectedSubtitleTrack
+        }
+        if let selectedClosedCaptionTrack {
+            tracks[.closedCaption] = selectedClosedCaptionTrack
+        }
+        if let selectedVideoAlternativeTrack {
+            tracks[.videoAlternative] = selectedVideoAlternativeTrack
+        }
+        if let selectedAudioDescriptionTrack {
+            tracks[.audioDescription] = selectedAudioDescriptionTrack
+        }
+        return tracks
+    }
+
+    /// Available audio tracks for the current media.
+    public private(set) var audioTracks: [AKMediaTrackOption] = []
+
+    /// Currently selected audio track.
+    public private(set) var selectedAudioTrack: AKMediaTrackOption?
+
+    /// Available subtitle tracks for the current media.
+    public private(set) var subtitleTracks: [AKMediaTrackOption] = []
+
+    /// Currently selected subtitle track.
+    public private(set) var selectedSubtitleTrack: AKMediaTrackOption?
+
+    /// Available closed caption tracks for the current media.
+    public private(set) var closedCaptionTracks: [AKMediaTrackOption] = []
+
+    /// Currently selected closed caption track.
+    public private(set) var selectedClosedCaptionTrack: AKMediaTrackOption?
+
+    /// Available alternative video tracks for the current media.
+    public private(set) var videoAlternativeTracks: [AKMediaTrackOption] = []
+
+    /// Currently selected alternative video track.
+    public private(set) var selectedVideoAlternativeTrack: AKMediaTrackOption?
+
+    /// Available audio description tracks for the current media.
+    public private(set) var audioDescriptionTracks: [AKMediaTrackOption] = []
+
+    /// Currently selected audio description track.
+    public private(set) var selectedAudioDescriptionTrack: AKMediaTrackOption?
 
     /// A description of the latest error while loading or selecting track options.
     public private(set) var trackSelectionError: String?
@@ -169,44 +243,26 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         return seconds.isFinite && !seconds.isNaN ? seconds : 0
     }
 
-    /// Available audio tracks for the current media.
-    public var audioTracks: [AKMediaTrackOption] {
-        availableTracks[.audio] ?? []
+    /// Returns the available tracks for a specific track type.
+    public func availableTracks(for type: AKTrackType) -> [AKMediaTrackOption] {
+        switch type {
+        case .audio: audioTracks
+        case .subtitle: subtitleTracks
+        case .closedCaption: closedCaptionTracks
+        case .videoAlternative: videoAlternativeTracks
+        case .audioDescription: audioDescriptionTracks
+        }
     }
 
-    /// Currently selected audio track.
-    public var selectedAudioTrack: AKMediaTrackOption? {
-        selectedTracks[.audio]
-    }
-
-    /// Available subtitle tracks for the current media.
-    public var subtitleTracks: [AKMediaTrackOption] {
-        availableTracks[.subtitle] ?? []
-    }
-
-    /// Currently selected subtitle track.
-    public var selectedSubtitleTrack: AKMediaTrackOption? {
-        selectedTracks[.subtitle]
-    }
-
-    /// Available closed caption tracks for the current media.
-    public var closedCaptionTracks: [AKMediaTrackOption] {
-        availableTracks[.closedCaption] ?? []
-    }
-
-    /// Currently selected closed caption track.
-    public var selectedClosedCaptionTrack: AKMediaTrackOption? {
-        selectedTracks[.closedCaption]
-    }
-
-    /// Available alternative video tracks for the current media.
-    public var videoAlternativeTracks: [AKMediaTrackOption] {
-        availableTracks[.videoAlternative] ?? []
-    }
-
-    /// Currently selected alternative video track.
-    public var selectedVideoAlternativeTrack: AKMediaTrackOption? {
-        selectedTracks[.videoAlternative]
+    /// Returns the currently selected track for a specific track type.
+    public func selectedTrack(for type: AKTrackType) -> AKMediaTrackOption? {
+        switch type {
+        case .audio: selectedAudioTrack
+        case .subtitle: selectedSubtitleTrack
+        case .closedCaption: selectedClosedCaptionTrack
+        case .videoAlternative: selectedVideoAlternativeTrack
+        case .audioDescription: selectedAudioDescriptionTrack
+        }
     }
 
     /// The active Now Playing info and remote command center session.
@@ -282,7 +338,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         }
 
         let events = player.events
-        eventTask = Task { [weak self] in
+        eventTask = Task { @MainActor [weak self] in
             for await event in events {
                 guard !Task.isCancelled, let self else { break }
                 self.handle(event)
@@ -643,14 +699,15 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
             }
 
             guard !Task.isCancelled, currentMedia === media else { return }
-            for (type, options) in available {
-                availableTracks[type] = options
+
+            for type in types {
+                let options = available[type] ?? []
+                updateAvailableTracks(options, for: type)
             }
-            for (type, option) in selected {
-                selectedTracks[type] = option
-            }
-            for type in types where selected[type] == nil {
-                selectedTracks.removeValue(forKey: type)
+
+            for type in types {
+                let option = selected[type]
+                updateSelectedTrack(option, for: type)
             }
             trackSelectionError = nil
         } catch is CancellationError {
@@ -675,11 +732,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
 
         do {
             try await service.select(option, for: type)
-            if let option {
-                selectedTracks[type] = option
-            } else {
-                selectedTracks.removeValue(forKey: type)
-            }
+            updateSelectedTrack(option, for: type)
             trackSelectionError = nil
         } catch is CancellationError {
             throw CancellationError()
@@ -700,11 +753,8 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
 
         do {
             try await service.selectPreferredTrack(for: type)
-            if let option = try await service.selectedTrack(for: type) {
-                selectedTracks[type] = option
-            } else {
-                selectedTracks.removeValue(forKey: type)
-            }
+            let option = try await service.selectedTrack(for: type)
+            updateSelectedTrack(option, for: type)
             trackSelectionError = nil
         } catch is CancellationError {
             throw CancellationError()
@@ -714,11 +764,61 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         }
     }
 
+    private func updateAvailableTracks(_ options: [AKMediaTrackOption], for type: AKTrackType) {
+        switch type {
+        case .audio:
+            if audioTracks != options {
+                audioTracks = options
+            }
+        case .subtitle:
+            if subtitleTracks != options {
+                subtitleTracks = options
+            }
+        case .closedCaption:
+            if closedCaptionTracks != options {
+                closedCaptionTracks = options
+            }
+        case .videoAlternative:
+            if videoAlternativeTracks != options {
+                videoAlternativeTracks = options
+            }
+        case .audioDescription:
+            if audioDescriptionTracks != options {
+                audioDescriptionTracks = options
+            }
+        }
+    }
+
+    private func updateSelectedTrack(_ option: AKMediaTrackOption?, for type: AKTrackType) {
+        switch type {
+        case .audio:
+            if selectedAudioTrack != option {
+                selectedAudioTrack = option
+            }
+        case .subtitle:
+            if selectedSubtitleTrack != option {
+                selectedSubtitleTrack = option
+            }
+        case .closedCaption:
+            if selectedClosedCaptionTrack != option {
+                selectedClosedCaptionTrack = option
+            }
+        case .videoAlternative:
+            if selectedVideoAlternativeTrack != option {
+                selectedVideoAlternativeTrack = option
+            }
+        case .audioDescription:
+            if selectedAudioDescriptionTrack != option {
+                selectedAudioDescriptionTrack = option
+            }
+        }
+    }
+
     // MARK: - Private Event Observers
 
     private func observeTrackSelection(for media: any AKPlayable) {
         trackRefreshTask?.cancel()
-        trackRefreshTask = Task { [weak self] in
+        trackRefreshTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 try await refreshTracks(for: AKTrackType.allCases)
@@ -790,8 +890,16 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
             timedMetadata = nil
             chapters = []
             currentChapter = nil
-            availableTracks = [:]
-            selectedTracks = [:]
+            audioTracks = []
+            subtitleTracks = []
+            closedCaptionTracks = []
+            videoAlternativeTracks = []
+            audioDescriptionTracks = []
+            selectedAudioTrack = nil
+            selectedSubtitleTrack = nil
+            selectedClosedCaptionTrack = nil
+            selectedVideoAlternativeTrack = nil
+            selectedAudioDescriptionTrack = nil
             isInterstitialActive = false
             adMarkers = []
             currentAdMarker = nil
@@ -906,14 +1014,10 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     private func handleTrackSelection(_ event: AKTrackSelectionEvent) {
         switch event {
         case let .availableTracksDidChange(options, type):
-            availableTracks[type] = options
+            updateAvailableTracks(options, for: type)
 
         case let .selectedTrackDidChange(option, type):
-            if let option {
-                selectedTracks[type] = option
-            } else {
-                selectedTracks.removeValue(forKey: type)
-            }
+            updateSelectedTrack(option, for: type)
         }
     }
 
@@ -1035,11 +1139,14 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     }
 
     private func refreshCapabilities(for media: any AKPlayable) {
-        capabilities = Dictionary(
+        let newCapabilities = Dictionary(
             uniqueKeysWithValues: AKMediaCapability.allCases.map {
                 ($0, media.manager.isSupported($0))
             }
         )
+        if newCapabilities != capabilities {
+            capabilities = newCapabilities
+        }
     }
 
     private func updateCurrentChapter() {

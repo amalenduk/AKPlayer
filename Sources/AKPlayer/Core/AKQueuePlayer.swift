@@ -62,6 +62,8 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
         return currentIndex > 0 || currentTime.seconds > 3.0
     }
 
+    // MARK: - Queue Events
+
     private let queueEventBroadcaster = AKEventBroadcaster<AKPlayerQueueEvent>()
 
     /// An asynchronous stream of queue mutations and queue playback setting changes.

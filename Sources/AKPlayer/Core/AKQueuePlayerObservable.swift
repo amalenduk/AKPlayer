@@ -46,10 +46,14 @@ public final class AKQueuePlayerObservable: AKPlayerObservable {
     }
 
     /// Whether the player can advance to the next queue item.
-    public private(set) var canPlayNext: Bool
+    public var canPlayNext: Bool {
+        queuePlayer.canPlayNext
+    }
 
     /// Whether the player can move to the previous queue item.
-    public private(set) var canPlayPrevious: Bool
+    public var canPlayPrevious: Bool {
+        queuePlayer.canPlayPrevious
+    }
 
     @ObservationIgnored private var queueEventTask: Task<Void, Never>?
     @ObservationIgnored private var playerEventTask: Task<Void, Never>?
@@ -67,20 +71,18 @@ public final class AKQueuePlayerObservable: AKPlayerObservable {
         currentIndex = player.currentIndex
         repeatMode = player.repeatMode
         isShuffleEnabled = player.isShuffleEnabled
-        canPlayNext = player.canPlayNext
-        canPlayPrevious = player.canPlayPrevious
         super.init(player: player, timelineSource: timelineSource)
 
         let queueEvents = player.queueEvents
         let playerEvents = player.events
-        queueEventTask = Task { [weak self] in
+        queueEventTask = Task { @MainActor [weak self] in
             for await event in queueEvents {
                 guard !Task.isCancelled, let self else { break }
                 latestQueueEvent = event
                 synchronizeQueueState()
             }
         }
-        playerEventTask = Task { [weak self] in
+        playerEventTask = Task { @MainActor [weak self] in
             for await event in playerEvents {
                 guard !Task.isCancelled, let self else { break }
                 switch event {
@@ -155,7 +157,5 @@ public final class AKQueuePlayerObservable: AKPlayerObservable {
         currentIndex = queuePlayer.currentIndex
         repeatMode = queuePlayer.repeatMode
         isShuffleEnabled = queuePlayer.isShuffleEnabled
-        canPlayNext = queuePlayer.canPlayNext
-        canPlayPrevious = queuePlayer.canPlayPrevious
     }
 }
