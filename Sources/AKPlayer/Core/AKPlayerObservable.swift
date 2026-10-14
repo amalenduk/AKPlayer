@@ -921,6 +921,12 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         } else {
             stopLiveDriftTimer()
         }
+
+        if newState.isLoaded, currentMedia?.isLive() ?? false {
+            Task {
+                await jumpToLive()
+            }
+        }
     }
 
     private func handleMediaDidChange(_ media: (any AKPlayable)?) {
