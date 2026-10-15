@@ -71,6 +71,11 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         _playerItemNotificationsObserver
     }
 
+    /// Subtitle output service for intercepting active subtitles and captions in real-time.
+    public var subtitleOutputService: any AKSubtitleOutputServiceProtocol {
+        _subtitleOutputService
+    }
+
     // MARK: - Private Storage
 
     private var observations: [NSKeyValueObservation] = []
@@ -82,6 +87,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
     private var _metadataProvider: AKMediaMetadataProvider!
     private var _chapterService: AKChapterService!
     private var _playerItemNotificationsObserver: AKPlayerItemNotificationsObserver!
+    private var _subtitleOutputService: AKSubtitleOutputService!
 
     // MARK: - Initialization & Cleanup
 
@@ -108,6 +114,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         _metadataProvider = AKMediaMetadataProvider(mediaManager: self)
         _chapterService = AKChapterService(mediaManager: self)
         _playerItemNotificationsObserver = AKPlayerItemNotificationsObserver(mediaManager: self)
+        _subtitleOutputService = AKSubtitleOutputService(mediaManager: self)
 
         // Observe events from child services and emit them through manager.events
         startObservingChildServices()
@@ -125,6 +132,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             // 3. Start observing tracks and notifications
             _trackSelectionService.startObserving()
             _playerItemNotificationsObserver.startObserving(playerItem: customItem)
+            _subtitleOutputService.attach(to: customItem)
 
             // 4. Load metadata and chapters in parallel (extracting asset if not explicitly
             // provided)
@@ -204,6 +212,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
 
         // Start observing system notifications on the active player item
         _playerItemNotificationsObserver.startObserving(playerItem: newItem)
+        _subtitleOutputService.attach(to: newItem)
     }
 
     /// Aborts active asset property loading and cancels pending operations.
@@ -216,6 +225,7 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
         _metadataProvider.resetSession()
         _chapterService.resetSession()
         _trackSelectionService.resetSession()
+        _subtitleOutputService.resetSession()
         _playerItemNotificationsObserver.stopObserving()
     }
 
@@ -488,7 +498,15 @@ public final class AKMediaManager: NSObject, AKMediaManagerProtocol, @unchecked 
             }
         }
 
-        childServiceTasks = [trackTask, notifTask, metaTask, chapterTask]
+        let subtitleTask = Task { [weak self] in
+            guard let self else { return }
+            for await event in _subtitleOutputService.events {
+                guard !Task.isCancelled else { break }
+                emit(.subtitle(event))
+            }
+        }
+
+        childServiceTasks = [trackTask, notifTask, metaTask, chapterTask, subtitleTask]
     }
 }
 

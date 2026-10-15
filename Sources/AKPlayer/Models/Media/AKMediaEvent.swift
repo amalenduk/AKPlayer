@@ -78,6 +78,9 @@ public enum AKMediaEvent: Sendable {
 
     /// Chapter service event (chapter markers and active chapter transitions).
     case chapter(AKChapterEvent)
+
+    /// Subtitle output service event (live subtitle cues and running state).
+    case subtitle(AKSubtitleEvent)
 }
 
 // MARK: - Equatable Conformance
@@ -106,6 +109,8 @@ extension AKMediaEvent: Equatable {
         case let (.metadata(l), .metadata(r)):
             l == r
         case let (.chapter(l), .chapter(r)):
+            l == r
+        case let (.subtitle(l), .subtitle(r)):
             l == r
         default:
             false

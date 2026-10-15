@@ -49,6 +49,9 @@ public protocol AKMediaManagerProtocol: AnyObject, Sendable {
     /// Notification observer for player item playback lifecycle events.
     var playerItemNotificationsObserver: any AKPlayerItemNotificationsObserverProtocol { get }
 
+    /// Subtitle output service for intercepting active subtitles and captions in real-time.
+    var subtitleOutputService: any AKSubtitleOutputServiceProtocol { get }
+
     // MARK: - Lifecycle Hooks & Asset Operations
 
     /// Instantiates the underlying `AVURLAsset` for the media item.

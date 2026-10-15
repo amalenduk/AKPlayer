@@ -139,6 +139,22 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// The chapter containing the current playback position, if any.
     public private(set) var currentChapter: AKChapter?
 
+    /// The active subtitle or closed caption cue from the subtitle output service.
+    public private(set) var currentSubtitleCue: AKSubtitleCue?
+
+    /// Whether the subtitle output service is currently running and intercepting cues.
+    public private(set) var isSubtitleOutputRunning = false
+
+    /// Plain text of the currently active subtitle cue.
+    public var currentSubtitleText: String? {
+        currentSubtitleCue?.text
+    }
+
+    /// Attributed text of the currently active subtitle cue.
+    public var currentSubtitleAttributed: AttributedString? {
+        currentSubtitleCue?.attributedText
+    }
+
     /// Available track options keyed by track type.
     public var availableTracks: [AKTrackType: [AKMediaTrackOption]] {
         var tracks: [AKTrackType: [AKMediaTrackOption]] = [:]
@@ -932,6 +948,8 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     private func handleMediaDidChange(_ media: (any AKPlayable)?) {
         currentMedia = media
         metadata = media?.metadataProvider.staticMetadata
+        currentSubtitleCue = media?.subtitleOutput.currentCue
+        isSubtitleOutputRunning = media?.subtitleOutput.isRunning ?? false
         isLive = player.isLive
     }
 
@@ -1009,6 +1027,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case let .metadata(metadataEvent):
             handleMetadata(metadataEvent)
 
+        case let .subtitle(subtitleEvent):
+            handleSubtitle(subtitleEvent)
+
         case let .presentationSizeDidChange(size):
             presentationSize = size
 
@@ -1042,6 +1063,27 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case let .timedMetadataDidChange(newMetadata):
             timedMetadata = newMetadata
         }
+    }
+
+    private func handleSubtitle(_ event: AKSubtitleEvent) {
+        switch event {
+        case let .cueDidChange(newCue):
+            currentSubtitleCue = newCue
+        case let .isRunningDidChange(running):
+            isSubtitleOutputRunning = running
+        }
+    }
+
+    // MARK: - Subtitle Output Service Controls
+
+    /// Starts intercepting subtitle and closed-caption cues from the active media item.
+    public func startSubtitleOutput() {
+        currentMedia?.subtitleOutput.start()
+    }
+
+    /// Stops intercepting subtitle and closed-caption cues.
+    public func stopSubtitleOutput() {
+        currentMedia?.subtitleOutput.stop()
     }
 
     private func handleInterstitial(_ event: AKInterstitialEvent) {

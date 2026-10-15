@@ -179,6 +179,11 @@ public extension AKPlayable {
     var chapterService: any AKChapterServiceProtocol {
         manager.chapterService
     }
+
+    /// Subtitle output service for intercepting active subtitles and captions in real-time.
+    var subtitleOutput: any AKSubtitleOutputServiceProtocol {
+        manager.subtitleOutputService
+    }
 }
 
 // MARK: - Live Stream & DVR Extensions
