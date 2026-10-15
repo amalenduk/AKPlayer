@@ -289,8 +289,6 @@ public class AKQueuePlayer: AKPlayer, AKQueuePlayerProtocol {
     private func handleTrackEnded() {
         if canPlayNext {
             next()
-        } else {
-            stop()
         }
     }
 
