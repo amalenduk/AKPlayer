@@ -17,7 +17,9 @@ import MediaPlayer
 // MARK: - AKPlayable Protocol
 
 /// A protocol representing a playable media item with metadata and playback configuration.
-public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Sendable {
+public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Identifiable, Sendable
+    where ID == URL
+{
     /// The media asset's destination URL (file path or remote stream).
     var url: URL { get }
 
@@ -78,6 +80,11 @@ public protocol AKPlayable: AnyObject, Equatable, CustomStringConvertible, Senda
 // MARK: - Default Property Implementations
 
 public extension AKPlayable {
+    /// A stable identifier for the playable media item, based on its backing URL.
+    var id: URL {
+        url
+    }
+
     /// Default FairPlay configuration (returns `nil`).
     var fairPlayConfiguration: AKFairPlayConfiguration? {
         nil
