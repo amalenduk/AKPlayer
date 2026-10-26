@@ -191,3 +191,32 @@ public extension AKPlayable {
         return ["http", "https", "rtsp", "rtmp"].contains(scheme)
     }
 }
+
+// MARK: - Playback Rate Capabilities
+
+public extension AKPlayable {
+    /// Indicates whether the media item supports fast-forward playback rates (> 1.0).
+    var canPlayFastForward: Bool {
+        playerItem?.canPlayFastForward ?? true
+    }
+
+    /// Indicates whether the media item supports slow-forward playback rates (0.0 < rate < 1.0).
+    var canPlaySlowForward: Bool {
+        playerItem?.canPlaySlowForward ?? true
+    }
+
+    /// Indicates whether the media item supports fast reverse playback rates (< -1.0).
+    var canPlayFastReverse: Bool {
+        playerItem?.canPlayFastReverse ?? false
+    }
+
+    /// Indicates whether the media item supports slow reverse playback rates (-1.0 < rate < 0.0).
+    var canPlaySlowReverse: Bool {
+        playerItem?.canPlaySlowReverse ?? false
+    }
+
+    /// Indicates whether the media item supports reverse playback (-1.0).
+    var canPlayReverse: Bool {
+        playerItem?.canPlayReverse ?? false
+    }
+}

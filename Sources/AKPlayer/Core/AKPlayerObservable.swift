@@ -814,10 +814,20 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case .subtitle:
             if selectedSubtitleTrack != option {
                 selectedSubtitleTrack = option
+                if option == nil || option?.isOff == true,
+                   selectedClosedCaptionTrack == nil || selectedClosedCaptionTrack?.isOff == true
+                {
+                    currentSubtitleCue = nil
+                }
             }
         case .closedCaption:
             if selectedClosedCaptionTrack != option {
                 selectedClosedCaptionTrack = option
+                if option == nil || option?.isOff == true,
+                   selectedSubtitleTrack == nil || selectedSubtitleTrack?.isOff == true
+                {
+                    currentSubtitleCue = nil
+                }
             }
         case .videoAlternative:
             if selectedVideoAlternativeTrack != option {

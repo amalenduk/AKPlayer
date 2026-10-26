@@ -39,6 +39,9 @@ public protocol AKSubtitleOutputServiceProtocol: AnyObject, Sendable {
 
     /// Stops intercepting subtitle cues and clears any active cue.
     func stop()
+
+    /// Clears the active subtitle or caption cue.
+    func clearCue()
 }
 
 // MARK: - Internal Lifecycle Protocol

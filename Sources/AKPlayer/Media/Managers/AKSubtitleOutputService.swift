@@ -165,6 +165,11 @@ public final class AKSubtitleOutputService: NSObject, AKSubtitleOutputServicePro
         eventsBroadcaster.send(.isRunningDidChange(false))
     }
 
+    public func clearCue() {
+        state.withLock { $0.currentCue = nil }
+        eventsBroadcaster.send(.cueDidChange(nil))
+    }
+
     // MARK: - Lifecycle Management
 
     func attach(to playerItem: AVPlayerItem) {

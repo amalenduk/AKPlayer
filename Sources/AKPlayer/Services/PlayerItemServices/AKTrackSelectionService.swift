@@ -350,6 +350,10 @@ public final class AKTrackSelectionService: AKTrackSelectionServiceProtocol,
             playerItem.select(nil, in: group)
         }
 
+        if isDeselecting, type == .subtitle || type == .closedCaption {
+            mediaManager?.subtitleOutputService.clearCue()
+        }
+
         let resolved = try await selectedTrack(for: type)
         recordAndBroadcastIfChanged(resolved, for: type)
 

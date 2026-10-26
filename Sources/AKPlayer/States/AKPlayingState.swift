@@ -209,10 +209,12 @@ public class AKPlayingState: AKBaseState {
         allowed: Bool, reason: AKPlayerUnavailableCommandReason?
     ) {
         switch action {
-        case .play(at: .normal):
-            (false, .alreadyPlaying)
+        case let .play(at: rate):
+            guard rate.rate != playerController?.player.rate
+            else { return (false, .alreadyPlaying) }
+            return super.availability(for: action)
         default:
-            super.availability(for: action)
+            return super.availability(for: action)
         }
     }
 }
