@@ -32,6 +32,9 @@ public struct AKInterstitialScheduleConfig: @unchecked Sendable {
     public var supplementsPrimaryContent: Bool
     /// Indicates whether dynamic server-side variations in content duration or payload may occur.
     public var contentMayVary: Bool
+    /// Indicates whether the interstitial event plays only once.
+    /// If true, seeking backwards before this event will not trigger it again.
+    public var willPlayOnce: Bool
 
     /// Initializes an interstitial schedule configuration payload.
     /// - Parameters:
@@ -45,6 +48,8 @@ public struct AKInterstitialScheduleConfig: @unchecked Sendable {
     ///   - supplementsPrimaryContent: Whether it supplements primary content. Defaults to `false`.
     ///   - contentMayVary: Whether ad content duration or payload may vary dynamically. Defaults to
     /// `true`.
+    ///   - willPlayOnce: Whether the interstitial should play only once during the playback
+    /// session. Defaults to `true`.
     public init(
         time: CMTime,
         templateItems: [AVPlayerItem],
@@ -54,7 +59,8 @@ public struct AKInterstitialScheduleConfig: @unchecked Sendable {
         playoutLimit: CMTime = .invalid,
         timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy = .singlePoint,
         supplementsPrimaryContent: Bool = false,
-        contentMayVary: Bool = true
+        contentMayVary: Bool = true,
+        willPlayOnce: Bool = true
     ) {
         self.time = time
         self.templateItems = templateItems
@@ -65,5 +71,6 @@ public struct AKInterstitialScheduleConfig: @unchecked Sendable {
         self.timelineOccupancy = timelineOccupancy
         self.supplementsPrimaryContent = supplementsPrimaryContent
         self.contentMayVary = contentMayVary
+        self.willPlayOnce = willPlayOnce
     }
 }

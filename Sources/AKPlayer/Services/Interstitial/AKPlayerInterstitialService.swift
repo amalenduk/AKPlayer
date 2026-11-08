@@ -270,6 +270,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             event.timelineOccupancy = config.timelineOccupancy
             event.supplementsPrimaryContent = config.supplementsPrimaryContent
             event.contentMayVary = config.contentMayVary
+            event.willPlayOnce = config.willPlayOnce
             return event
         }
 
@@ -291,7 +292,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         playoutLimit: CMTime = .invalid,
         timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy = .singlePoint,
         supplementsPrimaryContent: Bool = false,
-        contentMayVary: Bool = true
+        contentMayVary: Bool = true,
+        willPlayOnce: Bool = true
     ) {
         let config = AKInterstitialScheduleConfig(
             time: time,
@@ -302,7 +304,8 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
             playoutLimit: playoutLimit,
             timelineOccupancy: timelineOccupancy,
             supplementsPrimaryContent: supplementsPrimaryContent,
-            contentMayVary: contentMayVary
+            contentMayVary: contentMayVary,
+            willPlayOnce: willPlayOnce
         )
         schedule([config], replaceExisting: false)
     }
@@ -584,6 +587,10 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         } else {
             if let finishedEvent = lastStartedEvent {
                 playedEventIDs.insert(finishedEvent.identifier)
+                if finishedEvent.willPlayOnce {
+                    customEvents.removeAll { $0.identifier == finishedEvent.identifier }
+                    controller?.events = customEvents
+                }
                 lastStartedEvent = nil
                 setPlaybackState(.finished)
                 stopObservingInterstitialPlaybackState()
@@ -596,6 +603,10 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
 
     private func finishCurrentEvent(_ event: AVPlayerInterstitialEvent, resumptionOffset: CMTime) {
         playedEventIDs.insert(event.identifier)
+        if event.willPlayOnce {
+            customEvents.removeAll { $0.identifier == event.identifier }
+            controller?.events = customEvents
+        }
         lastStartedEvent = nil
         setPlaybackState(.finished)
         stopObservingInterstitialPlaybackState()

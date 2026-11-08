@@ -119,6 +119,8 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
     ///   - timelineOccupancy: Timeline occupancy behavior (`.singlePoint` or `.fill`).
     ///   - supplementsPrimaryContent: Whether the interstitial supplements primary content.
     ///   - contentMayVary: Whether interstitial content may vary.
+    ///   - willPlayOnce: Whether the interstitial should play only once and not replay when seeking
+    /// back.
     func schedule(
         at time: CMTime,
         templateItems: [AVPlayerItem],
@@ -128,7 +130,8 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
         playoutLimit: CMTime,
         timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy,
         supplementsPrimaryContent: Bool,
-        contentMayVary: Bool
+        contentMayVary: Bool,
+        willPlayOnce: Bool
     )
 
     /// Cancels the currently active interstitial ad event.
@@ -178,6 +181,32 @@ public protocol AKPlayerInterstitialServiceProtocol: AnyObject, Sendable {
 }
 
 public extension AKPlayerInterstitialServiceProtocol {
+    func schedule(
+        at time: CMTime,
+        templateItems: [AVPlayerItem],
+        identifier: String? = nil,
+        restrictions: AVPlayerInterstitialEvent.Restrictions = [],
+        resumptionOffset: CMTime = .zero,
+        playoutLimit: CMTime = .invalid,
+        timelineOccupancy: AVPlayerInterstitialEvent.TimelineOccupancy = .singlePoint,
+        supplementsPrimaryContent: Bool = false,
+        contentMayVary: Bool = true,
+        willPlayOnce: Bool = true
+    ) {
+        schedule(
+            at: time,
+            templateItems: templateItems,
+            identifier: identifier,
+            restrictions: restrictions,
+            resumptionOffset: resumptionOffset,
+            playoutLimit: playoutLimit,
+            timelineOccupancy: timelineOccupancy,
+            supplementsPrimaryContent: supplementsPrimaryContent,
+            contentMayVary: contentMayVary,
+            willPlayOnce: willPlayOnce
+        )
+    }
+
     func skipCurrentEvent() {
         cancelCurrent(resumptionOffset: .zero)
     }
