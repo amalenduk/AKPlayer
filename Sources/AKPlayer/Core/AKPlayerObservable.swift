@@ -25,7 +25,7 @@ public enum AKPlayerTimelineSource: Sendable, Equatable {
 /// remain available for functionality not directly surfaced by this type.
 @MainActor
 @Observable
-public class AKPlayerObservable: AKPlayerActionsProtocol {
+public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
     /// The underlying player that performs media loading and playback.
     public let player: AKPlayer
 

@@ -34,6 +34,7 @@
   - [7. Chapters & Media Metadata](#7-chapters--media-metadata)
   - [8. Audio Session & Interruption Handling](#8-audio-session--interruption-handling)
   - [9. Picture-in-Picture (PiP)](#9-picture-in-picture-pip)
+  - [10. Segment & A-B Looping](#10-segment--a-b-looping)
 - [Configuration](#configuration)
 - [Observing Events](#observing-events)
 - [Demo App](#demo-app)
@@ -58,6 +59,7 @@
 - 📻 **FairPlay Streaming (DRM)**: Integrated `AKFairPlayHandler` for SPC/CKC license key exchange with persistable offline key support.
 - 👥 **Apple SharePlay**: Seamless synchronized playback across FaceTime using `GroupActivities` and `AVPlayerPlaybackCoordinator`.
 - 🎙️ **Voice Pitch Preservation**: Configurable `AVAudioTimePitchAlgorithm` (.spectral, .timeDomain, .varispeed) for natural 2x/3x speed podcast playback.
+- 🔁 **A-B / Segment Looping**: Continuous segment looping between custom time boundaries via `AKPlayerLoopProtocol` with boundary enforcement, zero-tolerance seek rewinds, and live stream safety.
 
 ---
 
@@ -523,6 +525,55 @@ if pipController.isPictureInPicturePossible {
 
 ---
 
+### 10. Segment & A-B Looping
+
+AKPlayer supports seamless continuous playback looping between custom time boundaries via the dedicated `AKPlayerLoopProtocol`. Looping is automatically protected against live streams, strictly validates that the requested range is within the media duration, and rewinds seamlessly with zero tolerance when reaching the end boundary:
+
+```swift
+// Enable A-B looping using CMTime or seconds
+let loopStart = CMTime(seconds: 10.0, preferredTimescale: 600)
+let loopEnd = CMTime(seconds: 25.0, preferredTimescale: 600)
+let success = player.setLoopRange(startTime: loopStart, endTime: loopEnd)
+
+// Or using seconds convenience
+player.setLoopRange(startSeconds: 10.0, endSeconds: 25.0)
+
+// Inspect loop state
+if player.isLoopActive, let loop = player.loopRange {
+    print("Looping from \(loop.startSeconds)s to \(loop.endSeconds)s (duration: \(loop.durationSeconds)s)")
+}
+
+// Clear and disable looping
+player.clearLoop()
+```
+
+#### SwiftUI Observation with `AKPlayerObservable`
+
+`AKPlayerObservable` conforms to `AKPlayerLoopProtocol` and publishes reactive updates whenever a loop is set, cleared, or reset:
+
+```swift
+struct LoopControlView: View {
+    @State private var playerModel = AKPlayerObservable()
+
+    var body: some View {
+        VStack {
+            if let loop = playerModel.loopRange {
+                Text("Loop: \(String(format: "%.1f", loop.startSeconds))s - \(String(format: "%.1f", loop.endSeconds))s")
+                Button("Clear Loop") {
+                    playerModel.clearLoop()
+                }
+            } else {
+                Button("Set Loop (10s - 30s)") {
+                    playerModel.setLoopRange(startSeconds: 10.0, endSeconds: 30.0)
+                }
+            }
+        }
+    }
+}
+```
+
+---
+
 ## Configuration
 
 Customize player behaviors with `AKPlayerConfiguration`:
@@ -583,6 +634,9 @@ Task {
             
         case .muteStatusDidChange(let isMuted):
             print("Mute status changed: \(isMuted)")
+
+        case .loopRangeDidChange(let loopRange):
+            print("Loop range changed: \(String(describing: loopRange))")
 
         case .sharePlayStateDidChange(let sharePlayState):
             print("SharePlay state: \(sharePlayState)")

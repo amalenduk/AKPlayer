@@ -15,7 +15,9 @@ import GroupActivities
 /// Protocol defining the main player instance properties, playback metrics, and
 /// boundary observation capabilities.
 @MainActor
-public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol {
+public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol,
+    AKPlayerLoopProtocol
+{
     // MARK: - Core Properties
 
     /// The underlying `AVPlayer` instance managing media playback.
