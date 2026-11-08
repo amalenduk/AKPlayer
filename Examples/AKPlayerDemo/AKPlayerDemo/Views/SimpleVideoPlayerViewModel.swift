@@ -138,7 +138,6 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
 
     private func syncFromObservable() {
         self.stateDescription = observable.state.description
-        self.isLoading = observable.isLoading
         self.currentTime = observable.currentTimeSeconds
         self.duration = observable.durationSeconds
         self.volume = observable.volume
@@ -266,7 +265,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
     public func seekOffset(_ offset: Double) {
         Task {
             if offset > 0 {
-                _ = await observable.skipForward(by: offset)
+                _ = await observable.seek(to: .offset(offset))
             } else {
                 _ = await observable.seek(to: .offset(abs(offset)))
             }

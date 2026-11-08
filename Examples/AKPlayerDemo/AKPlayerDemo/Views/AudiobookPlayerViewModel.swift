@@ -331,6 +331,9 @@ extension AudiobookPlayerViewModel {
         case .boundaryReached, .volumeDidChange, .muteStatusDidChange, .sharePlayStateDidChange,
              .commandUnavailable, .interstitial, .media, .autoPlayDidChange:
             break
+
+        case .loopRangeDidChange:
+            break
         }
     }
 }

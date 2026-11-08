@@ -214,6 +214,9 @@ extension QueuePlayerViewModel {
              .sharePlayStateDidChange, .commandUnavailable, .didFail, .interstitial, .media,
              .autoPlayDidChange:
             break
+
+        case .loopRangeDidChange:
+            break
         }
     }
 }

@@ -348,6 +348,9 @@ extension LivePlayerViewModel {
         case .didReachEnd, .boundaryReached, .sharePlayStateDidChange, .interstitial, .media,
              .autoPlayDidChange:
             break
+
+        case .loopRangeDidChange:
+            break
         }
     }
 }
