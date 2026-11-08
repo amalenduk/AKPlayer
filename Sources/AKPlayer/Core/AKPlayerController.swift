@@ -153,6 +153,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
 
     // MARK: - Controller Services
 
+    /// Active loop range if segment/A-B looping is enabled, or `nil` if looping is disabled.
+    public private(set) var loopRange: AKLoopRange?
+
     /// Service managing seek operation queuing and execution against
     /// `AVPlayer`.
     public let playerSeekingThroughMediaService: any AKPlayerSeekingThroughMediaServiceProtocol
@@ -329,6 +332,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         if !state.isAny(of: [.idle, .stopped, .failed]) {
             stop()
         }
+        clearLoop()
         currentMedia = media
         controller.load(media: media, autoPlay: autoPlay, at: position)
     }
@@ -499,6 +503,80 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         controller.jumpToLive(completionHandler: completionHandler)
     }
 
+    // MARK: - Playback Looping (A-B Looping)
+
+    /// Enables continuous playback looping between specified start and end time boundaries.
+    /// - Parameters:
+    ///   - startTime: The loop start boundary as `CMTime`.
+    ///   - endTime: The loop end boundary as `CMTime`.
+    /// - Returns: `true` if the loop was valid and successfully activated; `false` otherwise.
+    @discardableResult
+    public func setLoopRange(startTime: CMTime, endTime: CMTime) -> Bool {
+        // 1. Live stream check: Looping is not applicable for live content
+        guard !isLive, currentMedia?.isLive() == false else {
+            AKLogger.warning(
+                "AKPlayerController: Looping is not applicable for live streams.",
+                category: .player
+            )
+            return false
+        }
+
+        // 2. Active media & numeric duration check
+        guard currentItem != nil,
+              currentItemDuration.isNumeric,
+              currentItemDuration > .zero
+        else {
+            AKLogger.warning(
+                "AKPlayerController: Cannot set loop range without an active item with valid duration.",
+                category: .player
+            )
+            return false
+        }
+
+        // 3. Numeric timestamps check
+        guard startTime.isNumeric, endTime.isNumeric else {
+            return false
+        }
+
+        // 4. Bounds validation within media duration
+        guard startTime >= .zero,
+              endTime <= currentItemDuration,
+              startTime < endTime,
+              (endTime - startTime).seconds >= 0.1
+        else {
+            AKLogger.warning(
+                "AKPlayerController: Invalid loop range: start (\(startTime.seconds)s) must be < end (\(endTime.seconds)s) and within duration (\(currentItemDuration.seconds)s).",
+                category: .player
+            )
+            return false
+        }
+
+        let newRange = AKLoopRange(start: startTime, end: endTime)
+        loopRange = newRange
+        eventBroadcaster.send(.loopRangeDidChange(newRange))
+
+        // If current playback position is outside the loop range, jump immediately to the loop
+        // start
+        if currentTime < startTime || currentTime >= endTime {
+            Task { [weak self] in
+                await self?.seek(
+                    to: .time(startTime),
+                    toleranceBefore: .zero,
+                    toleranceAfter: .zero
+                )
+            }
+        }
+
+        return true
+    }
+
+    /// Disables active segment looping.
+    public func clearLoop() {
+        guard loopRange != nil else { return }
+        loopRange = nil
+        eventBroadcaster.send(.loopRangeDidChange(nil))
+    }
+
     // MARK: - Helper & Pipeline Management Functions
 
     /// Prepares the controller pipeline, initializes idle state, starts network
@@ -577,6 +655,18 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             for await time in stream {
                 guard !Task.isCancelled, let self else { break }
                 guard currentMedia != nil else { continue }
+
+                // Evaluate active A-B loop boundary
+                if let loop = loopRange, time >= loop.end {
+                    Task { [weak self] in
+                        await self?.seek(
+                            to: .time(loop.start),
+                            toleranceBefore: .zero,
+                            toleranceAfter: .zero
+                        )
+                    }
+                }
+
                 eventBroadcaster.send(.timeDidChange(time))
             }
         }
@@ -771,6 +861,7 @@ public extension AKPlayerController {
     /// Directly pauses playback, resets position to time zero, and cancels
     /// pending seek requests.
     func performStop() {
+        clearLoop()
         playerPlaybackTimeObserver.stopObservingPeriodicTime()
         playerPlaybackTimeObserver.stopObservingBoundaryTime()
 

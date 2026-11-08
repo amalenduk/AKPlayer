@@ -140,6 +140,13 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.isAtLiveEdge
     }
 
+    // MARK: - Playback Looping (A-B Looping)
+
+    /// Active loop range if segment/A-B looping is enabled, or `nil` if looping is disabled.
+    public var loopRange: AKLoopRange? {
+        playerController.loopRange
+    }
+
     // MARK: - Manager & Services
 
     /// Controller managing underlying AVPlayer actions and state machine
@@ -499,6 +506,23 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
             return
         }
         playerController.jumpToLive(completionHandler: completionHandler)
+    }
+
+    // MARK: - Playback Looping Commands
+
+    /// Enables continuous playback looping between specified start and end time boundaries.
+    /// - Parameters:
+    ///   - startTime: The loop start boundary as `CMTime`.
+    ///   - endTime: The loop end boundary as `CMTime`.
+    /// - Returns: `true` if the loop was valid and successfully activated; `false` otherwise.
+    @discardableResult
+    public func setLoopRange(startTime: CMTime, endTime: CMTime) -> Bool {
+        playerController.setLoopRange(startTime: startTime, endTime: endTime)
+    }
+
+    /// Disables active segment looping.
+    public func clearLoop() {
+        playerController.clearLoop()
     }
 
     // MARK: - Internal Helper Functions

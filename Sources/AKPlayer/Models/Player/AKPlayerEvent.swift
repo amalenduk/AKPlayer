@@ -55,6 +55,11 @@ public enum AKPlayerEvent: Sendable {
     /// Audio mute toggle state changed.
     case muteStatusDidChange(isMuted: Bool)
 
+    // MARK: - Playback Looping
+
+    /// The active A-B loop boundary range changed or was cleared.
+    case loopRangeDidChange(AKLoopRange?)
+
     // MARK: - SharePlay
 
     /// The SharePlay group activity synchronization state changed.
@@ -102,6 +107,8 @@ extension AKPlayerEvent: Equatable {
         case let (.volumeDidChange(l), .volumeDidChange(r)):
             l == r
         case let (.muteStatusDidChange(l), .muteStatusDidChange(r)):
+            l == r
+        case let (.loopRangeDidChange(l), .loopRangeDidChange(r)):
             l == r
         case let (.sharePlayStateDidChange(l), .sharePlayStateDidChange(r)):
             l == r

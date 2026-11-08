@@ -133,6 +133,16 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     /// The drift in seconds behind the live playback edge.
     public private(set) var liveDrift: TimeInterval = 0
 
+    // MARK: - Playback Looping (A-B Looping)
+
+    /// Active loop range if segment/A-B looping is enabled, or `nil` if looping is disabled.
+    public private(set) var loopRange: AKLoopRange?
+
+    /// Indicates whether segment/A-B looping is currently active.
+    public var isLoopActive: Bool {
+        loopRange != nil
+    }
+
     /// All chapters extracted from the current media item.
     public private(set) var chapters: [AKChapter] = []
 
@@ -339,6 +349,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         liveDrift = player.currentMedia?.liveDrift ?? .zero
         metadata = player.currentMedia?.metadataProvider.staticMetadata
         timedMetadata = player.currentMedia?.metadataProvider.timedMetadata
+        loopRange = player.loopRange
         canSeek = player.interstitialService.isPlayingInterstitial
             ? player.interstitialService.canSeek
             : player.currentMedia?.canSeek ?? false
@@ -669,6 +680,28 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         player.jumpToLive(completionHandler: completionHandler)
     }
 
+    // MARK: - Playback Looping Commands (AKPlayerActionsProtocol)
+
+    /// Enables continuous playback looping between specified start and end time boundaries.
+    /// - Parameters:
+    ///   - startTime: The loop start boundary as `CMTime`.
+    ///   - endTime: The loop end boundary as `CMTime`.
+    /// - Returns: `true` if the loop was valid and successfully activated; `false` otherwise.
+    @discardableResult
+    public func setLoopRange(startTime: CMTime, endTime: CMTime) -> Bool {
+        let success = player.setLoopRange(startTime: startTime, endTime: endTime)
+        if success {
+            loopRange = player.loopRange
+        }
+        return success
+    }
+
+    /// Disables active segment looping.
+    public func clearLoop() {
+        player.clearLoop()
+        loopRange = nil
+    }
+
     // MARK: - Audio & Volume Controls
 
     /// Changes the output volume.
@@ -893,6 +926,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
         case let .muteStatusDidChange(isMuted):
             self.isMuted = isMuted
 
+        case let .loopRangeDidChange(newRange):
+            loopRange = newRange
+
         case let .didFail(playerError):
             error = playerError
 
@@ -904,6 +940,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
     private func handleStateDidChange(_ newState: AKPlayerState) {
         state = newState
         if newState.isStopped {
+            loopRange = nil
             currentMedia = nil
             capabilities = [:]
             canSeek = false
@@ -957,6 +994,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol {
 
     private func handleMediaDidChange(_ media: (any AKPlayable)?) {
         currentMedia = media
+        loopRange = player.loopRange
         metadata = media?.metadataProvider.staticMetadata
         currentSubtitleCue = media?.subtitleOutput.currentCue
         isSubtitleOutputRunning = media?.subtitleOutput.isRunning ?? false
