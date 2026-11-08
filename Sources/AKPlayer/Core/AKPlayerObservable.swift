@@ -601,22 +601,6 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         await seek(to: .seconds(seconds), scope: scope)
     }
 
-    /// Skips forward by the specified duration in seconds.
-    /// - Parameter seconds: Number of seconds to jump ahead. Defaults to 15.
-    /// - Returns: Whether the seek completed successfully.
-    @discardableResult
-    public func skipForward(by seconds: Double = 15) async -> Bool {
-        await seek(to: .offset(seconds))
-    }
-
-    /// Skips backward by the specified duration in seconds.
-    /// - Parameter seconds: Number of seconds to jump behind. Defaults to 10.
-    /// - Returns: Whether the seek completed successfully.
-    @discardableResult
-    public func skipBackward(by seconds: Double = 10) async -> Bool {
-        await seek(to: .offset(-seconds))
-    }
-
     /// Seeks to a chapter's start time.
     /// - Parameter chapter: The chapter to seek to.
     /// - Returns: Whether the seek completed successfully.

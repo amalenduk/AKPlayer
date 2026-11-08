@@ -268,7 +268,7 @@ public class SimpleVideoPlayerViewModel: NSObject, ObservableObject {
             if offset > 0 {
                 _ = await observable.skipForward(by: offset)
             } else {
-                _ = await observable.skipBackward(by: abs(offset))
+                _ = await observable.seek(to: .offset(abs(offset)))
             }
         }
     }

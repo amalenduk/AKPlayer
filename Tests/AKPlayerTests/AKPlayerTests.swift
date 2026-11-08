@@ -52,17 +52,6 @@ struct AKPlayerTests {
         #expect(observable.timelineSource == .normal)
     }
 
-    @Test func observablePlayerTransportSkipHelpers() async {
-        let player = AKPlayer()
-        let observable = AKPlayerObservable(player: player)
-
-        // Transport skips should execute safely without crashing even when idle
-        let forwardSuccess = await observable.skipForward(by: 15)
-        let backwardSuccess = await observable.skipBackward(by: 10)
-        #expect(forwardSuccess == false)
-        #expect(backwardSuccess == false)
-    }
-
     @Test func queueObservableExposesPlaybackAndQueueState() async throws {
         let queuePlayer = AKQueuePlayer()
         let observable = AKQueuePlayerObservable(player: queuePlayer)
