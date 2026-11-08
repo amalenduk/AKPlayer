@@ -60,6 +60,20 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         playerController.currentTime
     }
 
+    /// Returns the current playback position in the specified timeline coordinate space.
+    /// - Parameter scope: The timeline coordinate space (`.primary` or `.integrated`).
+    /// - Returns: The current playback position as `CMTime`.
+    public func currentTime(in scope: AKSeekScope) -> CMTime {
+        playerController.currentTime(in: scope)
+    }
+
+    /// Returns the total duration in the specified timeline coordinate space.
+    /// - Parameter scope: The timeline coordinate space (`.primary` or `.integrated`).
+    /// - Returns: The total duration as `CMTime`.
+    public func duration(in scope: AKSeekScope) -> CMTime {
+        playerController.duration(in: scope)
+    }
+
     /// The remaining playback time of the active item, if available.
     public var remainingTime: CMTime? {
         playerController.remainingTime
@@ -509,6 +523,18 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
     }
 
     // MARK: - Playback Looping Commands
+
+    /// Enables continuous playback looping between specified start and end time boundaries within
+    /// a targeted timeline coordinate space.
+    /// - Parameters:
+    ///   - startTime: The loop start boundary as `CMTime`.
+    ///   - endTime: The loop end boundary as `CMTime`.
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
+    /// - Returns: `true` if the loop was valid and successfully activated; `false` otherwise.
+    @discardableResult
+    public func setLoopRange(startTime: CMTime, endTime: CMTime, scope: AKSeekScope) -> Bool {
+        playerController.setLoopRange(startTime: startTime, endTime: endTime, scope: scope)
+    }
 
     /// Enables continuous playback looping between specified start and end time boundaries.
     /// - Parameters:

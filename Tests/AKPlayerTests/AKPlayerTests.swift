@@ -420,4 +420,33 @@ struct AKPlayerTests {
         controller.change(AKPlayingState(playerController: controller))
         #expect(!controller.willPlay)
     }
+
+    @Test func scopedTimeAndDurationQueries() throws {
+        let avPlayer = AVPlayer()
+        let controller = AKPlayerController(
+            player: avPlayer,
+            configuration: AKPlayerConfiguration()
+        )
+        try controller.prepare()
+
+        // 1. Controller scoped queries
+        #expect(controller.currentTime(in: .primary) == controller.currentTime)
+        #expect(controller.duration(in: .primary) == controller.currentItemDuration)
+        #expect(controller.currentTime(in: .integrated) == controller.currentTime)
+        #expect(controller.duration(in: .integrated) == controller.currentItemDuration)
+
+        // 2. Player scoped queries
+        let player = AKPlayer()
+        #expect(player.currentTime(in: .primary) == player.currentTime)
+        #expect(player.duration(in: .primary) == player.currentItemDuration)
+        #expect(player.currentTime(in: .integrated) == player.currentTime)
+        #expect(player.duration(in: .integrated) == player.currentItemDuration)
+
+        // 3. Observable scoped queries
+        let observable = AKPlayerObservable(player: player)
+        #expect(observable.currentTime(in: .primary) == player.currentTime)
+        #expect(observable.duration(in: .primary) == player.currentItemDuration)
+        #expect(observable.currentTime(in: .integrated) == player.currentTime(in: .integrated))
+        #expect(observable.duration(in: .integrated) == player.duration(in: .integrated))
+    }
 }

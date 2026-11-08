@@ -92,4 +92,59 @@ struct AKLoopRangeTests {
         #expect(player.loopRange == nil)
         #expect(player.isLoopActive == false)
     }
+
+    @Test func loopRangeScopePropertiesAndDescription() {
+        let start = CMTime(seconds: 10, preferredTimescale: 600)
+        let end = CMTime(seconds: 25, preferredTimescale: 600)
+
+        let primaryLoop = AKLoopRange(start: start, end: end, scope: .primary)
+        let integratedLoop = AKLoopRange(start: start, end: end, scope: .integrated)
+
+        #expect(primaryLoop.scope == .primary)
+        #expect(integratedLoop.scope == .integrated)
+        #expect(primaryLoop != integratedLoop)
+
+        #expect(primaryLoop.description.contains("scope: primary"))
+        #expect(integratedLoop.description.contains("scope: integrated"))
+
+        // Default scope should be .primary
+        let defaultLoop = AKLoopRange(start: start, end: end)
+        #expect(defaultLoop.scope == .primary)
+        #expect(defaultLoop == primaryLoop)
+
+        let secondsLoop = AKLoopRange(startSeconds: 10, endSeconds: 25, scope: .integrated)
+        #expect(secondsLoop.scope == .integrated)
+        #expect(secondsLoop == integratedLoop)
+    }
+
+    @Test func scopedLoopRejectsWhenNoItemLoaded() async throws {
+        let player = AKPlayer()
+        try await player.prepare()
+
+        let successPrimary = player.setLoopRange(
+            startSeconds: 5.0,
+            endSeconds: 15.0,
+            scope: .primary
+        )
+        #expect(successPrimary == false)
+
+        let successIntegrated = player.setLoopRange(
+            startSeconds: 5.0,
+            endSeconds: 15.0,
+            scope: .integrated
+        )
+        #expect(successIntegrated == false)
+        #expect(player.loopRange == nil)
+        #expect(player.isLoopActive == false)
+
+        let observable = AKPlayerObservable(player: player)
+        let obsSuccess = observable.setLoopRange(
+            startSeconds: 5.0,
+            endSeconds: 15.0,
+            scope: .integrated
+        )
+        #expect(obsSuccess == false)
+        #expect(observable.loopRange == nil)
+        #expect(observable.isLoopActive == false)
+    }
 }

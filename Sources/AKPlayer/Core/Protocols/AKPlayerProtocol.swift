@@ -98,6 +98,18 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol,
     /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
     var isAtLiveEdge: Bool { get }
 
+    // MARK: - Scoped Time Queries
+
+    /// Returns the current playback position in the specified timeline coordinate space.
+    /// - Parameter scope: The timeline coordinate space (`.primary` or `.integrated`).
+    /// - Returns: The current playback position as `CMTime`.
+    func currentTime(in scope: AKSeekScope) -> CMTime
+
+    /// Returns the total duration in the specified timeline coordinate space.
+    /// - Parameter scope: The timeline coordinate space (`.primary` or `.integrated`).
+    /// - Returns: The total duration as `CMTime`.
+    func duration(in scope: AKSeekScope) -> CMTime
+
     // MARK: - Boundary Time Observers
 
     /// Registers a boundary time observer to trigger notifications when
@@ -109,6 +121,22 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol,
     /// Removes the currently registered boundary time observer from the
     /// underlying player instance.
     func removeBoundaryTimeObserver()
+}
+
+// MARK: - Scoped Time Queries Extension
+
+public extension AKPlayerProtocol {
+    /// Returns the current playback position in the specified timeline coordinate space.
+    /// Defaults to returning `currentTime`.
+    func currentTime(in _: AKSeekScope) -> CMTime {
+        currentTime
+    }
+
+    /// Returns the total duration in the specified timeline coordinate space.
+    /// Defaults to returning `currentItemDuration`.
+    func duration(in _: AKSeekScope) -> CMTime {
+        currentItemDuration
+    }
 }
 
 // MARK: - Playback State Convenience Extension

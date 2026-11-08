@@ -21,6 +21,9 @@ public struct AKLoopRange: Sendable, Equatable, Hashable, CustomStringConvertibl
     /// The ending boundary timestamp of the loop segment.
     public let end: CMTime
 
+    /// The timeline coordinate space targeted by this loop range (`.primary` or `.integrated`).
+    public let scope: AKSeekScope
+
     /// The loop starting boundary in fractional seconds.
     public var startSeconds: TimeInterval {
         start.seconds
@@ -47,23 +50,30 @@ public struct AKLoopRange: Sendable, Equatable, Hashable, CustomStringConvertibl
     /// - Parameters:
     ///   - start: Starting timestamp.
     ///   - end: Ending timestamp.
-    public init(start: CMTime, end: CMTime) {
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`). Defaults to
+    /// `.primary`.
+    public init(start: CMTime, end: CMTime, scope: AKSeekScope = .primary) {
         self.start = start
         self.end = end
+        self.scope = scope
     }
 
     /// Initializes a loop range with starting and ending timestamps in seconds.
     /// - Parameters:
     ///   - startSeconds: Starting boundary in seconds.
     ///   - endSeconds: Ending boundary in seconds.
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`). Defaults to
+    /// `.primary`.
     ///   - timescale: The preferred CMTime timescale (default: 600).
     public init(
         startSeconds: TimeInterval,
         endSeconds: TimeInterval,
+        scope: AKSeekScope = .primary,
         timescale: CMTimeScale = 600
     ) {
         self.start = CMTime(seconds: max(0, startSeconds), preferredTimescale: timescale)
         self.end = CMTime(seconds: max(0, endSeconds), preferredTimescale: timescale)
+        self.scope = scope
     }
 
     // MARK: - Range Inspection
@@ -86,10 +96,11 @@ public struct AKLoopRange: Sendable, Equatable, Hashable, CustomStringConvertibl
 
     public var description: String {
         String(
-            format: "AKLoopRange(start: %.2fs, end: %.2fs, duration: %.2fs)",
+            format: "AKLoopRange(start: %.2fs, end: %.2fs, duration: %.2fs, scope: %@)",
             startSeconds,
             endSeconds,
-            durationSeconds
+            durationSeconds,
+            scope.rawValue
         )
     }
 }

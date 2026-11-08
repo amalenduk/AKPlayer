@@ -66,6 +66,42 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         player.currentTime()
     }
 
+    /// Returns the current playback position in the specified timeline coordinate space.
+    /// - Parameter scope: The timeline coordinate space (`.primary` or `.integrated`).
+    /// - Returns: The current playback position as `CMTime`.
+    public func currentTime(in scope: AKSeekScope) -> CMTime {
+        switch scope {
+        case .primary:
+            return currentTime
+        case .integrated:
+            guard interstitialService.integratedTimeline != nil || interstitialService
+                .isPlayingInterstitial
+            else {
+                return currentTime
+            }
+            return CMTime(
+                seconds: interstitialService.integratedTimelineCurrentTime,
+                preferredTimescale: 600
+            )
+        }
+    }
+
+    /// Returns the total duration in the specified timeline coordinate space.
+    /// - Parameter scope: The timeline coordinate space (`.primary` or `.integrated`).
+    /// - Returns: The total duration as `CMTime`.
+    public func duration(in scope: AKSeekScope) -> CMTime {
+        switch scope {
+        case .primary:
+            return currentItemDuration
+        case .integrated:
+            let dur = interstitialService.integratedTimelineDuration
+            guard dur.isFinite, dur > 0 else {
+                return currentItemDuration
+            }
+            return CMTime(seconds: dur, preferredTimescale: 600)
+        }
+    }
+
     /// The remaining playback time duration for the active media item, if
     /// available.
     public var remainingTime: CMTime? {
@@ -505,13 +541,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
 
     // MARK: - Playback Looping (A-B Looping)
 
-    /// Enables continuous playback looping between specified start and end time boundaries.
+    /// Enables continuous playback looping between specified start and end time boundaries within
+    /// a targeted timeline coordinate space.
     /// - Parameters:
     ///   - startTime: The loop start boundary as `CMTime`.
     ///   - endTime: The loop end boundary as `CMTime`.
+    ///   - scope: The timeline coordinate space targeted (`.primary` or `.integrated`).
     /// - Returns: `true` if the loop was valid and successfully activated; `false` otherwise.
     @discardableResult
-    public func setLoopRange(startTime: CMTime, endTime: CMTime) -> Bool {
+    public func setLoopRange(startTime: CMTime, endTime: CMTime, scope: AKSeekScope) -> Bool {
         // 1. Live stream check: Looping is not applicable for live content
         guard !isLive, currentMedia?.isLive() == false else {
             AKLogger.warning(
@@ -521,16 +559,36 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             return false
         }
 
-        // 2. Active media & numeric duration check
-        guard currentItem != nil,
-              currentItemDuration.isNumeric,
-              currentItemDuration > .zero
-        else {
+        // 2. Active media & numeric duration check based on scope
+        guard currentItem != nil else {
             AKLogger.warning(
-                "AKPlayerController: Cannot set loop range without an active item with valid duration.",
+                "AKPlayerController: Cannot set loop range without an active item.",
                 category: .player
             )
             return false
+        }
+
+        let maxDuration: CMTime
+        switch scope {
+        case .primary:
+            guard currentItemDuration.isNumeric, currentItemDuration > .zero else {
+                AKLogger.warning(
+                    "AKPlayerController: Cannot set loop range without an active item with valid primary duration.",
+                    category: .player
+                )
+                return false
+            }
+            maxDuration = currentItemDuration
+        case .integrated:
+            let dur = interstitialService.integratedTimelineDuration
+            guard dur.isFinite, dur > 0 else {
+                AKLogger.warning(
+                    "AKPlayerController: Cannot set integrated loop range without a valid integrated timeline duration.",
+                    category: .player
+                )
+                return false
+            }
+            maxDuration = CMTime(seconds: dur, preferredTimescale: 600)
         }
 
         // 3. Numeric timestamps check
@@ -538,29 +596,37 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             return false
         }
 
-        // 4. Bounds validation within media duration
+        // 4. Bounds validation within media duration for target scope
         guard startTime >= .zero,
-              endTime <= currentItemDuration,
+              endTime <= maxDuration,
               startTime < endTime,
               (endTime - startTime).seconds >= 0.1
         else {
             AKLogger.warning(
-                "AKPlayerController: Invalid loop range: start (\(startTime.seconds)s) must be < end (\(endTime.seconds)s) and within duration (\(currentItemDuration.seconds)s).",
+                "AKPlayerController: Invalid loop range: start (\(startTime.seconds)s) must be < end (\(endTime.seconds)s) and within duration (\(maxDuration.seconds)s).",
                 category: .player
             )
             return false
         }
 
-        let newRange = AKLoopRange(start: startTime, end: endTime)
+        let newRange = AKLoopRange(start: startTime, end: endTime, scope: scope)
         loopRange = newRange
         eventBroadcaster.send(.loopRangeDidChange(newRange))
 
-        // If current playback position is outside the loop range, jump immediately to the loop
+        // 5. If current playback position is outside the loop range, jump immediately to the loop
         // start
-        if currentTime < startTime || currentTime >= endTime {
+        let currentPos: CMTime = (scope == .integrated)
+            ? CMTime(
+                seconds: interstitialService.integratedTimelineCurrentTime,
+                preferredTimescale: 600
+            )
+            : currentTime
+
+        if currentPos < startTime || currentPos >= endTime {
             Task { [weak self] in
                 await self?.seek(
                     to: .time(startTime),
+                    scope: scope,
                     toleranceBefore: .zero,
                     toleranceAfter: .zero
                 )
@@ -568,6 +634,17 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         }
 
         return true
+    }
+
+    /// Enables continuous playback looping between specified start and end time boundaries within
+    /// the primary playback timeline.
+    /// - Parameters:
+    ///   - startTime: The loop start boundary as `CMTime`.
+    ///   - endTime: The loop end boundary as `CMTime`.
+    /// - Returns: `true` if the loop was valid and successfully activated; `false` otherwise.
+    @discardableResult
+    public func setLoopRange(startTime: CMTime, endTime: CMTime) -> Bool {
+        setLoopRange(startTime: startTime, endTime: endTime, scope: .primary)
     }
 
     /// Disables active segment looping.
@@ -656,11 +733,12 @@ public class AKPlayerController: AKPlayerControllerProtocol {
                 guard !Task.isCancelled, let self else { break }
                 guard currentMedia != nil else { continue }
 
-                // Evaluate active A-B loop boundary
-                if let loop = loopRange, time >= loop.end {
+                // Evaluate active A-B loop boundary for primary timeline scope
+                if let loop = loopRange, loop.scope == .primary, time >= loop.end {
                     Task { [weak self] in
                         await self?.seek(
                             to: .time(loop.start),
+                            scope: .primary,
                             toleranceBefore: .zero,
                             toleranceAfter: .zero
                         )
@@ -752,9 +830,28 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             guard let stream = self?.interstitialService.events else { return }
             for await event in stream {
                 guard !Task.isCancelled, let self else { break }
-                if case let .playbackStateDidChange(playbackState) = event {
+                switch event {
+                case let .playbackStateDidChange(playbackState):
                     guard interstitialService.isPlayingInterstitial else { continue }
                     controller.handleInterstitialPlaybackStateChange(playbackState)
+                case let .integratedTimeline(.timeUpdated(currentTime, _, _)):
+                    // Evaluate active A-B loop boundary for integrated timeline scope
+                    if let loop = loopRange, loop.scope == .integrated,
+                       currentTime >= loop.end.seconds
+                    {
+                        guard !interstitialService.isPlayingInterstitial || interstitialService
+                            .canSeek else { continue }
+                        Task { [weak self] in
+                            await self?.seek(
+                                to: .time(loop.start),
+                                scope: .integrated,
+                                toleranceBefore: .zero,
+                                toleranceAfter: .zero
+                            )
+                        }
+                    }
+                default:
+                    break
                 }
             }
         }
