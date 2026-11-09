@@ -55,6 +55,39 @@ public class AKFailedState: AKBaseState {
         AKLogger.error(error.localizedDescription, category: .player)
     }
 
+    // MARK: - Actions (AKPlayerActionsProtocol)
+
+    // MARK: 1. Controlling Playback
+
+    /// Commands the player to begin media playback.
+    override public func play() {
+        performIfAllowed(
+            check: { availability(for: .play()) },
+            action: { [weak self] in
+                guard let self,
+                      let playerController,
+                      let media = playerController.currentMedia else { return }
+                return load(
+                    media: media,
+                    autoPlay: true
+                )
+            },
+            blocked: { [weak self] reason in
+                guard let self, let playerController else { return }
+                if reason == .loadMediaFirst,
+                   let media = playerController.currentMedia
+                {
+                    return load(
+                        media: media,
+                        autoPlay: true
+                    )
+                }
+                playerController.emit(.commandUnavailable(reason: reason))
+            },
+            fallback: ()
+        )
+    }
+
     // MARK: - Availability Overrides
 
     /// Evaluates preflight permission and unavailable reasons for a given
