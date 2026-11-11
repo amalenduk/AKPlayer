@@ -179,7 +179,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
 
     /// Indicates whether the active media is a live broadcast stream.
     public var isLive: Bool {
-        currentMedia?.isLive() ?? (currentItem?.duration.isIndefinite == true)
+        currentMedia?.isLive() ?? false
     }
 
     /// Indicates whether playback is currently synced with the live edge (drift <= threshold).
@@ -568,27 +568,13 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             return false
         }
 
-        let maxDuration: CMTime
-        switch scope {
-        case .primary:
-            guard currentItemDuration.isNumeric, currentItemDuration > .zero else {
-                AKLogger.warning(
-                    "AKPlayerController: Cannot set loop range without an active item with valid primary duration.",
-                    category: .player
-                )
-                return false
-            }
-            maxDuration = currentItemDuration
-        case .integrated:
-            let dur = interstitialService.integratedTimelineDuration
-            guard dur.isFinite, dur > 0 else {
-                AKLogger.warning(
-                    "AKPlayerController: Cannot set integrated loop range without a valid integrated timeline duration.",
-                    category: .player
-                )
-                return false
-            }
-            maxDuration = CMTime(seconds: dur, preferredTimescale: 600)
+        let maxDuration: CMTime = duration(in: scope)
+        guard maxDuration.isNumeric, maxDuration > .zero else {
+            AKLogger.warning(
+                "AKPlayerController: Cannot set loop range without an active item with valid duration.",
+                category: .player
+            )
+            return false
         }
 
         // 3. Numeric timestamps check
@@ -614,13 +600,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         eventBroadcaster.send(.loopRangeDidChange(newRange))
 
         // 5. If current playback position is outside the loop range, jump immediately to the loop
-        // start
-        let currentPos: CMTime = (scope == .integrated)
-            ? CMTime(
-                seconds: interstitialService.integratedTimelineCurrentTime,
-                preferredTimescale: 600
-            )
-            : currentTime
+        // start with sample-accurate precision
+        let currentPos: CMTime = currentTime(in: scope)
 
         if currentPos < startTime || currentPos >= endTime {
             Task { [weak self] in
@@ -733,12 +714,16 @@ public class AKPlayerController: AKPlayerControllerProtocol {
                 guard !Task.isCancelled, let self else { break }
                 guard currentMedia != nil else { continue }
 
-                // Evaluate active A-B loop boundary for primary timeline scope
-                if let loop = loopRange, loop.scope == .primary, time >= loop.end {
+                // Evaluate active A-B loop boundary for primary timeline scope (or integrated when
+                // no ad timeline exists)
+                if let loop = loopRange,
+                   loop.scope == .primary || interstitialService.integratedTimeline == nil,
+                   time >= loop.end
+                {
                     Task { [weak self] in
                         await self?.seek(
                             to: .time(loop.start),
-                            scope: .primary,
+                            scope: loop.scope,
                             toleranceBefore: .zero,
                             toleranceAfter: .zero
                         )

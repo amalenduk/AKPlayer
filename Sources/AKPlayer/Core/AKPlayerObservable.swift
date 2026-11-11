@@ -999,9 +999,12 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
             stopLiveDriftTimer()
         }
 
-        if newState.isLoaded, currentMedia?.isLive() ?? false {
-            Task {
-                await jumpToLive()
+        if newState.isLoaded {
+            isLive = currentMedia?.isLive() ?? false
+            if isLive {
+                Task {
+                    await jumpToLive()
+                }
             }
         }
     }
