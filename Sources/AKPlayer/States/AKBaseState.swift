@@ -241,11 +241,12 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         scope: AKSeekScope,
         completionHandler: @escaping @Sendable (Bool) -> Void
     ) {
+        let isLoopActive = playerController?.loopRange != nil
         seek(
             to: target,
             scope: scope,
-            toleranceBefore: .positiveInfinity,
-            toleranceAfter: .positiveInfinity,
+            toleranceBefore: isLoopActive ? .zero : .positiveInfinity,
+            toleranceAfter: isLoopActive ? .zero : .positiveInfinity,
             completionHandler: completionHandler
         )
     }
@@ -259,6 +260,13 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
         toleranceAfter: CMTime,
         completionHandler: @Sendable @escaping (Bool) -> Void
     ) {
+        let isLoopActive = playerController?.loopRange != nil
+        let effectiveToleranceBefore = (isLoopActive && toleranceBefore == .positiveInfinity) ?
+            .zero : toleranceBefore
+        let effectiveToleranceAfter = (isLoopActive && toleranceAfter == .positiveInfinity) ?
+            .zero :
+            toleranceAfter
+
         performIfAllowed(
             check: { [weak self] in
                 guard let self else { return (false, nil) }
@@ -272,8 +280,8 @@ public class AKBaseState: AKPlayerStateControllerProtocol {
                 let seekToken = AKSeek(
                     target: target,
                     scope: scope,
-                    toleranceBefore: toleranceBefore,
-                    toleranceAfter: toleranceAfter,
+                    toleranceBefore: effectiveToleranceBefore,
+                    toleranceAfter: effectiveToleranceAfter,
                     completionHandler: completionHandler
                 )
 
