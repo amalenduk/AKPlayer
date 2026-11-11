@@ -1013,6 +1013,10 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         currentSubtitleCue = media?.subtitleOutput.currentCue
         isSubtitleOutputRunning = media?.subtitleOutput.isRunning ?? false
         isLive = player.isLive
+        adMarkers = []
+        currentAdMarker = nil
+        isInterstitialActive = false
+        currentAdItemIndex = 1
     }
 
     private func handleTimeDidChange(_ time: CMTime) {

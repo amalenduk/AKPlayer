@@ -557,6 +557,7 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         timelineTimerTask = nil
         currentItem = nil
         resetTimelineMetrics()
+        refreshMarkers()
     }
 
     /// Resets all metrics and segments related to the integrated timeline.
@@ -760,10 +761,19 @@ public final class AKPlayerInterstitialService: NSObject, AKPlayerInterstitialSe
         var processedIDs = Set<String>()
 
         for event in allScheduled {
+            if let eventItem = event.primaryItem, let activeItem, eventItem !== activeItem {
+                continue
+            }
             let id = event.identifier
             let isCurrent = (id == currentEventID) && isPlayingInterstitial
             let isPlayed = playedEventIDs.contains(id)
             let segment = segmentsByEventID[id]
+            if segment == nil,
+               !event.time.isValid || CMTimeGetSeconds(event.time)
+               .isNaN || CMTimeGetSeconds(event.time) < 0
+            {
+                continue
+            }
             newMarkers.append(AKInterstitialMarker(
                 event: event,
                 segment: segment,
