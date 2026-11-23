@@ -61,6 +61,9 @@ public protocol AKPlayerControllerProtocol: AnyObject, Sendable, AKPlayerProtoco
     /// streaming.
     var networkStatusMonitor: any AKNetworkStatusMonitorProtocol { get }
 
+    /// Real-time audio tap digital signal processor engine.
+    var audioTapProcessor: AKAudioTapProcessor? { get }
+
     /// Prepares internal audio/video playback engines and system resources for
     /// playback.
     /// - Throws: An `AKPlayerError` if pipeline preparation fails.

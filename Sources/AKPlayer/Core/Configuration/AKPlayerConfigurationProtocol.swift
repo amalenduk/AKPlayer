@@ -141,6 +141,31 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     /// playback (e.g., `.spectral` preserves voice pitch naturally for podcasts and audiobooks).
     var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm { get set }
 
+    /// Indicates whether real-time audio tap processing is enabled for audio boost,
+    /// Smart Speed silence skipping, and frequency spectrum visualization. Defaults to `true`.
+    var isAudioTapEnabled: Bool { get set }
+
+    /// The audio volume boost multiplier (software gain) applied to quiet media.
+    /// Ranges from `1.0` (100% standard hardware volume) up to `2.0` (200% volume boost). Defaults
+    /// to `1.0`.
+    var audioBoost: Float { get set }
+
+    /// Indicates whether Smart Speed (auto-skip / accelerate through silence) is enabled. Defaults
+    /// to `false`.
+    var isSmartSpeedEnabled: Bool { get set }
+
+    /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
+    /// enabled. Defaults to `2.0`.
+    var smartSpeedRate: Float { get set }
+
+    /// The root-mean-square (RMS) energy threshold below which audio is classified as silence.
+    /// Defaults to `0.01` (~ -40 dBFS).
+    var silenceThresholdRMS: Float { get set }
+
+    /// The minimum duration of continuous silence (in seconds) required before Smart Speed rate
+    /// acceleration activates. Defaults to `0.15`.
+    var silenceDurationThreshold: TimeInterval { get set }
+
     // MARK: - Lifecycle Behavior Configurations
 
     /// Pauses playback automatically when the application resigns active

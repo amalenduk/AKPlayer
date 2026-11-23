@@ -51,6 +51,34 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// playback. Defaults to `.spectral`.
     public var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm
 
+    /// Indicates whether real-time audio tap processing is enabled for audio boost,
+    /// Smart Speed silence skipping, and frequency spectrum visualization.
+    /// Defaults to `true`.
+    public var isAudioTapEnabled: Bool
+
+    /// The audio volume boost multiplier (software gain) applied to quiet media.
+    /// Ranges from `1.0` (100% standard hardware volume) up to `2.0` (200% volume boost).
+    /// Defaults to `1.0`.
+    public var audioBoost: Float
+
+    /// Indicates whether Smart Speed (auto-skip / accelerate through silence) is enabled.
+    /// Defaults to `false`.
+    public var isSmartSpeedEnabled: Bool
+
+    /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
+    /// enabled.
+    /// Defaults to `2.0`.
+    public var smartSpeedRate: Float
+
+    /// The root-mean-square (RMS) energy threshold below which audio is classified as silence.
+    /// Defaults to `0.01` (~ -40 dBFS).
+    public var silenceThresholdRMS: Float
+
+    /// The minimum duration of continuous silence (in seconds) required before Smart Speed rate
+    /// acceleration activates.
+    /// Defaults to `0.15` seconds.
+    public var silenceDurationThreshold: TimeInterval
+
     // MARK: - Lifecycle Behavior Configurations
 
     /// Specifies whether playback automatically pauses when the application
@@ -192,6 +220,12 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         bufferObservingTimeInterval: TimeInterval = 0.5,
         audioSession: AKAudioSessionConfiguration = .init(),
         audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm = .spectral,
+        isAudioTapEnabled: Bool = true,
+        audioBoost: Float = 1.0,
+        isSmartSpeedEnabled: Bool = false,
+        smartSpeedRate: Float = 2.0,
+        silenceThresholdRMS: Float = 0.01,
+        silenceDurationThreshold: TimeInterval = 0.15,
         playbackPausesWhenResigningActive: Bool = false,
         playbackPausesWhenBackgrounded: Bool = false,
         playbackResumesWhenBecameActive: Bool = true,
@@ -218,6 +252,12 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         self.bufferObservingTimeInterval = bufferObservingTimeInterval
         self.audioSession = audioSession
         self.audioTimePitchAlgorithm = audioTimePitchAlgorithm
+        self.isAudioTapEnabled = isAudioTapEnabled
+        self.audioBoost = audioBoost
+        self.isSmartSpeedEnabled = isSmartSpeedEnabled
+        self.smartSpeedRate = smartSpeedRate
+        self.silenceThresholdRMS = silenceThresholdRMS
+        self.silenceDurationThreshold = silenceDurationThreshold
         self.playbackPausesWhenResigningActive = playbackPausesWhenResigningActive
         self.playbackPausesWhenBackgrounded = playbackPausesWhenBackgrounded
         self.playbackResumesWhenBecameActive = playbackResumesWhenBecameActive

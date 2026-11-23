@@ -133,6 +133,25 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
     /// The drift in seconds behind the live playback edge.
     public private(set) var liveDrift: TimeInterval = 0
 
+    // MARK: - Audio Processing Properties
+
+    /// Software volume boost multiplier (1.0 ... 2.0).
+    public private(set) var audioBoost: Float
+
+    /// Whether Smart Speed (auto-skip silence) is enabled.
+    public private(set) var isSmartSpeedEnabled: Bool
+
+    /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
+    /// enabled.
+    public private(set) var smartSpeedRate: Float
+
+    /// Total cumulative time saved (in seconds) by Smart Speed skipping silence during playback.
+    public private(set) var smartSpeedSavedTime: TimeInterval = 0
+
+    /// Real-time FFT frequency spectrum magnitudes across frequency bands, normalized between `0.0`
+    /// and `1.0`.
+    public private(set) var spectrumBands: [Float] = []
+
     // MARK: - Playback Looping (A-B Looping)
 
     /// Active loop range if segment/A-B looping is enabled, or `nil` if looping is disabled.
@@ -364,6 +383,11 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         metadata = player.currentMedia?.metadataProvider.staticMetadata
         timedMetadata = player.currentMedia?.metadataProvider.timedMetadata
         loopRange = player.loopRange
+        audioBoost = player.audioBoost
+        isSmartSpeedEnabled = player.isSmartSpeedEnabled
+        smartSpeedRate = player.smartSpeedRate
+        smartSpeedSavedTime = player.smartSpeedSavedTime
+        spectrumBands = player.spectrumBands
         canSeek = player.interstitialService.isPlayingInterstitial
             ? player.interstitialService.canSeek
             : player.currentMedia?.canSeek ?? false
@@ -738,6 +762,21 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         player.play(at: rate)
     }
 
+    /// Sets the software audio boost multiplier (1.0 ... 2.0).
+    public func setAudioBoost(_ boost: Float) {
+        player.audioBoost = boost
+    }
+
+    /// Sets whether Smart Speed (auto-skip silence) is enabled.
+    public func setSmartSpeedEnabled(_ isEnabled: Bool) {
+        player.isSmartSpeedEnabled = isEnabled
+    }
+
+    /// Sets the Smart Speed rate multiplier applied during detected silence.
+    public func setSmartSpeedRate(_ rate: Float) {
+        player.smartSpeedRate = rate
+    }
+
     // MARK: - Track Selection
 
     /// Reloads available and selected track options for the current media.
@@ -943,6 +982,16 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         case let .loopRangeDidChange(newRange):
             loopRange = newRange
 
+        case let .audioBoostDidChange(newBoost):
+            audioBoost = newBoost
+
+        case let .smartSpeedStatusDidChange(isEnabled):
+            isSmartSpeedEnabled = isEnabled
+
+        case let .spectrumLevelsDidChange(bands):
+            spectrumBands = bands
+            smartSpeedSavedTime = player.smartSpeedSavedTime
+
         case let .didFail(playerError):
             error = playerError
 
@@ -955,6 +1004,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         state = newState
         if newState.isStopped {
             loopRange = nil
+            spectrumBands = []
             currentMedia = nil
             capabilities = [:]
             canSeek = false

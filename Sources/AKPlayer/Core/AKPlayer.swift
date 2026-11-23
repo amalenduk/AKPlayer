@@ -138,6 +138,38 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         set { manager.audioTimePitchAlgorithm = newValue }
     }
 
+    // MARK: - Audio Processing Properties
+
+    /// The audio volume boost multiplier (software gain) applied to media (1.0 ... 2.0).
+    public var audioBoost: Float {
+        get { manager.audioBoost }
+        set { manager.audioBoost = newValue }
+    }
+
+    /// Indicates whether Smart Speed (auto-skip / accelerate through silence) is enabled.
+    public var isSmartSpeedEnabled: Bool {
+        get { manager.isSmartSpeedEnabled }
+        set { manager.isSmartSpeedEnabled = newValue }
+    }
+
+    /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
+    /// enabled.
+    public var smartSpeedRate: Float {
+        get { manager.smartSpeedRate }
+        set { manager.smartSpeedRate = newValue }
+    }
+
+    /// Total cumulative time saved (in seconds) by Smart Speed skipping silence during playback.
+    public var smartSpeedSavedTime: TimeInterval {
+        manager.smartSpeedSavedTime
+    }
+
+    /// Real-time FFT frequency spectrum magnitudes across frequency bands, normalized between `0.0`
+    /// and `1.0`.
+    public var spectrumBands: [Float] {
+        manager.spectrumBands
+    }
+
     private let eventBroadcaster = AKEventBroadcaster<AKPlayerEvent>()
 
     /// Asynchronous stream of all player, media, service, and interstitial events for Swift

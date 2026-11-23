@@ -218,6 +218,9 @@ public class AKLoadingState: AKBaseState {
                 .automaticallyPreservesTimeOffsetFromLive
             item.audioTimePitchAlgorithm = media.audioTimePitchAlgorithm?.avAlgorithm ??
                 playerController.configuration.audioTimePitchAlgorithm.avAlgorithm
+            if let tap = playerController.audioTapProcessor, let asset = media.asset {
+                tap.attach(to: item, for: asset)
+            }
             playerController.player.replaceCurrentItem(with: item)
         }
     }

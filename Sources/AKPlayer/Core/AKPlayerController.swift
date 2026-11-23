@@ -210,6 +210,49 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         sharePlayCoordinator
     }
 
+    // MARK: - Audio Tap & DSP Properties
+
+    /// Real-time audio tap digital signal processor engine.
+    public private(set) var audioTapProcessor: AKAudioTapProcessor?
+
+    /// Software volume boost multiplier (1.0 ... 2.0).
+    public var audioBoost: Float {
+        get { audioTapProcessor?.audioBoost ?? configuration.audioBoost }
+        set {
+            configuration.audioBoost = newValue
+            audioTapProcessor?.audioBoost = newValue
+            emit(.audioBoostDidChange(newValue))
+        }
+    }
+
+    /// Indicates whether Smart Speed (auto-skip silence) is enabled.
+    public var isSmartSpeedEnabled: Bool {
+        get { audioTapProcessor?.isSmartSpeedEnabled ?? configuration.isSmartSpeedEnabled }
+        set {
+            configuration.isSmartSpeedEnabled = newValue
+            audioTapProcessor?.isSmartSpeedEnabled = newValue
+            emit(.smartSpeedStatusDidChange(isEnabled: newValue))
+        }
+    }
+
+    /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
+    /// enabled.
+    public var smartSpeedRate: Float {
+        get { configuration.smartSpeedRate }
+        set { configuration.smartSpeedRate = newValue }
+    }
+
+    /// Total cumulative time saved (in seconds) by Smart Speed skipping silence during playback.
+    public private(set) var smartSpeedSavedTime: TimeInterval = 0
+
+    /// Real-time FFT frequency spectrum magnitudes across frequency bands, normalized between `0.0`
+    /// and `1.0`.
+    public private(set) var spectrumBands: [Float] = []
+
+    /// Internal state tracking Smart Speed rate adjustments
+    private var basePlaybackRateBeforeSilence: Float?
+    private var silenceStartTime: Date?
+
     // MARK: - Internal Properties
 
     /// The active state controller instance representing current player state
@@ -643,6 +686,15 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     public func prepare() throws {
         networkStatusMonitor.startObserving()
         startPlayerObservers()
+        if configuration.isAudioTapEnabled {
+            let tap = AKAudioTapProcessor()
+            tap.audioBoost = configuration.audioBoost
+            tap.isSmartSpeedEnabled = configuration.isSmartSpeedEnabled
+            tap.silenceThresholdRMS = configuration.silenceThresholdRMS
+            tap.silenceDurationThreshold = configuration.silenceDurationThreshold
+            tap.delegate = self
+            self.audioTapProcessor = tap
+        }
     }
 
     /// Transitions the current state controller to a new state controller
@@ -918,6 +970,7 @@ public extension AKPlayerController {
         if interstitialService.isPlayingInterstitial {
             interstitialService.interstitialPlayer?.play()
         }
+        attachAudioTapIfAvailable()
         player.play()
     }
 
@@ -928,6 +981,7 @@ public extension AKPlayerController {
         if interstitialService.isPlayingInterstitial {
             interstitialService.interstitialPlayer?.play()
         }
+        attachAudioTapIfAvailable()
         player.rate = rate.rate
     }
 
@@ -944,6 +998,9 @@ public extension AKPlayerController {
     /// pending seek requests.
     func performStop() {
         clearLoop()
+        spectrumBands = []
+        basePlaybackRateBeforeSilence = nil
+        silenceStartTime = nil
         playerPlaybackTimeObserver.stopObservingPeriodicTime()
         playerPlaybackTimeObserver.stopObservingBoundaryTime()
 
@@ -962,6 +1019,14 @@ public extension AKPlayerController {
         player.replaceCurrentItem(with: nil)
     }
 
+    /// Attaches the audio tap processor to current media and active item if available.
+    func attachAudioTapIfAvailable() {
+        guard let tap = audioTapProcessor,
+              let item = currentItem,
+              let asset = currentMedia?.asset else { return }
+        tap.attach(to: item, for: asset)
+    }
+
     /// Submits a target seek token directly to the seek service for execution.
     /// - Parameter targetSeek: The seek payload object containing target
     /// parameters and completion callbacks.
@@ -975,5 +1040,43 @@ public extension AKPlayerController {
     /// negative for reverse).
     func performStep(by count: Int) {
         player.currentItem?.step(byCount: count)
+    }
+}
+
+// MARK: - AKAudioTapProcessorDelegate Conformance
+
+extension AKPlayerController: AKAudioTapProcessorDelegate {
+    public func audioTapProcessor(_: AKAudioTapProcessor, didUpdateSpectrum spectrum: [Float]) {
+        self.spectrumBands = spectrum
+        emit(.spectrumLevelsDidChange(spectrum))
+    }
+
+    public func audioTapProcessor(
+        _: AKAudioTapProcessor,
+        didDetectSilence isSilent: Bool,
+        rms _: Float
+    ) {
+        guard isSmartSpeedEnabled, state.isPlaying else { return }
+
+        if isSilent {
+            if basePlaybackRateBeforeSilence == nil {
+                let current = player.rate > 0 ? player.rate : 1.0
+                basePlaybackRateBeforeSilence = current
+                silenceStartTime = Date()
+                let targetRate = current * smartSpeedRate
+                player.rate = targetRate
+            }
+        } else {
+            if let base = basePlaybackRateBeforeSilence {
+                if let start = silenceStartTime {
+                    let elapsed = Date().timeIntervalSince(start)
+                    let timeSaved = elapsed * Double(max(0, smartSpeedRate - 1.0) / smartSpeedRate)
+                    smartSpeedSavedTime += timeSaved
+                }
+                silenceStartTime = nil
+                basePlaybackRateBeforeSilence = nil
+                player.rate = base
+            }
+        }
     }
 }

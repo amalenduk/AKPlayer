@@ -55,6 +55,15 @@ public enum AKPlayerEvent: Sendable {
     /// Audio mute toggle state changed.
     case muteStatusDidChange(isMuted: Bool)
 
+    /// The audio volume boost multiplier changed (e.g., 1.5x for 150% boost).
+    case audioBoostDidChange(Float)
+
+    /// Smart Speed auto-skip silence status changed.
+    case smartSpeedStatusDidChange(isEnabled: Bool)
+
+    /// Real-time FFT frequency spectrum magnitudes updated.
+    case spectrumLevelsDidChange([Float])
+
     // MARK: - Playback Looping
 
     /// The active A-B loop boundary range changed or was cleared.
@@ -107,6 +116,12 @@ extension AKPlayerEvent: Equatable {
         case let (.volumeDidChange(l), .volumeDidChange(r)):
             l == r
         case let (.muteStatusDidChange(l), .muteStatusDidChange(r)):
+            l == r
+        case let (.audioBoostDidChange(l), .audioBoostDidChange(r)):
+            l == r
+        case let (.smartSpeedStatusDidChange(l), .smartSpeedStatusDidChange(r)):
+            l == r
+        case let (.spectrumLevelsDidChange(l), .spectrumLevelsDidChange(r)):
             l == r
         case let (.loopRangeDidChange(l), .loopRangeDidChange(r)):
             l == r

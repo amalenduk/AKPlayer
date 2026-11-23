@@ -82,6 +82,26 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol,
     /// playback.
     var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm { get set }
 
+    // MARK: - Audio Processing Properties
+
+    /// The audio volume boost multiplier (software gain) applied to media.
+    /// Ranges from `1.0` (100% standard hardware volume) up to `2.0` (200% volume boost).
+    var audioBoost: Float { get set }
+
+    /// Indicates whether Smart Speed (auto-skip / accelerate through silence) is enabled.
+    var isSmartSpeedEnabled: Bool { get set }
+
+    /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
+    /// enabled.
+    var smartSpeedRate: Float { get set }
+
+    /// Total cumulative time saved (in seconds) by Smart Speed skipping silence during playback.
+    var smartSpeedSavedTime: TimeInterval { get }
+
+    /// Real-time FFT frequency spectrum magnitudes across frequency bands, normalized between `0.0`
+    /// and `1.0`.
+    var spectrumBands: [Float] { get }
+
     /// An asynchronous sequence of player lifecycle and playback events.
     var events: AsyncStream<AKPlayerEvent> { get }
 
