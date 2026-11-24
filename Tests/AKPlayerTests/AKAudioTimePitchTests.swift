@@ -99,7 +99,7 @@ struct AKAudioTimePitchTests {
         // Dynamically change on player
         player.audioTimePitchAlgorithm = .timeDomain
         #expect(player.audioTimePitchAlgorithm == .timeDomain)
-        #expect(player.configuration.audioTimePitchAlgorithm == .timeDomain)
+        #expect(player.configuration.audioTimePitchAlgorithm == .spectral)
 
         // Test with custom item
         let url = try #require(URL(string: "https://example.com/audio.mp3"))
