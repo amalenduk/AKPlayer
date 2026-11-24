@@ -61,6 +61,9 @@ public enum AKPlayerEvent: Sendable {
     /// Smart Speed auto-skip silence status changed.
     case smartSpeedStatusDidChange(isEnabled: Bool)
 
+    /// Dialogue Clarity voice boost status changed.
+    case dialogueClarityStatusDidChange(isEnabled: Bool)
+
     /// Real-time FFT frequency spectrum magnitudes updated.
     case spectrumLevelsDidChange([Float])
 
@@ -120,6 +123,8 @@ extension AKPlayerEvent: Equatable {
         case let (.audioBoostDidChange(l), .audioBoostDidChange(r)):
             l == r
         case let (.smartSpeedStatusDidChange(l), .smartSpeedStatusDidChange(r)):
+            l == r
+        case let (.dialogueClarityStatusDidChange(l), .dialogueClarityStatusDidChange(r)):
             l == r
         case let (.spectrumLevelsDidChange(l), .spectrumLevelsDidChange(r)):
             l == r

@@ -154,6 +154,11 @@ public protocol AKPlayerConfigurationProtocol: Sendable {
     /// to `false`.
     var isSmartSpeedEnabled: Bool { get set }
 
+    /// Indicates whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    /// Defaults
+    /// to `false`.
+    var isDialogueClarityEnabled: Bool { get set }
+
     /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
     /// enabled. Defaults to `2.0`.
     var smartSpeedRate: Float { get set }

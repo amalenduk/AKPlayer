@@ -224,6 +224,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Stored runtime Smart Speed enable state.
     private var _isSmartSpeedEnabled: Bool
 
+    /// Stored runtime Dialogue Clarity enable state.
+    private var _isDialogueClarityEnabled: Bool
+
     /// Stored runtime Smart Speed rate multiplier.
     private var _smartSpeedRate: Float
 
@@ -245,6 +248,16 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             _isSmartSpeedEnabled = newValue
             audioTapProcessor?.isSmartSpeedEnabled = newValue
             emit(.smartSpeedStatusDidChange(isEnabled: newValue))
+        }
+    }
+
+    /// Indicates whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    public var isDialogueClarityEnabled: Bool {
+        get { audioTapProcessor?.isDialogueClarityEnabled ?? _isDialogueClarityEnabled }
+        set {
+            _isDialogueClarityEnabled = newValue
+            audioTapProcessor?.isDialogueClarityEnabled = newValue
+            emit(.dialogueClarityStatusDidChange(isEnabled: newValue))
         }
     }
 
@@ -336,6 +349,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         self._audioTimePitchAlgorithm = configuration.audioTimePitchAlgorithm
         self._audioBoost = configuration.audioBoost
         self._isSmartSpeedEnabled = configuration.isSmartSpeedEnabled
+        self._isDialogueClarityEnabled = configuration.isDialogueClarityEnabled
         self._smartSpeedRate = configuration.smartSpeedRate
 
         playerRateObserver = AKPlayerRateObserver(with: player)
@@ -712,6 +726,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             let tap = AKAudioTapProcessor()
             tap.audioBoost = _audioBoost
             tap.isSmartSpeedEnabled = _isSmartSpeedEnabled
+            tap.isDialogueClarityEnabled = _isDialogueClarityEnabled
             tap.silenceThresholdRMS = configuration.silenceThresholdRMS
             tap.silenceDurationThreshold = configuration.silenceDurationThreshold
             self.audioTapProcessor = tap

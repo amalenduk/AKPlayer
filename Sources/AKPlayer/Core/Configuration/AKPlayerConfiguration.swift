@@ -65,6 +65,10 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
     /// Defaults to `false`.
     public var isSmartSpeedEnabled: Bool
 
+    /// Indicates whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    /// Defaults to `false`.
+    public var isDialogueClarityEnabled: Bool
+
     /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
     /// enabled.
     /// Defaults to `2.0`.
@@ -223,6 +227,7 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         isAudioTapEnabled: Bool = true,
         audioBoost: Float = 1.0,
         isSmartSpeedEnabled: Bool = false,
+        isDialogueClarityEnabled: Bool = false,
         smartSpeedRate: Float = 2.0,
         silenceThresholdRMS: Float = 0.01,
         silenceDurationThreshold: TimeInterval = 0.15,
@@ -255,6 +260,7 @@ public struct AKPlayerConfiguration: AKPlayerConfigurationProtocol, Sendable, Eq
         self.isAudioTapEnabled = isAudioTapEnabled
         self.audioBoost = audioBoost
         self.isSmartSpeedEnabled = isSmartSpeedEnabled
+        self.isDialogueClarityEnabled = isDialogueClarityEnabled
         self.smartSpeedRate = smartSpeedRate
         self.silenceThresholdRMS = silenceThresholdRMS
         self.silenceDurationThreshold = silenceDurationThreshold

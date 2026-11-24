@@ -32,8 +32,17 @@ private final class AKAudioTapContext: @unchecked Sendable {
     // Parameters (accessed across threads via synchronized locks or direct read)
     var boostFactor: Float = 1.0
     var isSmartSpeedEnabled = false
+    var isDialogueClarityEnabled = false
     var silenceThresholdRMS: Float = 0.01
     var silenceDurationThreshold: TimeInterval = 0.15
+
+    // Biquad filter state for Speech Peaking EQ (formants ~2 kHz)
+    var biquadB0: Float = 1.0
+    var biquadB1: Float = 0.0
+    var biquadB2: Float = 0.0
+    var biquadA1: Float = 0.0
+    var biquadA2: Float = 0.0
+    var filterStates: [(z1: Float, z2: Float)] = []
 
     // FFT & Spectrum Configuration
     let fftSize = 1024
@@ -74,6 +83,34 @@ private final class AKAudioTapContext: @unchecked Sendable {
         self.outputImag = [Float](repeating: 0, count: size)
         self.magnitudes = [Float](repeating: 0, count: size / 2)
         self.smoothedBands = [Float](repeating: 0, count: bands)
+
+        updateDialogueClarityCoefficients(sampleRate: 44100.0)
+    }
+
+    /// Calculates second-order peaking biquad IIR filter coefficients for vocal clarity (~2 kHz
+    /// center, +5 dB boost).
+    func updateDialogueClarityCoefficients(sampleRate: Double) {
+        let sr = sampleRate > 0 ? sampleRate : 44100.0
+        let f0: Float = 2000.0
+        let q: Float = 1.2
+        let gainDB: Float = 5.0
+        let a = powf(10.0, gainDB / 40.0)
+        let w0 = 2.0 * Float.pi * f0 / Float(sr)
+        let alpha = sinf(w0) / (2.0 * q)
+        let cosw0 = cosf(w0)
+
+        let b0 = 1.0 + alpha * a
+        let b1 = -2.0 * cosw0
+        let b2 = 1.0 - alpha * a
+        let a0 = 1.0 + alpha / a
+        let a1 = -2.0 * cosw0
+        let a2 = 1.0 - alpha / a
+
+        biquadB0 = b0 / a0
+        biquadB1 = b1 / a0
+        biquadB2 = b2 / a0
+        biquadA1 = a1 / a0
+        biquadA2 = a2 / a0
     }
 
     deinit {
@@ -120,6 +157,17 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
             if !newValue {
                 context.isCurrentlySilent = false
                 context.silenceFramesAccumulated = 0
+            }
+        }
+    }
+
+    /// Indicates whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    public var isDialogueClarityEnabled: Bool {
+        get { context.isDialogueClarityEnabled }
+        set {
+            context.isDialogueClarityEnabled = newValue
+            if !newValue {
+                context.filterStates.removeAll()
             }
         }
     }
@@ -191,6 +239,7 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
                 let ctx = Unmanaged<AKAudioTapContext>.fromOpaque(clientInfo).takeUnretainedValue()
                 ctx.sampleRate = processingFormat.pointee.mSampleRate > 0 ? processingFormat.pointee
                     .mSampleRate : 44100.0
+                ctx.updateDialogueClarityCoefficients(sampleRate: ctx.sampleRate)
             },
             unprepare: { tap in
                 // Clean state on audio stop
@@ -198,6 +247,7 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
                 let ctx = Unmanaged<AKAudioTapContext>.fromOpaque(clientInfo).takeUnretainedValue()
                 ctx.isCurrentlySilent = false
                 ctx.silenceFramesAccumulated = 0
+                ctx.filterStates.removeAll()
             },
             process: { tap, numberFrames, _, bufferListInOut, numberFramesOut, flagsOut in
                 let clientInfo = MTAudioProcessingTapGetStorage(tap)
@@ -220,10 +270,48 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
                 let buffers = UnsafeMutableAudioBufferListPointer(bufferListInOut)
                 guard !buffers.isEmpty else { return }
 
+                // 1. Dialogue Clarity (Speech Enhancer: Vocal Formant Peaking Filter + Dynamic
+                // Range Compression)
+                if ctx.isDialogueClarityEnabled {
+                    let b0 = ctx.biquadB0
+                    let b1 = ctx.biquadB1
+                    let b2 = ctx.biquadB2
+                    let a1 = ctx.biquadA1
+                    let a2 = ctx.biquadA2
+
+                    for (channelIndex, buffer) in buffers.enumerated() {
+                        guard let mData = buffer.mData else { continue }
+                        let samples = mData.assumingMemoryBound(to: Float.self)
+
+                        while ctx.filterStates.count <= channelIndex {
+                            ctx.filterStates.append((z1: 0, z2: 0))
+                        }
+                        var z1 = ctx.filterStates[channelIndex].z1
+                        var z2 = ctx.filterStates[channelIndex].z2
+
+                        for i in 0 ..< frameCount {
+                            let x = samples[i]
+                            let y = b0 * x + z1
+                            z1 = b1 * x - a1 * y + z2
+                            z2 = b2 * x - a2 * y
+                            samples[i] = y
+                        }
+                        ctx.filterStates[channelIndex] = (z1: z1, z2: z2)
+
+                        // Dynamic compression to tame loud explosions / background sound effects
+                        var chRMS: Float = 0.0
+                        vDSP_rmsqv(samples, 1, &chRMS, vDSP_Length(frameCount))
+                        if chRMS > 0.35 {
+                            var comp = max(0.4, 0.35 / chRMS)
+                            vDSP_vsmul(samples, 1, &comp, samples, 1, vDSP_Length(frameCount))
+                        }
+                    }
+                }
+
                 var totalRMS: Float = 0.0
                 var activeChannels = 0
 
-                // 1. Audio Boost (Software Gain + Limiter)
+                // 2. Audio Boost (Software Gain + Limiter)
                 let boost = ctx.boostFactor
                 for buffer in buffers {
                     guard let mData = buffer.mData else { continue }
@@ -244,7 +332,7 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
                         }
                     }
 
-                    // 2. RMS Energy calculation
+                    // 3. RMS Energy calculation
                     var rms: Float = 0.0
                     vDSP_rmsqv(samples, 1, &rms, vDSP_Length(frameCount))
                     totalRMS += rms

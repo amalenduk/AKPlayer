@@ -144,6 +144,12 @@ public class AKPlayerManager: NSObject, AKPlayerManagerProtocol {
         set { playerController.isSmartSpeedEnabled = newValue }
     }
 
+    /// Indicates whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    public var isDialogueClarityEnabled: Bool {
+        get { playerController.isDialogueClarityEnabled }
+        set { playerController.isDialogueClarityEnabled = newValue }
+    }
+
     /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
     /// enabled.
     public var smartSpeedRate: Float {

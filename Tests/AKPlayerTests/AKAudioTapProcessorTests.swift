@@ -32,6 +32,11 @@ struct AKAudioTapProcessorTests {
         processor.audioBoost = 2.5
         #expect(processor.audioBoost == 2.0)
 
+        // Dialogue Clarity toggle
+        #expect(!processor.isDialogueClarityEnabled)
+        processor.isDialogueClarityEnabled = true
+        #expect(processor.isDialogueClarityEnabled)
+
         // Smart Speed toggle
         processor.isSmartSpeedEnabled = true
         #expect(processor.isSmartSpeedEnabled)
@@ -49,6 +54,7 @@ struct AKAudioTapProcessorTests {
         #expect(config.isAudioTapEnabled)
         #expect(config.audioBoost == 1.0)
         #expect(!config.isSmartSpeedEnabled)
+        #expect(!config.isDialogueClarityEnabled)
         #expect(config.smartSpeedRate == 2.0)
         #expect(config.silenceThresholdRMS == 0.01)
         #expect(config.silenceDurationThreshold == 0.15)
@@ -79,6 +85,10 @@ struct AKAudioTapProcessorTests {
         #expect(controller.isSmartSpeedEnabled)
         #expect(controller.audioTapProcessor?.isSmartSpeedEnabled == true)
 
+        controller.isDialogueClarityEnabled = true
+        #expect(controller.isDialogueClarityEnabled)
+        #expect(controller.audioTapProcessor?.isDialogueClarityEnabled == true)
+
         controller.smartSpeedRate = 2.5
         #expect(controller.smartSpeedRate == 2.5)
     }
@@ -99,6 +109,10 @@ struct AKAudioTapProcessorTests {
         observable.setSmartSpeedEnabled(true)
         #expect(player.isSmartSpeedEnabled)
 
+        observable.setDialogueClarityEnabled(true)
+        #expect(player.isDialogueClarityEnabled)
+        #expect(observable.isDialogueClarityEnabled)
+
         observable.setSmartSpeedRate(2.25)
         #expect(player.smartSpeedRate == 2.25)
     }
@@ -117,6 +131,13 @@ struct AKAudioTapProcessorTests {
 
         #expect(smartSpeed1 == smartSpeed2)
         #expect(smartSpeed1 != smartSpeed3)
+
+        let clarity1 = AKPlayerEvent.dialogueClarityStatusDidChange(isEnabled: true)
+        let clarity2 = AKPlayerEvent.dialogueClarityStatusDidChange(isEnabled: true)
+        let clarity3 = AKPlayerEvent.dialogueClarityStatusDidChange(isEnabled: false)
+
+        #expect(clarity1 == clarity2)
+        #expect(clarity1 != clarity3)
 
         let spectrum1 = AKPlayerEvent.spectrumLevelsDidChange([0.1, 0.5])
         let spectrum2 = AKPlayerEvent.spectrumLevelsDidChange([0.1, 0.5])

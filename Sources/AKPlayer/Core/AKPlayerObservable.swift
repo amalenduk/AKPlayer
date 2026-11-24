@@ -141,6 +141,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
     /// Whether Smart Speed (auto-skip silence) is enabled.
     public private(set) var isSmartSpeedEnabled: Bool
 
+    /// Whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    public private(set) var isDialogueClarityEnabled: Bool
+
     /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
     /// enabled.
     public private(set) var smartSpeedRate: Float
@@ -385,6 +388,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         loopRange = player.loopRange
         audioBoost = player.audioBoost
         isSmartSpeedEnabled = player.isSmartSpeedEnabled
+        isDialogueClarityEnabled = player.isDialogueClarityEnabled
         smartSpeedRate = player.smartSpeedRate
         smartSpeedSavedTime = player.smartSpeedSavedTime
         spectrumBands = player.spectrumBands
@@ -774,6 +778,12 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         isSmartSpeedEnabled = player.isSmartSpeedEnabled
     }
 
+    /// Sets whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    public func setDialogueClarityEnabled(_ isEnabled: Bool) {
+        player.isDialogueClarityEnabled = isEnabled
+        isDialogueClarityEnabled = player.isDialogueClarityEnabled
+    }
+
     /// Sets the Smart Speed rate multiplier applied during detected silence.
     public func setSmartSpeedRate(_ rate: Float) {
         player.smartSpeedRate = rate
@@ -990,6 +1000,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
 
         case let .smartSpeedStatusDidChange(isEnabled):
             isSmartSpeedEnabled = isEnabled
+
+        case let .dialogueClarityStatusDidChange(isEnabled):
+            isDialogueClarityEnabled = isEnabled
 
         case let .spectrumLevelsDidChange(bands):
             spectrumBands = bands

@@ -91,6 +91,9 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol,
     /// Indicates whether Smart Speed (auto-skip / accelerate through silence) is enabled.
     var isSmartSpeedEnabled: Bool { get set }
 
+    /// Indicates whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    var isDialogueClarityEnabled: Bool { get set }
+
     /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
     /// enabled.
     var smartSpeedRate: Float { get set }
