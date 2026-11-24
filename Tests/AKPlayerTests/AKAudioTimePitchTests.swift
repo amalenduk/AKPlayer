@@ -124,4 +124,17 @@ struct AKAudioTimePitchTests {
         queuePlayer.audioTimePitchAlgorithm = .varispeed
         #expect(queuePlayer.audioTimePitchAlgorithm == .varispeed)
     }
+
+    @Test func observablePlayerAudioTimePitchAlgorithm() {
+        let player = AKPlayer()
+        let observable = AKPlayerObservable(player: player)
+        #expect(observable.audioTimePitchAlgorithm == .spectral)
+
+        observable.setAudioTimePitchAlgorithm(.timeDomain)
+        #expect(observable.audioTimePitchAlgorithm == .timeDomain)
+        #expect(player.audioTimePitchAlgorithm == .timeDomain)
+
+        player.setAudioTimePitchAlgorithm(.varispeed)
+        #expect(player.audioTimePitchAlgorithm == .varispeed)
+    }
 }

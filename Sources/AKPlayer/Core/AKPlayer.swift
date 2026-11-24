@@ -138,6 +138,32 @@ public class AKPlayer: NSObject, AKPlayerProtocol {
         set { manager.audioTimePitchAlgorithm = newValue }
     }
 
+    /// Sets the active time-pitch algorithm used for pitch preservation during variable rate
+    /// playback.
+    public func setAudioTimePitchAlgorithm(_ algorithm: AKAudioTimePitchAlgorithm) {
+        audioTimePitchAlgorithm = algorithm
+    }
+
+    /// Sets the software audio boost multiplier (1.0 ... 2.0).
+    public func setAudioBoost(_ boost: Float) {
+        audioBoost = boost
+    }
+
+    /// Sets whether Smart Speed (auto-skip silence) is enabled.
+    public func setSmartSpeedEnabled(_ isEnabled: Bool) {
+        isSmartSpeedEnabled = isEnabled
+    }
+
+    /// Sets whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    public func setDialogueClarityEnabled(_ isEnabled: Bool) {
+        isDialogueClarityEnabled = isEnabled
+    }
+
+    /// Sets the Smart Speed rate multiplier applied during detected silent intervals.
+    public func setSmartSpeedRate(_ rate: Float) {
+        smartSpeedRate = rate
+    }
+
     // MARK: - Audio Processing Properties
 
     /// The audio volume boost multiplier (software gain) applied to media (1.0 ... 2.0).

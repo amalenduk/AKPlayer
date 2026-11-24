@@ -135,6 +135,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
 
     // MARK: - Audio Processing Properties
 
+    /// Active time-pitch algorithm used for pitch preservation during variable rate playback.
+    public private(set) var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm
+
     /// Software volume boost multiplier (1.0 ... 2.0).
     public private(set) var audioBoost: Float
 
@@ -386,6 +389,7 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         metadata = player.currentMedia?.metadataProvider.staticMetadata
         timedMetadata = player.currentMedia?.metadataProvider.timedMetadata
         loopRange = player.loopRange
+        audioTimePitchAlgorithm = player.audioTimePitchAlgorithm
         audioBoost = player.audioBoost
         isSmartSpeedEnabled = player.isSmartSpeedEnabled
         isDialogueClarityEnabled = player.isDialogueClarityEnabled
@@ -766,6 +770,12 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
         player.play(at: rate)
     }
 
+    /// Sets the time-pitch algorithm used for pitch preservation during variable rate playback.
+    public func setAudioTimePitchAlgorithm(_ algorithm: AKAudioTimePitchAlgorithm) {
+        player.setAudioTimePitchAlgorithm(algorithm)
+        audioTimePitchAlgorithm = player.audioTimePitchAlgorithm
+    }
+
     /// Sets the software audio boost multiplier (1.0 ... 2.0).
     public func setAudioBoost(_ boost: Float) {
         player.audioBoost = boost
@@ -1003,6 +1013,9 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
 
         case let .dialogueClarityStatusDidChange(isEnabled):
             isDialogueClarityEnabled = isEnabled
+
+        case let .audioTimePitchAlgorithmDidChange(newAlgorithm):
+            audioTimePitchAlgorithm = newAlgorithm
 
         case let .spectrumLevelsDidChange(bands):
             spectrumBands = bands

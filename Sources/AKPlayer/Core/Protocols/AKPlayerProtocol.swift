@@ -146,6 +146,35 @@ public protocol AKPlayerProtocol: AnyObject, Sendable, AKPlayerActionsProtocol,
     func removeBoundaryTimeObserver()
 }
 
+// MARK: - Audio Processing Methods Extension
+
+public extension AKPlayerProtocol {
+    /// Sets the time-pitch algorithm used for pitch preservation.
+    func setAudioTimePitchAlgorithm(_ algorithm: AKAudioTimePitchAlgorithm) {
+        audioTimePitchAlgorithm = algorithm
+    }
+
+    /// Sets the software audio boost multiplier (1.0 ... 2.0).
+    func setAudioBoost(_ boost: Float) {
+        audioBoost = boost
+    }
+
+    /// Sets whether Smart Speed (auto-skip silence) is enabled.
+    func setSmartSpeedEnabled(_ isEnabled: Bool) {
+        isSmartSpeedEnabled = isEnabled
+    }
+
+    /// Sets whether Dialogue Clarity (voice boost & background suppression) is enabled.
+    func setDialogueClarityEnabled(_ isEnabled: Bool) {
+        isDialogueClarityEnabled = isEnabled
+    }
+
+    /// Sets the Smart Speed rate multiplier applied during detected silent intervals.
+    func setSmartSpeedRate(_ rate: Float) {
+        smartSpeedRate = rate
+    }
+}
+
 // MARK: - Scoped Time Queries Extension
 
 public extension AKPlayerProtocol {

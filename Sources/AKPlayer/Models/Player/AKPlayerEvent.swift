@@ -64,6 +64,9 @@ public enum AKPlayerEvent: Sendable {
     /// Dialogue Clarity voice boost status changed.
     case dialogueClarityStatusDidChange(isEnabled: Bool)
 
+    /// The audio time-pitch algorithm changed (e.g., spectral, timeDomain, varispeed).
+    case audioTimePitchAlgorithmDidChange(AKAudioTimePitchAlgorithm)
+
     /// Real-time FFT frequency spectrum magnitudes updated.
     case spectrumLevelsDidChange([Float])
 
@@ -125,6 +128,8 @@ extension AKPlayerEvent: Equatable {
         case let (.smartSpeedStatusDidChange(l), .smartSpeedStatusDidChange(r)):
             l == r
         case let (.dialogueClarityStatusDidChange(l), .dialogueClarityStatusDidChange(r)):
+            l == r
+        case let (.audioTimePitchAlgorithmDidChange(l), .audioTimePitchAlgorithmDidChange(r)):
             l == r
         case let (.spectrumLevelsDidChange(l), .spectrumLevelsDidChange(r)):
             l == r

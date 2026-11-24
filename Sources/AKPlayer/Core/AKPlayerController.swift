@@ -170,6 +170,7 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         set {
             _audioTimePitchAlgorithm = newValue
             currentItem?.audioTimePitchAlgorithm = newValue.avAlgorithm
+            emit(.audioTimePitchAlgorithmDidChange(newValue))
         }
     }
 
