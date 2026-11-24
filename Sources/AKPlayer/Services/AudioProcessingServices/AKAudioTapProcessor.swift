@@ -11,27 +11,19 @@ import AVFoundation
 import Foundation
 import MediaToolbox
 
-// MARK: - AKAudioTapProcessorDelegate
+// MARK: - AKAudioTapEvent
 
-/// Delegate protocol receiving real-time audio spectrum magnitudes and silence events.
-@MainActor
-public protocol AKAudioTapProcessorDelegate: AnyObject, Sendable {
-    /// Notifies the delegate of real-time FFT frequency spectrum levels.
-    /// - Parameters:
-    ///   - processor: The audio tap processor instance.
-    ///   - spectrum: Array of normalized frequency band magnitudes (`0.0 ... 1.0`).
-    func audioTapProcessor(_ processor: AKAudioTapProcessor, didUpdateSpectrum spectrum: [Float])
+/// Events emitted by `AKAudioTapProcessor` during real-time digital signal processing.
+public enum AKAudioTapEvent: Sendable, Equatable {
+    /// Emitted when real-time frequency spectrum magnitudes are updated.
+    /// Values are normalized between `0.0` and `1.0` across 32 logarithmic frequency bands.
+    case spectrumDidUpdate([Float])
 
-    /// Notifies the delegate when silence state transitions occur.
+    /// Emitted when a silence state transition occurs.
     /// - Parameters:
-    ///   - processor: The audio tap processor instance.
     ///   - isSilent: `true` if sustained silence is detected, `false` when active sound resumes.
     ///   - rms: The current root-mean-square audio energy level.
-    func audioTapProcessor(
-        _ processor: AKAudioTapProcessor,
-        didDetectSilence isSilent: Bool,
-        rms: Float
-    )
+    case silenceDidDetect(isSilent: Bool, rms: Float)
 }
 
 // MARK: - AKAudioTapContext (Internal CoreAudio Thread Storage)
@@ -60,13 +52,13 @@ private final class AKAudioTapContext: @unchecked Sendable {
     var silenceFramesAccumulated = 0
     var isCurrentlySilent = false
 
-    /// Throttled UI dispatch (~40 Hz)
+    /// Throttled dispatch (~40 Hz)
     var lastDispatchTimestamp: TimeInterval = 0
 
-    weak var delegate: (any AKAudioTapProcessorDelegate)?
-    weak var processor: AKAudioTapProcessor?
+    let eventBroadcaster: AKEventBroadcaster<AKAudioTapEvent>
 
-    init() {
+    init(eventBroadcaster: AKEventBroadcaster<AKAudioTapEvent>) {
+        self.eventBroadcaster = eventBroadcaster
         let size = 1024
         let bands = 32
         self.fftSetup = vDSP_DFT_zop_CreateSetup(nil, vDSP_Length(size), .FORWARD)
@@ -104,14 +96,14 @@ private final class AKAudioTapContext: @unchecked Sendable {
 /// 3. **Real-time Frequency Spectrum Visualizer**: Fast Fourier Transform (vDSP DFT) calculating
 /// live frequency bins.
 public final class AKAudioTapProcessor: @unchecked Sendable {
-    // MARK: - Public Properties
+    // MARK: - Events
 
-    /// Real-time audio tap delegate receiving spectrum and silence updates.
-    public weak var delegate: (any AKAudioTapProcessorDelegate)? {
-        didSet {
-            context.delegate = delegate
-        }
+    /// Asynchronous stream of real-time audio tap processing events.
+    public var events: AsyncStream<AKAudioTapEvent> {
+        eventBroadcaster.makeStream(bufferingPolicy: .bufferingNewest(20))
     }
+
+    // MARK: - Public Properties
 
     /// Software volume boost factor.
     /// Ranges from `1.0` (100% standard hardware volume) up to `2.0` (200% volume boost).
@@ -148,7 +140,9 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
     }
 
     /// Current frequency spectrum band magnitudes (`0.0 ... 1.0`).
-    public private(set) var currentSpectrum = [Float](repeating: 0, count: 32)
+    public var currentSpectrum: [Float] {
+        context.smoothedBands
+    }
 
     /// Indicates whether audio is currently detected as silent.
     public var isSilence: Bool {
@@ -157,6 +151,7 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
 
     // MARK: - Internal Storage
 
+    private let eventBroadcaster: AKEventBroadcaster<AKAudioTapEvent>
     private let context: AKAudioTapContext
     private var tap: MTAudioProcessingTap?
     private var activeItem: AVPlayerItem?
@@ -165,13 +160,15 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
 
     /// Initializes a new audio tap processor.
     public init() {
-        self.context = AKAudioTapContext()
-        self.context.processor = self
+        let broadcaster = AKEventBroadcaster<AKAudioTapEvent>()
+        self.eventBroadcaster = broadcaster
+        self.context = AKAudioTapContext(eventBroadcaster: broadcaster)
         setupTap()
     }
 
     deinit {
         tearDownTap()
+        eventBroadcaster.finish()
     }
 
     // MARK: - Tap Lifecycle
@@ -265,27 +262,19 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
                            !ctx.isCurrentlySilent
                         {
                             ctx.isCurrentlySilent = true
-                            DispatchQueue.main.async { [weak ctx] in
-                                guard let ctx, let processor = ctx.processor else { return }
-                                ctx.delegate?.audioTapProcessor(
-                                    processor,
-                                    didDetectSilence: true,
-                                    rms: avgRMS
-                                )
-                            }
+                            ctx.eventBroadcaster.send(.silenceDidDetect(
+                                isSilent: true,
+                                rms: avgRMS
+                            ))
                         }
                     } else {
                         ctx.silenceFramesAccumulated = 0
                         if ctx.isCurrentlySilent {
                             ctx.isCurrentlySilent = false
-                            DispatchQueue.main.async { [weak ctx] in
-                                guard let ctx, let processor = ctx.processor else { return }
-                                ctx.delegate?.audioTapProcessor(
-                                    processor,
-                                    didDetectSilence: false,
-                                    rms: avgRMS
-                                )
-                            }
+                            ctx.eventBroadcaster.send(.silenceDidDetect(
+                                isSilent: false,
+                                rms: avgRMS
+                            ))
                         }
                     }
                 }
@@ -354,19 +343,12 @@ public final class AKAudioTapProcessor: @unchecked Sendable {
                             ctx.smoothedBands[b] = max(rawBand, ctx.smoothedBands[b] * 0.80)
                         }
 
-                        // Throttled UI dispatch (~40 updates per second)
+                        // Throttled dispatch (~40 updates per second)
                         let now = ProcessInfo.processInfo.systemUptime
                         if now - ctx.lastDispatchTimestamp >= 0.025 {
                             ctx.lastDispatchTimestamp = now
                             let bandsSnapshot = ctx.smoothedBands
-                            DispatchQueue.main.async { [weak ctx] in
-                                guard let ctx, let processor = ctx.processor else { return }
-                                processor.currentSpectrum = bandsSnapshot
-                                ctx.delegate?.audioTapProcessor(
-                                    processor,
-                                    didUpdateSpectrum: bandsSnapshot
-                                )
-                            }
+                            ctx.eventBroadcaster.send(.spectrumDidUpdate(bandsSnapshot))
                         }
                     }
                 }

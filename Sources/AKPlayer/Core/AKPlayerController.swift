@@ -154,7 +154,10 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     }
 
     /// Configuration options driving player behavior and timing defaults.
-    public private(set) var configuration: any AKPlayerConfigurationProtocol
+    public let configuration: any AKPlayerConfigurationProtocol
+
+    /// Stored runtime time-pitch algorithm fallback.
+    private var _audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm
 
     /// The active time-pitch algorithm used for pitch preservation and time stretching.
     public var audioTimePitchAlgorithm: AKAudioTimePitchAlgorithm {
@@ -162,10 +165,10 @@ public class AKPlayerController: AKPlayerControllerProtocol {
             if let currentItem {
                 return AKAudioTimePitchAlgorithm(avAlgorithm: currentItem.audioTimePitchAlgorithm)
             }
-            return configuration.audioTimePitchAlgorithm
+            return _audioTimePitchAlgorithm
         }
         set {
-            configuration.audioTimePitchAlgorithm = newValue
+            _audioTimePitchAlgorithm = newValue
             currentItem?.audioTimePitchAlgorithm = newValue.avAlgorithm
         }
     }
@@ -215,21 +218,31 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Real-time audio tap digital signal processor engine.
     public private(set) var audioTapProcessor: AKAudioTapProcessor?
 
+    /// Stored runtime volume boost multiplier.
+    private var _audioBoost: Float
+
+    /// Stored runtime Smart Speed enable state.
+    private var _isSmartSpeedEnabled: Bool
+
+    /// Stored runtime Smart Speed rate multiplier.
+    private var _smartSpeedRate: Float
+
     /// Software volume boost multiplier (1.0 ... 2.0).
     public var audioBoost: Float {
-        get { audioTapProcessor?.audioBoost ?? configuration.audioBoost }
+        get { audioTapProcessor?.audioBoost ?? _audioBoost }
         set {
-            configuration.audioBoost = newValue
-            audioTapProcessor?.audioBoost = newValue
-            emit(.audioBoostDidChange(newValue))
+            let clamped = max(1.0, min(2.0, newValue))
+            _audioBoost = clamped
+            audioTapProcessor?.audioBoost = clamped
+            emit(.audioBoostDidChange(clamped))
         }
     }
 
     /// Indicates whether Smart Speed (auto-skip silence) is enabled.
     public var isSmartSpeedEnabled: Bool {
-        get { audioTapProcessor?.isSmartSpeedEnabled ?? configuration.isSmartSpeedEnabled }
+        get { audioTapProcessor?.isSmartSpeedEnabled ?? _isSmartSpeedEnabled }
         set {
-            configuration.isSmartSpeedEnabled = newValue
+            _isSmartSpeedEnabled = newValue
             audioTapProcessor?.isSmartSpeedEnabled = newValue
             emit(.smartSpeedStatusDidChange(isEnabled: newValue))
         }
@@ -238,8 +251,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// The playback rate multiplier applied during detected silent intervals when Smart Speed is
     /// enabled.
     public var smartSpeedRate: Float {
-        get { configuration.smartSpeedRate }
-        set { configuration.smartSpeedRate = newValue }
+        get { _smartSpeedRate }
+        set { _smartSpeedRate = newValue }
     }
 
     /// Total cumulative time saved (in seconds) by Smart Speed skipping silence during playback.
@@ -300,6 +313,9 @@ public class AKPlayerController: AKPlayerControllerProtocol {
     /// Task responsible for observing interstitial playback state updates.
     private var interstitialObservationTask: Task<Void, Never>?
 
+    /// Task responsible for observing audio tap DSP events.
+    private var audioTapObservationTask: Task<Void, Never>?
+
     // MARK: - Initialization & Teardown
 
     /// Initializes a new `AKPlayerController` instance with a target player
@@ -317,6 +333,10 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         }
         self.player = player
         self.configuration = configuration
+        self._audioTimePitchAlgorithm = configuration.audioTimePitchAlgorithm
+        self._audioBoost = configuration.audioBoost
+        self._isSmartSpeedEnabled = configuration.isSmartSpeedEnabled
+        self._smartSpeedRate = configuration.smartSpeedRate
 
         playerRateObserver = AKPlayerRateObserver(with: player)
         playerPlaybackTimeObserver = AKPlayerPlaybackTimeObserver(with: player)
@@ -367,6 +387,8 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         playerItemNotificationObservationTask = nil
         interstitialObservationTask?.cancel()
         interstitialObservationTask = nil
+        audioTapObservationTask?.cancel()
+        audioTapObservationTask = nil
         eventBroadcaster.finish()
         #if os(iOS) || os(tvOS) || os(visionOS)
             Task { @MainActor in
@@ -688,12 +710,28 @@ public class AKPlayerController: AKPlayerControllerProtocol {
         startPlayerObservers()
         if configuration.isAudioTapEnabled {
             let tap = AKAudioTapProcessor()
-            tap.audioBoost = configuration.audioBoost
-            tap.isSmartSpeedEnabled = configuration.isSmartSpeedEnabled
+            tap.audioBoost = _audioBoost
+            tap.isSmartSpeedEnabled = _isSmartSpeedEnabled
             tap.silenceThresholdRMS = configuration.silenceThresholdRMS
             tap.silenceDurationThreshold = configuration.silenceDurationThreshold
-            tap.delegate = self
             self.audioTapProcessor = tap
+            startAudioTapObservation(for: tap)
+        }
+    }
+
+    /// Asynchronously observes real-time audio tap DSP events from the audio processor stream.
+    private func startAudioTapObservation(for tap: AKAudioTapProcessor) {
+        audioTapObservationTask?.cancel()
+        audioTapObservationTask = Task { [weak self] in
+            for await event in tap.events {
+                guard let self, !Task.isCancelled else { return }
+                switch event {
+                case let .spectrumDidUpdate(spectrum):
+                    self.handleSpectrumUpdate(spectrum)
+                case let .silenceDidDetect(isSilent, rms):
+                    self.handleSilenceDetection(isSilent: isSilent, rms: rms)
+                }
+            }
         }
     }
 
@@ -1043,19 +1081,17 @@ public extension AKPlayerController {
     }
 }
 
-// MARK: - AKAudioTapProcessorDelegate Conformance
+// MARK: - Audio Tap Event Handling
 
-extension AKPlayerController: AKAudioTapProcessorDelegate {
-    public func audioTapProcessor(_: AKAudioTapProcessor, didUpdateSpectrum spectrum: [Float]) {
+extension AKPlayerController {
+    /// Handles real-time frequency spectrum updates received from the audio tap processor.
+    func handleSpectrumUpdate(_ spectrum: [Float]) {
         self.spectrumBands = spectrum
         emit(.spectrumLevelsDidChange(spectrum))
     }
 
-    public func audioTapProcessor(
-        _: AKAudioTapProcessor,
-        didDetectSilence isSilent: Bool,
-        rms _: Float
-    ) {
+    /// Handles real-time silence state transitions received from the audio tap processor.
+    func handleSilenceDetection(isSilent: Bool, rms _: Float) {
         guard isSmartSpeedEnabled, state.isPlaying else { return }
 
         if isSilent {

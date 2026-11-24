@@ -131,10 +131,7 @@ struct AKAudioTapProcessorTests {
         let controller = AKPlayerController(player: player, configuration: AKPlayerConfiguration())
         try controller.prepare()
 
-        guard let tap = controller.audioTapProcessor else {
-            Issue.record("Expected audioTapProcessor to be initialized")
-            return
-        }
+        #expect(controller.audioTapProcessor != nil)
 
         controller.isSmartSpeedEnabled = true
         controller.smartSpeedRate = 2.0
@@ -144,12 +141,38 @@ struct AKAudioTapProcessorTests {
         player.rate = 1.0
 
         // Simulate silence detected
-        controller.audioTapProcessor(tap, didDetectSilence: true, rms: 0.002)
+        controller.handleSilenceDetection(isSilent: true, rms: 0.002)
         #expect(player.rate == 2.0)
 
         // Simulate voice resumes
-        controller.audioTapProcessor(tap, didDetectSilence: false, rms: 0.15)
+        controller.handleSilenceDetection(isSilent: false, rms: 0.15)
         #expect(player.rate == 1.0)
         #expect(controller.smartSpeedSavedTime >= 0)
+    }
+
+    @Test func configurationRemainsImmutableWhenDynamicPropertiesChange() throws {
+        let player = AVPlayer()
+        var config = AKPlayerConfiguration()
+        config.audioBoost = 1.0
+        config.isSmartSpeedEnabled = false
+        config.smartSpeedRate = 2.0
+
+        let controller = AKPlayerController(player: player, configuration: config)
+        try controller.prepare()
+
+        // Modify runtime dynamic properties
+        controller.audioBoost = 1.8
+        controller.isSmartSpeedEnabled = true
+        controller.smartSpeedRate = 3.0
+
+        // Verify runtime properties updated
+        #expect(controller.audioBoost == 1.8)
+        #expect(controller.isSmartSpeedEnabled == true)
+        #expect(controller.smartSpeedRate == 3.0)
+
+        // Verify configuration remains untouched at its initial preset values
+        #expect(controller.configuration.audioBoost == 1.0)
+        #expect(controller.configuration.isSmartSpeedEnabled == false)
+        #expect(controller.configuration.smartSpeedRate == 2.0)
     }
 }
