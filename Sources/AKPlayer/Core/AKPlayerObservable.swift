@@ -765,16 +765,19 @@ public class AKPlayerObservable: AKPlayerActionsProtocol, AKPlayerLoopProtocol {
     /// Sets the software audio boost multiplier (1.0 ... 2.0).
     public func setAudioBoost(_ boost: Float) {
         player.audioBoost = boost
+        audioBoost = player.audioBoost
     }
 
     /// Sets whether Smart Speed (auto-skip silence) is enabled.
     public func setSmartSpeedEnabled(_ isEnabled: Bool) {
         player.isSmartSpeedEnabled = isEnabled
+        isSmartSpeedEnabled = player.isSmartSpeedEnabled
     }
 
     /// Sets the Smart Speed rate multiplier applied during detected silence.
     public func setSmartSpeedRate(_ rate: Float) {
         player.smartSpeedRate = rate
+        smartSpeedRate = player.smartSpeedRate
     }
 
     // MARK: - Track Selection
